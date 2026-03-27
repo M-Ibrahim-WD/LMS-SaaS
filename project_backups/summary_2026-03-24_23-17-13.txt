@@ -1,0 +1,45 @@
+﻿Task: Milestone 3 - course completion and certificates
+
+Prisma models added/modified:
+- Updated User model with certificates relation.
+- Updated Course model with certificates relation.
+- Updated Tenant model with certificates relation.
+- Added Certificate model: id, user_id, course_id, tenant_id, issued_at, certificate_number.
+- Added unique constraint on [user_id, course_id] and unique certificate_number.
+
+New functions, APIs, or routes:
+- Added backend Certificates module.
+- Added CertificatesService with:
+  - myCertificates(user)
+  - getCourseCompletion(user, courseId)
+  - issueForCourse(user, courseId)
+- Added routes in CertificatesController:
+  - GET /api/certificates/my
+  - GET /api/certificates/courses/:courseId/status
+  - POST /api/certificates/courses/:courseId/issue
+- Completion rule implemented:
+  - all course lessons completed
+  - all course quizzes submitted
+  - all course assignments submitted
+  - student must be enrolled and have course access
+- Added backend test coverage in certificates.service.spec.ts for certificate issuance when requirements are satisfied.
+- Updated student course page to:
+  - fetch completion/certificate status
+  - show lessons/quizzes/assignments completion counts
+  - issue certificate when eligible
+  - display issued certificate number and date
+- Updated student profile page to list issued certificates.
+
+Migrations or schema changes:
+- Prisma schema updated with Certificate model and relations.
+- Database synced with prisma db push --accept-data-loss.
+- Prisma client regenerated.
+
+Validation performed:
+- pnpm --filter @lms/backend exec prisma validate
+- pnpm --filter @lms/backend exec prisma db push --accept-data-loss
+- pnpm --filter @lms/backend exec prisma generate
+- pnpm --filter @lms/backend test
+- pnpm --filter @lms/backend build
+- pnpm --filter @lms/frontend lint
+- pnpm exec next build (frontend production build)

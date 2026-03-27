@@ -1,0 +1,16 @@
+﻿Task: Improve authentication UX by linking Login and Register pages.
+
+Prisma models added/modified:
+- None.
+- No Prisma schema changes were made for this task.
+
+New functions, APIs, or routes:
+- No backend APIs or routes were added or modified.
+- No frontend routes were added.
+- Updated existing auth page UIs:
+  - apps/frontend/src/app/login/page.tsx
+  - apps/frontend/src/app/register/page.tsx
+
+Frontend changes:
+- Login page now includes text below the form action:
+  - Don't

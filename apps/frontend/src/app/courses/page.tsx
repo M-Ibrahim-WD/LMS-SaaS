@@ -1,0 +1,226 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
+import { useMemo, useState } from "react";
+import { apiFetch } from "../../lib/api/client";
+import { ContentCard } from "../../components/content-card";
+import { EmptyState } from "../../components/empty-state";
+import { PageShell } from "../../components/page-shell";
+import { StatusBanner } from "../../components/status-banner";
+import { useAuthStore } from "../../store/auth.store";
+
+interface Course {
+  id: string;
+  title: string;
+  description?: string | null;
+  thumbnailImage?: string | null;
+  category?: string | null;
+  level: "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
+  isPaid: boolean;
+  price?: number | null;
+  status: "DRAFT" | "PUBLISHED";
+  instructor?: {
+    id: string;
+    fullName: string;
+  };
+}
+
+export default function CoursesPage() {
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const user = useAuthStore((state) => state.user);
+  const [search, setSearch] = useState("");
+  const [pricing, setPricing] = useState<"ALL" | "FREE" | "PAID">("ALL");
+  const [category, setCategory] = useState("");
+  const [level, setLevel] = useState<"ALL" | Course["level"]>("ALL");
+  const [page, setPage] = useState(1);
+
+  const coursePath = useMemo(() => {
+    const params = new URLSearchParams();
+    if (search.trim()) {
+      params.set("search", search.trim());
+    }
+    if (pricing !== "ALL") {
+      params.set("pricing", pricing);
+    }
+    if (category.trim()) {
+      params.set("category", category.trim());
+    }
+    if (level !== "ALL") {
+      params.set("level", level);
+    }
+
+    params.set("page", String(page));
+    params.set("pageSize", "12");
+    return `/courses?${params.toString()}`;
+  }, [category, level, page, pricing, search]);
+
+  const coursesQuery = useQuery({
+    queryKey: ["courses", "discover", search, pricing, category, level, page],
+    queryFn: () => apiFetch<Course[]>(coursePath, { token: accessToken ?? undefined }),
+    enabled: Boolean(accessToken)
+  });
+
+  const availableCategories = useMemo(() => {
+    return Array.from(
+      new Set((coursesQuery.data ?? []).map((course) => course.category?.trim()).filter(Boolean) as string[])
+    ).sort((left, right) => left.localeCompare(right));
+  }, [coursesQuery.data]);
+
+  const coursesByInstructor = (coursesQuery.data ?? []).reduce<Record<string, Course[]>>((groups, course) => {
+    const key = course.instructor?.fullName ?? "Your Courses";
+    if (!groups[key]) {
+      groups[key] = [];
+    }
+    groups[key].push(course);
+    return groups;
+  }, {});
+
+  return (
+    <PageShell
+      title={user?.role === "INSTRUCTOR" ? "My Courses" : "Courses"}
+      description="Browse the courses available in your current LMS workspace."
+      backHref="/dashboard"
+      actions={
+        <>
+          {user?.role === "INSTRUCTOR" ? (
+            <Link href="/instructor/courses" className="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white">
+              Open Course Manager
+            </Link>
+          ) : null}
+          {user?.role === "STUDENT" ? (
+            <Link href="/my-courses" className="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white">
+              My Courses
+            </Link>
+          ) : null}
+        </>
+      }
+    >
+      <div className="mt-6 space-y-6">
+        <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]">
+          <input
+            className="rounded-xl border border-slate-300 px-4 py-3 text-sm"
+            placeholder="Search by title, description, or category"
+            value={search}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              setPage(1);
+            }}
+          />
+          <select
+            className="rounded-xl border border-slate-300 px-4 py-3 text-sm"
+            value={pricing}
+            onChange={(event) => {
+              setPricing(event.target.value as "ALL" | "FREE" | "PAID");
+              setPage(1);
+            }}
+          >
+            <option value="ALL">All Pricing</option>
+            <option value="FREE">Free</option>
+            <option value="PAID">Paid</option>
+          </select>
+          <select
+            className="rounded-xl border border-slate-300 px-4 py-3 text-sm"
+            value={category}
+            onChange={(event) => {
+              setCategory(event.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="">All Categories</option>
+            {availableCategories.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
+          </select>
+          <select
+            className="rounded-xl border border-slate-300 px-4 py-3 text-sm"
+            value={level}
+            onChange={(event) => {
+              setLevel(event.target.value as "ALL" | Course["level"]);
+              setPage(1);
+            }}
+          >
+            <option value="ALL">All Levels</option>
+            <option value="BEGINNER">Beginner</option>
+            <option value="INTERMEDIATE">Intermediate</option>
+            <option value="ADVANCED">Advanced</option>
+          </select>
+        </div>
+
+        {coursesQuery.isLoading ? <StatusBanner>Loading courses...</StatusBanner> : null}
+        {coursesQuery.isError ? <StatusBanner variant="error">Failed to load courses.</StatusBanner> : null}
+        {!coursesQuery.isLoading && !coursesQuery.isError && Object.keys(coursesByInstructor).length === 0 ? (
+          <EmptyState
+            title="No courses found"
+            description="Courses will appear here once instructors publish them."
+          />
+        ) : null}
+
+        {Object.entries(coursesByInstructor).map(([instructorName, courses]) => (
+          <section key={instructorName}>
+            {user?.role === "STUDENT" ? (
+              <h2 className="mb-3 text-lg font-semibold text-slate-800">{instructorName}</h2>
+            ) : null}
+            <div className="grid gap-3">
+              {courses.map((course) => (
+                <Link key={course.id} href={`/courses/${course.id}`}>
+                  <ContentCard className="overflow-hidden transition hover:border-slate-300 hover:shadow-md">
+                    <div className="flex flex-col gap-4 sm:flex-row">
+                      <div className="h-32 w-full overflow-hidden rounded-2xl bg-gradient-to-br from-sky-500 via-cyan-500 to-emerald-400 sm:w-44">
+                        {course.thumbnailImage ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={course.thumbnailImage} alt={`${course.title} thumbnail`} className="h-full w-full object-cover" />
+                        ) : null}
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium">{course.title}</p>
+                        <p className="text-sm text-slate-600">{course.description}</p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {course.category ? (
+                            <span className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-700">
+                              {course.category}
+                            </span>
+                          ) : null}
+                          <span className="rounded-full bg-sky-100 px-2 py-1 text-xs text-sky-700">
+                            {course.level.toLowerCase()}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {course.isPaid ? `Paid - ${course.price?.toFixed(2) ?? "0.00"}` : "Free"}
+                        </p>
+                      </div>
+                    </div>
+                  </ContentCard>
+                </Link>
+              ))}
+            </div>
+          </section>
+        ))}
+
+        {!coursesQuery.isLoading && !coursesQuery.isError && coursesQuery.data?.length ? (
+          <div className="flex items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+              disabled={page === 1}
+              className="rounded-lg border border-slate-300 px-4 py-2 text-sm disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <span className="text-sm text-slate-600">Page {page}</span>
+            <button
+              type="button"
+              onClick={() => setPage((current) => current + 1)}
+              disabled={(coursesQuery.data?.length ?? 0) < 12}
+              className="rounded-lg border border-slate-300 px-4 py-2 text-sm disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        ) : null}
+      </div>
+    </PageShell>
+  );
+}

@@ -1,0 +1,31 @@
+﻿Task: Implement Instapay validation.
+
+Prisma models added/modified:
+- None.
+- No Prisma schema changes were made for this task.
+
+New functions, APIs, or routes:
+- No new APIs or routes were added.
+- Updated backend payment method validation in apps/backend/src/modules/payment-methods/services/payment-methods.service.ts.
+- Updated shared frontend payment method validation in apps/frontend/src/lib/payments/payment-methods.ts.
+
+Instapay validation rules implemented:
+- Option 1: Phone
+  - must start with 010, 011, or 012
+  - enforced with regex: ^01[012]\d{8}$
+- Option 2: Username
+  - must end with @instapay
+  - invalid domains like gmail.com are rejected
+  - enforced with regex: ^[a-z0-9._-]+@instapay$
+- Invalid formats are rejected by the backend with a specific BadRequestException message.
+- The same validation rules are enforced on the frontend before submit so instructors see immediate validation feedback.
+
+Migrations or schema changes:
+- None.
+- No migration files created.
+- No database changes required.
+
+Validation performed:
+- Backend build passed with pnpm --filter @lms/backend build.
+- Frontend TypeScript lint passed with pnpm --filter @lms/frontend lint.
+- Frontend production build passed with pnpm --filter @lms/frontend build.

@@ -1,0 +1,58 @@
+﻿Task: Implement advanced student dashboard with tabs, filters, search, and instructor grouping.
+
+Prisma models added/modified:
+- None for this task.
+- No Prisma schema changes were made in this dashboard enhancement step.
+
+New functions, APIs, or routes:
+- No new backend APIs or routes were added for this task.
+- Reused existing endpoints on the frontend:
+  - GET /api/courses
+  - GET /api/enrollments/my-courses
+  - GET /api/student/instructors
+- Added explicit frontend not-found page:
+  - apps/frontend/src/app/not-found.tsx
+
+Frontend changes:
+- Updated apps/frontend/src/app/dashboard/page.tsx.
+- Added advanced student dashboard layout with:
+  - search bar
+  - tabs navigation
+  - free/paid filters
+  - professional courses display area
+- Added student dashboard state:
+  - activeTab (ALL | MY | INSTRUCTOR)
+  - filterType (ALL | FREE | PAID)
+  - searchQuery
+- Added memoized course processing using useMemo for:
+  - normalized student course list with isEnrolled, instructorName, instructorId
+  - filtered course list
+  - grouped courses by instructor
+  - dynamic empty-state message
+- Implemented filtering order exactly as requested:
+  1. Tab filter
+  2. Free/Paid filter
+  3. Search filter
+- Added instructor grouping view when activeTab = INSTRUCTOR.
+- Added modern card-based course UI with:
+  - instructor name visible
+  - enrollment state visible
+  - paid/free badge visible
+- Added empty states for:
+  - no courses found
+  - no search results
+  - no enrolled courses
+- Preserved existing instructor dashboard functionality unchanged.
+
+Build/UX support change:
+- Added apps/frontend/src/app/not-found.tsx.
+- This resolved a Next.js production build failure for /_not-found and also provides a cleaner product fallback page.
+
+Migrations or schema changes:
+- None.
+- No database changes required.
+- No migration files created.
+
+Validation performed:
+- Frontend TypeScript lint passed with pnpm --filter @lms/frontend lint.
+- Frontend production build passed with pnpm --filter @lms/frontend build.

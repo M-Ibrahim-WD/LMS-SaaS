@@ -1,0 +1,46 @@
+﻿Task summary: Roadmap execution pass 1 (multi-instructor student flow stabilization and shared UI/backend cleanup)
+
+Prisma models added/modified:
+- No Prisma models were added or modified in this pass.
+- No schema fields, relations, enums, indexes, or constraints changed.
+
+New functions, APIs, or routes:
+- No new API routes were added.
+- Added shared backend service `StudentAccessService` in `apps/backend/src/shared/access/student-access.service.ts`.
+  - `getFollowedInstructorWhere(studentId)` centralizes the student-follow relationship filter.
+  - `getAccessiblePublishedCourseForStudent(studentId, courseId, select)` centralizes published-course access checks for students who follow an instructor.
+- Added global backend module `StudentAccessModule` in `apps/backend/src/shared/access/student-access.module.ts` and registered it in `apps/backend/src/app.module.ts`.
+- Added reusable frontend component `ContentCard` in `apps/frontend/src/components/content-card.tsx`.
+- Added reusable frontend component `EmptyState` in `apps/frontend/src/components/empty-state.tsx`.
+
+Behavior and logic changes:
+- Backend tenant guard compatibility:
+  - `apps/backend/src/shared/guards/tenant-context.guard.ts` now allows student requests to pass `@RequireTenant()` checks without forcing a legacy single-tenant assignment, while preserving tenant enforcement for instructor/admin flows.
+- Backend shared student access logic:
+  - `apps/backend/src/modules/courses/services/courses.service.ts` now uses `StudentAccessService` for student course listing and single-course access checks.
+  - `apps/backend/src/modules/enrollments/services/enrollments.service.ts` now uses `StudentAccessService` when validating whether a student can enroll in a published course.
+  - `apps/backend/src/modules/payments/services/payments.service.ts` now uses `StudentAccessService` when validating whether a student can submit payment for a published course.
+  - `apps/backend/src/modules/payment-methods/services/payment-methods.service.ts` now uses `StudentAccessService` when returning payment methods for a student-accessible course.
+- Frontend student flow cleanup:
+  - `apps/frontend/src/app/dashboard/page.tsx` no longer redirects students based on missing `tenantId`.
+  - Student join-instructor success now refetches instructor list, student course list, and student enrolled courses so the dashboard updates immediately after joining.
+  - Replaced stale student `/join-tenant` dashboard action with an in-page focus action for the invite-code form.
+- Frontend navigation cleanup:
+  - Replaced raw anchor navigation with `next/link` in touched dashboard/course pages for smoother client navigation.
+- Frontend reusable UI cleanup:
+  - `apps/frontend/src/app/courses/page.tsx` now uses reusable `ContentCard` and `EmptyState` components, includes explicit loading/error/empty states, and uses `next/link` throughout.
+  - `apps/frontend/src/app/my-courses/page.tsx` now uses reusable `ContentCard` and `EmptyState` components, removes stale student tenant gating, and uses `next/link` throughout.
+  - `apps/frontend/src/app/profile/page.tsx` now uses reusable `ContentCard` for the profile information panel.
+
+Migrations or schema changes:
+- None in this pass.
+- No Prisma migration or db push was required.
+
+Validation executed:
+- `pnpm --filter @lms/backend build` passed.
+- `pnpm --filter @lms/frontend lint` passed.
+- `pnpm --filter @lms/frontend build` passed.
+
+Notes:
+- This pass completed the first roadmap slice around legacy student tenant dependency and shared access logic.
+- Automated backend tests were not added in this pass because no test harness is currently set up in the backend package scripts; that remains for a subsequent roadmap step.

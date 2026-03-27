@@ -1,0 +1,42 @@
+﻿Task Summary: Course Review Submission UI
+
+Prisma models added/modified:
+- No Prisma schema changes in this task.
+
+New functions, APIs, or routes:
+- No new backend routes were added in this task.
+- Existing review APIs used by the new frontend flow:
+  - POST /api/reviews/courses/:courseId
+  - GET /api/reviews/courses/:courseId/mine
+
+Frontend changes:
+- Updated course details page to add student review submission/editing UI in:
+  - apps/frontend/src/app/courses/[id]/page.tsx
+- Added course review state and integration:
+  - review rating selector (1 to 5 stars)
+  - review comment textarea
+  - submit/update review button
+  - success/error feedback messages
+  - fetch and hydrate existing student review via GET /api/reviews/courses/:courseId/mine
+  - submit review via POST /api/reviews/courses/:courseId
+- Added cache invalidation so new reviews propagate into profile surfaces:
+  - invalidates instructor public reviews queries
+  - invalidates public instructor profile queries
+- Minor cleanup confirmed in instructor profile view text rendering
+
+Validation and smoke tests:
+- Frontend TypeScript lint: passed
+- Live API smoke test passed end-to-end:
+  - instructor register/login
+  - invite code fetch
+  - free course create
+  - course publish
+  - student register/login with invite code
+  - student enroll in course
+  - student submit review
+  - student fetch own review
+  - public instructor reviews endpoint returns the new review
+- Smoke test result confirmed public review count increased to 1 for the new instructor profile
+
+Schema changes / migrations:
+- None in this task.

@@ -1,0 +1,57 @@
+﻿Task: Implement delete payment method feature with soft delete.
+
+Prisma models added/modified:
+- Modified PaymentMethod model in apps/backend/prisma/schema.prisma.
+- Added fields:
+  - isDeleted Boolean @default(false) mapped to is_deleted
+  - deletedAt DateTime? mapped to deleted_at
+- Added new index:
+  - @@index([tenantId, isDeleted])
+
+New functions, APIs, or routes:
+- Added backend endpoint:
+  - DELETE /api/payment-methods/:id
+- Updated backend controller:
+  - apps/backend/src/modules/payment-methods/controllers/payment-methods.controller.ts
+- Added backend service method:
+  - softDelete(user, id)
+- Updated service query logic so payment methods are only returned when isDeleted = false in:
+  - myMethods
+  - methodsForCourse
+  - ensureManualMethodForCourse
+
+Soft delete behavior implemented:
+- Payment methods are not physically deleted.
+- On delete:
+  - isDeleted = true
+  - deletedAt = current timestamp
+  - isActive = false
+- Only the owning instructor can delete a payment method.
+- If the method does not exist or is already deleted, a not found error is returned.
+- If the current user is not the owner, a forbidden error is returned.
+
+Frontend changes:
+- Updated instructor dashboard in apps/frontend/src/app/dashboard/page.tsx.
+- Added red X delete button next to each payment method.
+- Added confirmation dialog before delete.
+- On confirm, frontend calls DELETE /api/payment-methods/:id.
+- After success, payment methods list is refetched.
+- Added delete error handling message in the payment methods section.
+- Added empty state when instructor has no active payment methods.
+
+Migrations or schema changes:
+- Prisma schema changed for PaymentMethod soft delete fields.
+- Database schema applied with:
+  - pnpm --filter @lms/backend exec prisma db push --accept-data-loss
+- Prisma Client regenerated after schema change with:
+  - pnpm --filter @lms/backend exec prisma generate
+  - follow-up successful generation used PRISMA_GENERATE_NO_ENGINE=1 due a Windows file lock on the engine DLL during auto-generate
+- No Prisma migration file was created in this run.
+
+Validation performed:
+- Prisma validate passed.
+- Prisma db push passed.
+- Prisma Client generate passed.
+- Backend build passed with pnpm --filter @lms/backend build.
+- Frontend TypeScript lint passed with pnpm --filter @lms/frontend lint.
+- Frontend production build passed with pnpm --filter @lms/frontend build.

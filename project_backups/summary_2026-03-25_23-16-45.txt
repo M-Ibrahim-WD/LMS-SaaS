@@ -1,0 +1,44 @@
+﻿Task Summary: Public Instructor Rating and Review Signals
+
+Prisma models added/modified:
+- No Prisma schema changes in this task.
+
+New functions, APIs, or routes:
+- No new routes added in this task.
+- Extended existing GET /api/instructor/public/:id response in instructor service to include per-course review metrics:
+  - averageRating
+  - reviewsCount
+
+Backend changes:
+- Updated apps/backend/src/modules/instructor/services/instructor.service.ts
+- Public instructor profile now aggregates course review stats via courseReview groupBy(courseId)
+- Public profile response still includes instructor-level review stats and now also includes per-course rating/review counts in the courses array
+
+Frontend changes:
+- Updated apps/frontend/src/components/profile/course-card.tsx
+  - supports optional averageRating and reviewsCount
+  - course cards now show compact review/rating signal when available
+- Updated apps/frontend/src/app/instructors/[id]/page.tsx
+  - public instructor header now shows:
+    - average rating as main review stat when available
+    - review count as helper text
+    - fallback to “No ratings” when none exist
+  - public instructor course cards now receive and display per-course rating/review count
+
+Validation and smoke tests:
+- Backend build: passed
+- Frontend TypeScript lint: passed
+- Live API smoke test passed:
+  - instructor register
+  - invite code fetch
+  - course create/publish
+  - student register/enroll
+  - student submit review
+  - public instructor profile returned:
+    - profileStats.averageRating = 4
+    - profileStats.reviewsCount = 1
+    - firstCourse.averageRating = 4
+    - firstCourse.reviewsCount = 1
+
+Schema changes / migrations:
+- None in this task.

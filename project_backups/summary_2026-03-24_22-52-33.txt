@@ -1,0 +1,47 @@
+﻿Task: Milestone 2 - quizzes and assignments
+
+Prisma models added/modified:
+- Added QuizQuestionType enum with MULTIPLE_CHOICE.
+- Updated User model with quizSubmissions and assignmentSubmissions relations.
+- Updated Course model with quizzes and assignments relations.
+- Added Quiz model: id, course_id, tenant_id, instructor_id, title, description, createdAt, updatedAt.
+- Added QuizQuestion model: id, quiz_id, question, type, options, correct_answer, order.
+- Added QuizSubmission model: id, quiz_id, student_id, tenant_id, answers, score, total_questions, createdAt.
+- Added Assignment model: id, course_id, tenant_id, instructor_id, title, description, instructions, createdAt, updatedAt.
+- Added AssignmentSubmission model: id, assignment_id, student_id, tenant_id, content, createdAt, updatedAt.
+
+New functions, APIs, or routes:
+- Added backend Assessments module.
+- Added AssessmentsService with:
+  - getCourseAssessments(user, courseId)
+  - createQuiz(user, dto)
+  - createAssignment(user, dto)
+  - submitQuiz(user, quizId, dto)
+  - submitAssignment(user, assignmentId, dto)
+- Added routes in AssessmentsController:
+  - GET /api/assessments/courses/:courseId
+  - POST /api/assessments/quizzes
+  - POST /api/assessments/assignments
+  - POST /api/assessments/quizzes/:quizId/submit
+  - POST /api/assessments/assignments/:assignmentId/submit
+- Added backend test coverage in assessments.service.spec.ts for quiz scoring/submission.
+- Updated instructor course builder page to create and list quizzes and assignments.
+- Updated student course details page to:
+  - fetch course assessments
+  - submit quizzes
+  - submit/update assignments
+  - render quizzes and assignments for enrolled students and instructors
+
+Migrations or schema changes:
+- Prisma schema updated with quiz and assignment models plus relations.
+- Database synced with prisma db push --accept-data-loss.
+- Prisma client regenerated.
+
+Validation performed:
+- pnpm --filter @lms/backend exec prisma validate
+- pnpm --filter @lms/backend exec prisma db push --accept-data-loss
+- pnpm --filter @lms/backend exec prisma generate
+- pnpm --filter @lms/backend test
+- pnpm --filter @lms/backend build
+- pnpm --filter @lms/frontend lint
+- pnpm exec next build (frontend production build)

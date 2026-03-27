@@ -1,0 +1,93 @@
+﻿Task completed: Real profile image upload support for the TikTok-inspired profile redesign.
+
+Prisma models added/modified:
+- No Prisma schema changes were required for this task.
+- Existing User.profileImage field continues to be used, but its meaning is now expanded to support local uploaded image references that are resolved into public URLs by the backend.
+
+Backend changes:
+1. UsersService updates:
+- Added secure local profile image storage in uploads/profile-images.
+- Added file validation for profile images:
+  - allowed MIME types: image/png, image/jpeg, image/jpg, image/webp
+  - max size: 3 MB
+- Added filename sanitization and safe extension derivation.
+- Added public URL resolution for stored profile images.
+- Added image read/stream support for serving saved profile images.
+- Updated user-returning service methods to expose resolved profile image URLs instead of raw stored refs:
+  - findById
+  - getProfileSummary
+  - updateProfile
+  - assignTenant
+- New/updated backend helper functions in UsersService:
+  - toPublicUser
+  - resolveProfileImageUrl
+  - uploadProfileImage
+  - readProfileImage
+  - storeProfileImage
+  - readLocalProfileImageRef
+  - validateUploadedProfileImage
+  - sanitizeFileName
+  - extensionFromMime
+  - contentTypeFromExtension
+
+2. Users controller updates:
+- Added authenticated multipart upload endpoint:
+  - PATCH /api/users/profile-image
+- Uses FileInterceptor(file) with 3 MB limit.
+- Rejects missing files.
+
+3. New public users controller:
+- Added public image streaming endpoint:
+  - GET /api/users/:id/profile-image
+- Returns correct headers:
+  - Content-Type
+  - Content-Disposition: inline
+  - Cache-Control
+
+4. Users module updates:
+- Registered UsersPublicController.
+
+5. Instructor service/module updates:
+- Instructor private and public profile responses now resolve stored profile images into public URLs through UsersService.
+- InstructorModule now imports UsersModule to support that dependency.
+
+Frontend changes:
+1. Profile page settings flow updated:
+- Replaced profile image URL-only input with real file upload UI.
+- Added local preview of selected image before upload.
+- Added Upload button and Clear selection button.
+- Kept profile text settings save separate from image upload.
+- On successful image upload:
+  - auth store session updates immediately
+  - profile-related queries are invalidated and refreshed
+
+2. UX behavior:
+- Instructor and student profile pages can now show real uploaded avatars using backend-served URLs.
+- Public instructor profile also shows the uploaded image.
+
+Files changed:
+- apps/backend/src/modules/users/services/users.service.ts
+- apps/backend/src/modules/users/controllers/users.controller.ts
+- apps/backend/src/modules/users/controllers/users-public.controller.ts
+- apps/backend/src/modules/users/users.module.ts
+- apps/backend/src/modules/instructor/services/instructor.service.ts
+- apps/backend/src/modules/instructor/instructor.module.ts
+- apps/frontend/src/app/profile/page.tsx
+
+New APIs/routes:
+- PATCH /api/users/profile-image
+- GET /api/users/:id/profile-image
+
+Schema/migration changes:
+- No Prisma migration or schema update required for this task.
+
+Validation and testing completed:
+- pnpm --filter @lms/backend build -> passed
+- pnpm --filter @lms/frontend lint -> passed
+- pnpm --filter @lms/frontend build -> passed
+- Live smoke test passed:
+  - registered instructor account
+  - uploaded PNG profile image successfully
+  - confirmed profile summary returns /users/:id/profile-image
+  - confirmed public instructor profile returns same image URL
+  - confirmed direct image fetch returns 200 with image/png content type

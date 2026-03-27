@@ -1,0 +1,130 @@
+﻿Task completed: Real course thumbnail upload and display support for the TikTok-inspired course/profile surfaces.
+
+Prisma models added/modified:
+- Modified Course model:
+  - added thumbnailImage (mapped as thumbnail_image)
+- No new Prisma models were added in this task.
+
+Backend changes:
+1. CoursesService updates:
+- Added secure local course thumbnail storage in uploads/course-thumbnails.
+- Added thumbnail validation:
+  - allowed MIME types: image/png, image/jpeg, image/jpg, image/webp
+  - max size: 4 MB
+- Added thumbnail persistence and read helpers.
+- Added resolved public thumbnail URL support so API responses expose usable image paths instead of raw local refs.
+- Added new/updated backend helper functions in CoursesService:
+  - uploadThumbnail
+  - readThumbnail
+  - resolveCourseThumbnailUrl
+  - toPublicCourse
+  - storeThumbnail
+  - readLocalThumbnailRef
+  - validateUploadedThumbnail
+  - sanitizeFileName
+  - extensionFromMime
+  - contentTypeFromExtension
+- Updated course-returning APIs to expose resolved thumbnail URLs in:
+  - getAllByTenant
+  - getOne
+  - getContinueLearning
+
+2. Courses controller updates:
+- Added authenticated multipart upload endpoint:
+  - PATCH /api/courses/:id/thumbnail
+- Uses FileInterceptor(file) with 4 MB limit.
+- Rejects missing files.
+
+3. Added public thumbnail streaming route:
+- GET /api/courses/:id/thumbnail
+- Returns correct headers:
+  - Content-Type
+  - Content-Disposition: inline
+  - Cache-Control
+
+4. Courses module updates:
+- Registered public thumbnail controller route alongside the guarded courses controller.
+
+5. Instructor service updates:
+- Public instructor profile course objects now include thumbnailImage URLs for published courses.
+- Existing public profile course cards can now render real images.
+
+Frontend changes:
+1. Profile/UI cards:
+- Updated reusable profile course card to support imageUrl.
+- When a course thumbnail exists, the card renders the image.
+- When no thumbnail exists, the gradient fallback remains in place.
+
+2. Public instructor profile:
+- Published course cards now render uploaded thumbnails.
+
+3. Private instructor profile:
+- Instructor courses tab now renders uploaded thumbnails.
+
+4. Student profile:
+- My Courses cards now render uploaded thumbnails.
+
+5. Student dashboard:
+- Course explorer cards now render uploaded thumbnails.
+- Continue Learning card now renders the course thumbnail when available.
+
+6. Course discovery page:
+- Browse Courses cards now render thumbnail previews.
+
+7. Course details page:
+- Added large course hero thumbnail at the top when a thumbnail exists.
+
+8. Instructor course manager page:
+- Manage Courses list now shows thumbnail previews.
+
+9. Course builder page:
+- Added real thumbnail upload UI in the builder:
+  - live preview
+  - file chooser
+  - Upload thumbnail button
+  - Clear selection button
+  - upload success/error messages
+- This gives instructors a practical place to manage the visual card image for each course.
+
+Files changed:
+- apps/backend/prisma/schema.prisma
+- apps/backend/src/modules/courses/services/courses.service.ts
+- apps/backend/src/modules/courses/controllers/courses.controller.ts
+- apps/backend/src/modules/courses/courses.module.ts
+- apps/backend/src/modules/instructor/services/instructor.service.ts
+- apps/frontend/src/components/profile/course-card.tsx
+- apps/frontend/src/app/profile/_components/profile-types.ts
+- apps/frontend/src/app/profile/_components/instructor-profile-view.tsx
+- apps/frontend/src/app/profile/_components/student-profile-view.tsx
+- apps/frontend/src/app/instructors/[id]/page.tsx
+- apps/frontend/src/app/courses/page.tsx
+- apps/frontend/src/app/courses/[id]/page.tsx
+- apps/frontend/src/app/instructor/courses/page.tsx
+- apps/frontend/src/app/instructor/courses/[id]/builder/page.tsx
+- apps/frontend/src/app/dashboard/_components/dashboard-types.ts
+- apps/frontend/src/app/dashboard/_components/student-dashboard-section.tsx
+
+New APIs/routes:
+- PATCH /api/courses/:id/thumbnail
+- GET /api/courses/:id/thumbnail
+
+Schema/migration changes:
+- Prisma schema updated with Course.thumbnailImage.
+- Database synced with prisma db push --accept-data-loss.
+- Prisma client regenerated successfully with PRISMA_GENERATE_NO_ENGINE=1 after a Windows engine file lock blocked the default generate path.
+
+Validation and testing completed:
+- pnpm --filter @lms/backend exec prisma validate -> passed
+- pnpm --filter @lms/backend exec prisma db push --accept-data-loss -> passed
+- pnpm --filter @lms/backend exec prisma generate with PRISMA_GENERATE_NO_ENGINE=1 -> passed
+- pnpm --filter @lms/backend test -> passed
+- pnpm --filter @lms/backend build -> passed
+- pnpm --filter @lms/frontend lint -> passed
+- pnpm --filter @lms/frontend build -> passed
+- Live smoke tests passed:
+  - created instructor account
+  - created course
+  - uploaded PNG thumbnail successfully
+  - confirmed course details returns /courses/:id/thumbnail
+  - confirmed direct thumbnail fetch returns 200 with image/png
+  - confirmed published public instructor profile returns the same thumbnail URL for the course

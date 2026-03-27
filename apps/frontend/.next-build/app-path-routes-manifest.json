@@ -1,0 +1,20 @@
+{
+  "/_not-found/page": "/_not-found",
+  "/admin/change-password/page": "/admin/change-password",
+  "/admin/page": "/admin",
+  "/certificate-verification/[certificateNumber]/page": "/certificate-verification/[certificateNumber]",
+  "/certificates/[id]/page": "/certificates/[id]",
+  "/courses/page": "/courses",
+  "/courses/[id]/page": "/courses/[id]",
+  "/dashboard/page": "/dashboard",
+  "/instructor/courses/[id]/builder/page": "/instructor/courses/[id]/builder",
+  "/instructors/[id]/page": "/instructors/[id]",
+  "/instructor/courses/page": "/instructor/courses",
+  "/page": "/",
+  "/join-tenant/page": "/join-tenant",
+  "/login/page": "/login",
+  "/my-courses/page": "/my-courses",
+  "/profile/page": "/profile",
+  "/register/page": "/register",
+  "/subscription/page": "/subscription"
+}

@@ -1,0 +1,57 @@
+﻿Task summary: Roadmap execution pass 2 (backend tests and dashboard component extraction)
+
+Prisma models added/modified:
+- No Prisma models were added or modified in this pass.
+- No schema fields, relations, enums, indexes, or constraints changed.
+
+New functions, APIs, or routes:
+- No new API routes were added.
+- Added backend test runner script `apps/backend/test/run-specs.cjs` to load TypeScript spec files through Node's built-in test runner with `ts-node/register`.
+- Added backend test helper `apps/backend/src/test/mock-utils.ts` with `createAsyncMock(...)` for service-level unit tests.
+- Added backend unit tests:
+  - `apps/backend/src/modules/auth/services/auth.service.spec.ts`
+    - verifies student registration with invite code creates the student, joins the instructor, and signs JWT payload correctly.
+  - `apps/backend/src/modules/student-instructors/services/student-instructors.service.spec.ts`
+    - verifies duplicate student-instructor join is rejected.
+  - `apps/backend/src/modules/courses/services/courses.service.spec.ts`
+    - verifies student course access is blocked when the instructor is not followed.
+  - `apps/backend/src/modules/enrollments/services/enrollments.service.spec.ts`
+    - verifies paid course enrollment is blocked without approved payment.
+  - `apps/backend/src/modules/payment-methods/services/payment-methods.service.spec.ts`
+    - verifies duplicate active payment accounts are rejected for the same instructor and method type.
+- Updated backend package script in `apps/backend/package.json`:
+  - added `test` script using Node test runner.
+
+Frontend component and structure changes:
+- Added dashboard component types file:
+  - `apps/frontend/src/app/dashboard/_components/dashboard-types.ts`
+- Extracted instructor dashboard UI into:
+  - `apps/frontend/src/app/dashboard/_components/instructor-dashboard-section.tsx`
+- Extracted student dashboard UI into:
+  - `apps/frontend/src/app/dashboard/_components/student-dashboard-section.tsx`
+- Refactored `apps/frontend/src/app/dashboard/page.tsx` to keep page-level state/query orchestration only and delegate role-specific rendering to the new components.
+
+Behavior and logic changes:
+- Backend testing coverage now protects the most critical business rules introduced by the multi-instructor and payment-method work.
+- Frontend dashboard structure is now more maintainable:
+  - page-level data fetching remains in `dashboard/page.tsx`
+  - instructor-specific UI/actions are isolated in `InstructorDashboardSection`
+  - student-specific UI/actions are isolated in `StudentDashboardSection`
+- No API behavior or database behavior was changed in this pass; this was coverage and structure work.
+
+Migrations or schema changes:
+- None in this pass.
+- No Prisma migration or db push was required.
+
+Validation executed:
+- `pnpm --filter @lms/backend test` passed.
+- `pnpm --filter @lms/backend lint` passed.
+- `pnpm --filter @lms/backend build` passed.
+- `pnpm --filter @lms/frontend lint` passed.
+- `pnpm --filter @lms/frontend build` passed.
+
+Notes:
+- This pass completes two roadmap items:
+  - backend test coverage for the highest-risk completed business rules
+  - splitting the oversized dashboard into role-specific components
+- Remaining roadmap work is primarily the broader middleware/route-guard cleanup plus later UX/product improvements.

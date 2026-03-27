@@ -1,0 +1,72 @@
+﻿Task Summary: TikTok-Inspired Profile Redesign
+
+Prisma models added/modified:
+- Modified User model:
+  - added bio (String?)
+  - added profileImage (String?, mapped to profile_image)
+  - added courseReviews relation
+- Modified Course model:
+  - added reviews relation
+- Added CourseReview model:
+  - id
+  - courseId
+  - studentId
+  - instructorId
+  - rating
+  - comment
+  - createdAt
+  - updatedAt
+  - unique constraint on [courseId, studentId]
+  - indexes on courseId, studentId, instructorId
+
+Backend functions, APIs, and routes added/modified:
+- Users module:
+  - profile selection now returns bio and profileImage
+  - PATCH /api/users/profile now supports updating fullName, bio, and profileImage
+  - added GET /api/users/profile-summary for role-aware profile header/stat data
+- Instructor module:
+  - added GET /api/instructor/profile for private instructor profile summary
+  - added GET /api/instructor/analytics for instructor analytics cards and sales-per-course
+  - added GET /api/instructor/public/:id for public instructor profile data
+  - added GET /api/instructor/public/:id/reviews for public instructor reviews list
+  - existing GET /api/instructor/stats now uses the new private profile summary logic
+- Reviews module:
+  - added POST /api/reviews/courses/:courseId for student review create/update
+  - added GET /api/reviews/courses/:courseId/mine for student’s own course review
+  - added enrolled-student validation for review submission
+- App module:
+  - registered ReviewsModule
+
+Frontend implementation added/modified:
+- Added reusable profile UI system:
+  - profile shell
+  - profile header
+  - profile tabs
+  - profile course card
+  - shared profile support helpers
+  - shared profile icons
+- Rebuilt private /profile page to support:
+  - instructor creator-style profile/dashboard tabs
+  - student learning-focused profile tabs
+  - in-page settings form for name, bio, profile image URL
+- Added new public instructor route:
+  - /instructors/[id]
+  - public courses tab
+  - public reviews tab
+- Added instructor/student profile subcomponents for cleaner structure
+- Updated dashboard student instructor cards to link into the new public instructor profile route
+- Updated auth store typing to include bio/profileImage in session user shape
+
+Schema changes / database changes:
+- Prisma schema updated with new profile fields and CourseReview model
+- Applied with prisma db push --accept-data-loss
+- Prisma client regenerated
+
+Validation status:
+- Prisma validate: passed
+- Prisma db push: passed
+- Prisma generate: passed
+- Backend test: passed
+- Backend build: passed
+- Frontend TypeScript lint: passed
+- Frontend production build: currently blocked by the already-running Next dev server holding a broken .next state after cleanup/build attempts; this is an environment/runtime process conflict rather than a TypeScript schema error in the new profile code

@@ -1,0 +1,58 @@
+﻿Task summary: Roadmap execution pass 3 (middleware and route-guard cleanup)
+
+Prisma models added/modified:
+- No Prisma models were added or modified in this pass.
+- No schema fields, relations, enums, indexes, or constraints changed.
+
+New functions, APIs, or routes:
+- No backend or frontend API routes were added.
+- Added frontend auth token utility in `apps/frontend/src/lib/auth/token.ts`:
+  - `decodeAuthToken(token)` decodes JWT payload client/middleware-side for route policy decisions.
+- Added reusable client auth hook in `apps/frontend/src/hooks/use-require-auth.ts`:
+  - centralizes hydration-aware auth checks
+  - supports optional role restrictions
+  - redirects unauthenticated users to `/login`
+  - redirects authenticated users with wrong role to `/dashboard`
+
+Behavior and logic changes:
+- Middleware cleanup in `apps/frontend/src/middleware.ts`:
+  - kept public-auth redirect behavior for `/login` and `/register`
+  - kept auth-required protection for protected routes
+  - added lightweight JWT role decoding from cookie
+  - added route-level role enforcement:
+    - `/instructor/*` -> INSTRUCTOR only
+    - `/my-courses` -> STUDENT only
+    - `/join-tenant` -> STUDENT only
+  - continues to avoid legacy student tenant-based blocking
+- Page-level auth guard cleanup:
+  - `apps/frontend/src/app/dashboard/page.tsx`
+    - now uses `useRequireAuth()` instead of its own login redirect effect
+  - `apps/frontend/src/app/profile/page.tsx`
+    - now uses `useRequireAuth()`
+  - `apps/frontend/src/app/my-courses/page.tsx`
+    - now uses `useRequireAuth({ roles: [STUDENT] })`
+    - removed redundant local role-gate UI branch that should now be handled centrally
+  - `apps/frontend/src/app/join-tenant/page.tsx`
+    - now uses `useRequireAuth({ roles: [STUDENT] })`
+  - `apps/frontend/src/app/instructor/courses/page.tsx`
+    - now uses `useRequireAuth({ roles: [INSTRUCTOR] })`
+    - removed inline fallback screen for wrong role
+  - `apps/frontend/src/app/instructor/courses/[id]/builder/page.tsx`
+    - now uses `useRequireAuth({ roles: [INSTRUCTOR] })`
+    - removed inline fallback screen for wrong role
+- Overall effect:
+  - route access policy is now more centralized and consistent
+  - less duplicated `router.replace(/login)` logic across pages
+  - client pages still keep page-specific data gating, but auth/role routing is standardized
+
+Migrations or schema changes:
+- None in this pass.
+- No Prisma migration or db push was required.
+
+Validation executed:
+- `pnpm --filter @lms/frontend lint` passed.
+- `pnpm --filter @lms/frontend build` passed.
+
+Notes:
+- This pass completes the middleware / route-guard cleanup item from the roadmap.
+- Remaining roadmap work is now mostly the later product/UI improvements rather than auth-flow correctness issues.

@@ -1,0 +1,160 @@
+{
+  "version": 3,
+  "pages404": true,
+  "caseSensitive": false,
+  "basePath": "",
+  "redirects": [
+    {
+      "source": "/:path+/",
+      "destination": "/:path+",
+      "internal": true,
+      "statusCode": 308,
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
+    }
+  ],
+  "headers": [],
+  "rewrites": {
+    "beforeFiles": [],
+    "afterFiles": [],
+    "fallback": []
+  },
+  "dynamicRoutes": [
+    {
+      "page": "/certificate-verification/[certificateNumber]",
+      "regex": "^/certificate\\-verification/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPcertificateNumber": "nxtPcertificateNumber"
+      },
+      "namedRegex": "^/certificate\\-verification/(?<nxtPcertificateNumber>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/certificates/[id]",
+      "regex": "^/certificates/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/certificates/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/courses/[id]",
+      "regex": "^/courses/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/courses/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/instructor/courses/[id]/builder",
+      "regex": "^/instructor/courses/([^/]+?)/builder(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/instructor/courses/(?<nxtPid>[^/]+?)/builder(?:/)?$"
+    },
+    {
+      "page": "/instructors/[id]",
+      "regex": "^/instructors/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/instructors/(?<nxtPid>[^/]+?)(?:/)?$"
+    }
+  ],
+  "staticRoutes": [
+    {
+      "page": "/",
+      "regex": "^/(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/(?:/)?$"
+    },
+    {
+      "page": "/_not-found",
+      "regex": "^/_not\\-found(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/admin",
+      "regex": "^/admin(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin(?:/)?$"
+    },
+    {
+      "page": "/admin/change-password",
+      "regex": "^/admin/change\\-password(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/change\\-password(?:/)?$"
+    },
+    {
+      "page": "/courses",
+      "regex": "^/courses(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/courses(?:/)?$"
+    },
+    {
+      "page": "/dashboard",
+      "regex": "^/dashboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard(?:/)?$"
+    },
+    {
+      "page": "/instructor/courses",
+      "regex": "^/instructor/courses(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/instructor/courses(?:/)?$"
+    },
+    {
+      "page": "/join-tenant",
+      "regex": "^/join\\-tenant(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/join\\-tenant(?:/)?$"
+    },
+    {
+      "page": "/login",
+      "regex": "^/login(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/login(?:/)?$"
+    },
+    {
+      "page": "/my-courses",
+      "regex": "^/my\\-courses(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/my\\-courses(?:/)?$"
+    },
+    {
+      "page": "/profile",
+      "regex": "^/profile(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/profile(?:/)?$"
+    },
+    {
+      "page": "/register",
+      "regex": "^/register(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/register(?:/)?$"
+    },
+    {
+      "page": "/subscription",
+      "regex": "^/subscription(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/subscription(?:/)?$"
+    }
+  ],
+  "dataRoutes": [],
+  "rsc": {
+    "header": "rsc",
+    "varyHeader": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+    "prefetchHeader": "next-router-prefetch",
+    "didPostponeHeader": "x-nextjs-postponed",
+    "contentTypeHeader": "text/x-component",
+    "suffix": ".rsc",
+    "prefetchSuffix": ".prefetch.rsc",
+    "prefetchSegmentHeader": "next-router-segment-prefetch",
+    "prefetchSegmentSuffix": ".segment.rsc",
+    "prefetchSegmentDirSuffix": ".segments"
+  },
+  "rewriteHeaders": {
+    "pathHeader": "x-nextjs-rewritten-path",
+    "queryHeader": "x-nextjs-rewritten-query"
+  }
+}

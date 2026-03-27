@@ -1,0 +1,49 @@
+﻿Authentication Repair Summary
+
+Prisma models added/modified:
+- No Prisma schema changes were required for this fix.
+
+Backend functions, APIs, and routes added/updated:
+- Updated `LoginDto` in `apps/backend/src/modules/auth/dto/login.dto.ts`:
+  - removed `MinLength(8)` from login validation so legacy accounts with shorter passwords can still authenticate.
+- Updated `UsersService` in `apps/backend/src/modules/users/services/users.service.ts`:
+  - added centralized email normalization (`trim().toLowerCase()`)
+  - `findAuthUserByEmail` now looks up normalized email
+  - `create` now stores normalized email consistently
+- Updated `AuthService` in `apps/backend/src/modules/auth/services/auth.service.ts`:
+  - registration now normalizes email before creating users
+  - login now normalizes email before auth lookup
+  - instructor organization name is trimmed before tenant creation
+  - student invite code is normalized to uppercase before relation creation
+- No route shape changes were needed; existing auth routes remain:
+  - `POST /api/auth/login`
+  - `POST /api/auth/register`
+  - `GET /api/auth/me`
+
+Frontend changes:
+- Updated `apps/frontend/src/app/login/page.tsx`:
+  - sends normalized email (`trim().toLowerCase()`)
+  - surfaces real backend error messages instead of always showing the generic login failure string
+- Updated `apps/frontend/src/app/register/page.tsx`:
+  - sends normalized email
+  - trims full name and organization name
+  - uppercases and trims invite code
+  - surfaces real backend error messages instead of always showing the generic registration failure string
+
+Tests added/modified:
+- Updated `apps/backend/src/modules/auth/services/auth.service.spec.ts`:
+  - added test verifying login accepts a legacy short password and normalizes email before lookup
+  - updated student registration invite-code expectation to uppercase normalization
+
+Migrations or schema changes:
+- None.
+
+Validation completed:
+- `pnpm --filter @lms/backend test` passed
+- `pnpm --filter @lms/backend build` passed
+- `pnpm --filter @lms/frontend lint` passed
+- `pnpm --filter @lms/frontend build` passed
+
+Likely root cause addressed:
+- The login endpoint was incorrectly rejecting some existing accounts before password verification because login validation enforced a minimum password length. That is appropriate for registration, but not for login. This would block legacy accounts created before the current password policy.
+- Email normalization is now consistent across frontend and backend, reducing failures caused by case or surrounding whitespace.
