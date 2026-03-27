@@ -1,6 +1,8 @@
 node_modules
 .pnpm-store
 .next
+.next-dev
+.next-build
 dist
 coverage
 .env
@@ -8,4 +10,11 @@ coverage
 !.env.example
 *.log
 apps/backend/prisma/migrations
-
+uploads
+apps/backend/uploads
+project_backups
+*.zip
+*.tsbuildinfo
+.turbo
+.DS_Store
+Thumbs.db
