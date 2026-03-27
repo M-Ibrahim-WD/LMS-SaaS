@@ -19,7 +19,7 @@ if (Test-Path $stagingDir) {
 }
 New-Item -ItemType Directory -Path $stagingDir -Force | Out-Null
 
-robocopy $projectPath $stagingDir /E /XD project_backups node_modules .next dist .git /R:1 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null
+robocopy $projectPath $stagingDir /E /XD project_backups node_modules .next .next-dev .next-build dist .git uploads /R:1 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null
 
 if (Test-Path $backupFile) {
     Remove-Item $backupFile -Force

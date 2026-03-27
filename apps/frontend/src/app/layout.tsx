@@ -4,7 +4,12 @@ import { AppProviders } from "../providers/app-providers";
 
 export const metadata: Metadata = {
   title: "LMS SaaS",
-  description: "Multi-tenant LMS platform"
+  description: "Multi-tenant LMS platform",
+  icons: {
+    icon: [{ url: "/favicon.webp", type: "image/webp" }],
+    shortcut: [{ url: "/favicon.webp", type: "image/webp" }],
+    apple: [{ url: "/favicon.webp", type: "image/webp" }]
+  }
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -16,4 +21,3 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
-
