@@ -1,13 +1,21 @@
-"use client";
+﻿"use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { apiFetch } from "../../../lib/api/client";
 import { useAuthStore } from "../../../store/auth.store";
 import { BackButton } from "../../../components/back-button";
 import { VideoPlayer } from "../../../components/video-player";
+import {
+  EmptyState,
+  PillButton,
+  StatPill,
+  WorkspacePanel,
+  WorkspaceShell
+} from "../../../components/course-workspace";
+import { StatusBanner } from "../../../components/status-banner";
 import { type PaymentMethodType } from "../../../lib/payments/payment-methods";
 
 interface Lesson {
@@ -24,6 +32,13 @@ interface Section {
   title: string;
   order: number;
   lessons: Lesson[];
+}
+
+interface CourseProgress {
+  totalLessons: number;
+  completedLessons: number;
+  percentage: number;
+  isComplete: boolean;
 }
 
 interface CourseDetails {
@@ -67,13 +82,6 @@ interface CourseListItem {
     lastLessonId: string | null;
     nextLessonId?: string | null;
   } | null;
-}
-
-interface CourseProgress {
-  totalLessons: number;
-  completedLessons: number;
-  percentage: number;
-  isComplete: boolean;
 }
 
 interface EnrollmentItem {
@@ -205,6 +213,10 @@ type MergedLearningState =
       } | null;
     };
 
+function formatDate(value: string) {
+  return new Date(value).toLocaleString();
+}
+
 export default function CourseDetailsPage() {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
   const params = useParams<{ id: string }>();
@@ -221,6 +233,9 @@ export default function CourseDetailsPage() {
   const [assignmentDrafts, setAssignmentDrafts] = useState<Record<string, string>>({});
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
+  const [quizFormErrors, setQuizFormErrors] = useState<Record<string, string>>({});
+  const [assignmentFormErrors, setAssignmentFormErrors] = useState<Record<string, string>>({});
+  const [activeLessonId, setActiveLessonId] = useState<string | null>(null);
 
   const isInstructor = user?.role === "INSTRUCTOR";
   const isStudent = user?.role === "STUDENT";
@@ -473,6 +488,7 @@ export default function CourseDetailsPage() {
   const courseProgress = courseQuery.data?.progress ?? enrolledCourse?.progress ?? selectedCourse?.progress ?? null;
   const learningState =
     courseQuery.data?.learningState ?? enrolledCourse?.learningState ?? selectedCourse?.learningState ?? null;
+
   const hasNextLessonId = (
     state: MergedLearningState | null
   ): state is Extract<MergedLearningState, { nextLessonId?: string | null }> =>
@@ -481,12 +497,35 @@ export default function CourseDetailsPage() {
     state: MergedLearningState | null
   ): state is Extract<MergedLearningState, { nextLesson?: { id: string; title: string; order: number } | null }> =>
     state !== null && "nextLesson" in state;
+
   let nextLessonId: string | null = null;
   if (hasNextLessonId(learningState)) {
     nextLessonId = learningState.nextLessonId ?? null;
   } else if (hasNextLesson(learningState)) {
     nextLessonId = learningState.nextLesson?.id ?? null;
   }
+
+  const allLessons = useMemo(
+    () => courseQuery.data?.sections.flatMap((section) => section.lessons.map((lesson) => ({ ...lesson, sectionId: section.id, sectionTitle: section.title }))) ?? [],
+    [courseQuery.data?.sections]
+  );
+
+  useEffect(() => {
+    if (!allLessons.length) {
+      setActiveLessonId(null);
+      return;
+    }
+
+    const preferred = learningState?.lastLessonId ?? nextLessonId ?? allLessons[0]?.id ?? null;
+    if (!activeLessonId || !allLessons.some((lesson) => lesson.id === activeLessonId)) {
+      setActiveLessonId(preferred);
+    }
+  }, [activeLessonId, allLessons, learningState?.lastLessonId, nextLessonId]);
+
+  const activeLesson = allLessons.find((lesson) => lesson.id === activeLessonId) ?? allLessons[0] ?? null;
+  const activeLessonIndex = activeLesson ? allLessons.findIndex((lesson) => lesson.id === activeLesson.id) : -1;
+  const previousLesson = activeLessonIndex > 0 ? allLessons[activeLessonIndex - 1] : null;
+  const upcomingLesson = activeLessonIndex >= 0 && activeLessonIndex < allLessons.length - 1 ? allLessons[activeLessonIndex + 1] : null;
 
   function setQuizAnswer(quizId: string, questionIndex: number, value: string) {
     setQuizAnswers((current) => {
@@ -497,26 +536,36 @@ export default function CourseDetailsPage() {
         [quizId]: next
       };
     });
+    setQuizFormErrors((current) => ({ ...current, [quizId]: "" }));
+  }
+
+  async function onSelectLesson(lessonId: string) {
+    setActiveLessonId(lessonId);
+    if (isStudent && canAccessLessons && !trackLessonViewMutation.isPending) {
+      await trackLessonViewMutation.mutateAsync(lessonId);
+    }
   }
 
   async function onSubmitQuiz(quizId: string, questionCount: number) {
     const answers = quizAnswers[quizId] ?? [];
     if (answers.length !== questionCount || answers.some((answer) => !answer)) {
-      window.alert("Answer all quiz questions before submitting.");
+      setQuizFormErrors((current) => ({ ...current, [quizId]: "Answer every question before submitting." }));
       return;
     }
 
     await submitQuizMutation.mutateAsync({ quizId, answers });
+    setQuizFormErrors((current) => ({ ...current, [quizId]: "" }));
   }
 
   async function onSubmitAssignment(assignmentId: string) {
     const content = assignmentDrafts[assignmentId]?.trim() ?? "";
     if (!content) {
-      window.alert("Assignment response is required.");
+      setAssignmentFormErrors((current) => ({ ...current, [assignmentId]: "Assignment response is required." }));
       return;
     }
 
     await submitAssignmentMutation.mutateAsync({ assignmentId, content });
+    setAssignmentFormErrors((current) => ({ ...current, [assignmentId]: "" }));
   }
 
   function onProofChange(file: File | null) {
@@ -546,14 +595,6 @@ export default function CourseDetailsPage() {
     }
 
     await submitPaymentMutation.mutateAsync();
-  }
-
-  async function onViewLesson(lessonId: string) {
-    if (!isStudent || !canAccessLessons || trackLessonViewMutation.isPending) {
-      return;
-    }
-
-    await trackLessonViewMutation.mutateAsync(lessonId);
   }
 
   async function onSubmitReview(event: FormEvent<HTMLFormElement>) {
@@ -588,84 +629,101 @@ export default function CourseDetailsPage() {
     }
   }, [myReviewQuery.data]);
 
+  if (!selectedCourse) {
+    return (
+      <main className="mx-auto max-w-6xl p-8">
+        <BackButton fallbackHref="/courses" />
+        <StatusBanner>Loading course...</StatusBanner>
+      </main>
+    );
+  }
+
   return (
-    <main className="mx-auto max-w-4xl p-8">
+    <main className="mx-auto max-w-[1700px] p-6 lg:p-8">
       <BackButton fallbackHref="/courses" />
-      {selectedCourse ? (
-        <>
-          {selectedCourse.thumbnailImage ? (
-            <div className="mb-6 overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={selectedCourse.thumbnailImage}
-                alt={`${selectedCourse.title} thumbnail`}
-                className="h-56 w-full object-cover md:h-72"
-              />
-            </div>
-          ) : null}
-          <h1 className="text-2xl font-semibold">{selectedCourse.title}</h1>
-          <p className="mt-2 text-slate-700">{selectedCourse.description}</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {selectedCourse.category ? (
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700">
-                {selectedCourse.category}
-              </span>
+
+      <div className="mt-4 rounded-[32px] border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
+          <div className="h-full min-h-[280px] overflow-hidden bg-gradient-to-br from-sky-500 via-cyan-500 to-emerald-400">
+            {selectedCourse.thumbnailImage ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={selectedCourse.thumbnailImage} alt={`${selectedCourse.title} thumbnail`} className="h-full w-full object-cover" />
             ) : null}
-            <span className="rounded-full bg-sky-100 px-3 py-1 text-xs text-sky-700">
-              {selectedCourse.level.toLowerCase()}
-            </span>
           </div>
-          {selectedCourse.instructor ? (
-            <p className="mt-1 text-sm text-slate-500">Instructor: {selectedCourse.instructor.fullName}</p>
-          ) : null}
-          <p className="mt-1 text-sm text-slate-500">
-            {selectedCourse.isPaid
-              ? `Paid Course - ${selectedCourse.price?.toFixed(2) ?? "0.00"}`
-              : "Free Course"}
-          </p>
+          <div className="p-6 lg:p-8">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-emerald-700">Learning workspace</p>
+                <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">{selectedCourse.title}</h1>
+                <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">{selectedCourse.description}</p>
+              </div>
+              <span className={`rounded-full px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] ${selectedCourse.isPaid ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}`}>
+                {selectedCourse.isPaid ? `Paid ${selectedCourse.price?.toFixed(2) ?? "0.00"}` : "Free"}
+              </span>
+            </div>
+            <div className="mt-5 flex flex-wrap gap-2 text-xs text-slate-500">
+              {selectedCourse.category ? <span className="rounded-full bg-slate-100 px-3 py-1">{selectedCourse.category}</span> : null}
+              <span className="rounded-full bg-slate-100 px-3 py-1">{selectedCourse.level.toLowerCase()}</span>
+              {selectedCourse.instructor ? <span className="rounded-full bg-slate-100 px-3 py-1">Instructor: {selectedCourse.instructor.fullName}</span> : null}
+            </div>
+            {isStudent && courseProgress ? (
+              <div className="mt-6 grid gap-3 md:grid-cols-3">
+                <StatPill label="Progress" value={`${courseProgress.percentage}%`} tone="info" />
+                <StatPill label="Lessons" value={`${courseProgress.completedLessons}/${courseProgress.totalLessons}`} tone="default" />
+                <StatPill label="Next step" value={nextLessonId ? "Resume lesson" : "Assessments / finish"} tone="success" />
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </div>
 
-          {isStudent && !isEnrolled ? (
-            <div className="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-              {!selectedCourse.isPaid ? (
-                <>
-                  <p className="text-sm text-slate-700">This is a free course. You can enroll directly.</p>
-                  <button
-                    type="button"
-                    onClick={() => enrollMutation.mutate()}
-                    disabled={enrollMutation.isPending}
-                    className="mt-4 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-                  >
-                    {enrollMutation.isPending ? "Enrolling..." : "Enroll"}
-                  </button>
-                  {enrollMutation.isError ? (
-                    <p className="mt-3 text-sm text-red-600">Enrollment failed. Please try again.</p>
-                  ) : null}
-                </>
-              ) : (
-                <>
-                  <p className="text-sm font-medium text-slate-700">You need to complete payment to access this course</p>
-                  <p className="mt-1 text-sm text-slate-600">
-                    Course price: {selectedCourse.price?.toFixed(2) ?? "0.00"}.
-                  </p>
+      {isStudent && !isEnrolled ? (
+        <div className="mt-6 rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+          {!selectedCourse.isPaid ? (
+            <>
+              <h2 className="text-xl font-semibold text-slate-950">Join this course</h2>
+              <p className="mt-2 text-sm text-slate-600">This is a free course, so you can enroll and begin learning immediately.</p>
+              <button
+                type="button"
+                onClick={() => enrollMutation.mutate()}
+                disabled={enrollMutation.isPending}
+                className="mt-5 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-medium text-white disabled:opacity-60"
+              >
+                {enrollMutation.isPending ? "Enrolling..." : "Enroll now"}
+              </button>
+              {enrollMutation.isError ? <p className="mt-3 text-sm text-red-600">Enrollment failed. Please try again.</p> : null}
+            </>
+          ) : (
+            <>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold text-slate-950">Complete payment to unlock the course</h2>
+                  <p className="mt-2 text-sm text-slate-600">Choose a manual payment method, upload proof, and wait for approval.</p>
+                </div>
+                <StatPill label="Price" value={selectedCourse.price?.toFixed(2) ?? "0.00"} tone="warning" />
+              </div>
 
-                  <div className="mt-4 space-y-2">
-                    <p className="text-xs uppercase tracking-wide text-slate-500">Available Manual Methods</p>
+              <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Available payment methods</p>
+                  <div className="mt-3 space-y-3">
                     {manualMethods.length ? (
                       manualMethods.map((method) => (
-                        <div key={method.id} className="rounded border border-slate-200 p-3 text-sm">
-                          <p className="font-medium">{method.label}</p>
-                          <p className="text-slate-600">{method.type}</p>
-                          <p className="mt-1 text-slate-700">{method.details}</p>
+                        <div key={method.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm">
+                          <p className="font-semibold text-slate-900">{method.label}</p>
+                          <p className="mt-1 text-slate-500">{method.type}</p>
+                          <p className="mt-2 text-slate-700">{method.details}</p>
                         </div>
                       ))
                     ) : (
-                      <p className="text-sm text-slate-600">No manual payment methods are configured yet.</p>
+                      <EmptyState title="No payment methods yet" description="The instructor still needs to configure at least one manual payment method." />
                     )}
                   </div>
-
-                  <form onSubmit={onSubmitPayment} className="mt-4 space-y-3">
+                </div>
+                <WorkspacePanel title="Payment proof" description="Upload a screenshot or file showing the completed payment.">
+                  <form onSubmit={onSubmitPayment} className="space-y-4">
                     <select
-                      className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+                      className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm"
                       value={selectedMethodId}
                       onChange={(event) => setSelectedMethodId(event.target.value)}
                       required
@@ -677,468 +735,313 @@ export default function CourseDetailsPage() {
                         </option>
                       ))}
                     </select>
-
-                    <label className="block text-sm text-slate-700">
-                      Upload proof screenshot
-                      <input
-                        className="mt-1 block w-full text-sm"
-                        type="file"
-                        accept="image/*,.pdf,.txt,.zip,application/octet-stream"
-                        onChange={(event) => {
-                          onProofChange(event.target.files?.[0] ?? null);
-                        }}
-                        required
-                      />
+                    <label className="grid gap-2 text-sm text-slate-700">
+                      <span className="font-medium text-slate-900">Proof file</span>
+                      <input type="file" accept="image/*,.pdf,.txt,.zip,application/octet-stream" onChange={(event) => onProofChange(event.target.files?.[0] ?? null)} required className="block w-full text-sm" />
                     </label>
                     {shouldShowProofStatus ? (
-                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-medium text-slate-800">{proofFileName}</p>
                             <p className="mt-1 text-xs text-slate-600">{proofStatusMessage}</p>
                           </div>
                           {proofUploadState === "failed" ? (
-                            <button
-                              type="button"
-                              onClick={() => void onRetryUpload()}
-                              disabled={!proofFile || !selectedMethodId || submitPaymentMutation.isPending}
-                              className="shrink-0 rounded border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 disabled:opacity-60"
-                            >
-                              Retry upload
-                            </button>
+                            <PillButton onClick={() => void onRetryUpload()} disabled={!proofFile || !selectedMethodId || submitPaymentMutation.isPending}>Retry</PillButton>
                           ) : null}
                         </div>
-                        <div className="mt-3 h-2 w-full overflow-hidden rounded bg-slate-200">
-                          <div
-                            className={`h-full transition-all ${progressBarTone}`}
-                            style={{ width: `${progressValue}%` }}
-                          />
+                        <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-200">
+                          <div className={`h-full transition-all ${progressBarTone}`} style={{ width: `${progressValue}%` }} />
                         </div>
                       </div>
                     ) : null}
-
                     <button
                       type="submit"
-                      disabled={
-                        submitPaymentMutation.isPending ||
-                        !selectedMethodId ||
-                        !proofFile ||
-                        manualMethods.length === 0
-                      }
-                      className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+                      disabled={submitPaymentMutation.isPending || !selectedMethodId || !proofFile || manualMethods.length === 0}
+                      className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-medium text-white disabled:opacity-60"
                     >
-                      {submitPaymentMutation.isPending ? "Submitting..." : "Buy Course"}
+                      {submitPaymentMutation.isPending ? "Submitting..." : "Submit payment proof"}
                     </button>
-
-                    {submitPaymentMutation.isError && proofUploadState !== "failed" ? (
-                      <p className="text-sm text-red-600">{paymentErrorMessage ?? "Payment submission failed."}</p>
-                    ) : null}
-                    {submitPaymentMutation.isSuccess ? (
-                      <p className="text-sm text-emerald-700">
-                        Payment proof submitted. Wait for instructor approval.
-                      </p>
-                    ) : null}
+                    {submitPaymentMutation.isSuccess ? <p className="text-sm text-emerald-700">Payment proof submitted. Wait for instructor approval.</p> : null}
+                    {latestPayment ? <p className="text-sm text-slate-600">Latest payment status: <span className="font-semibold">{latestPayment.status}</span></p> : null}
                   </form>
+                </WorkspacePanel>
+              </div>
+            </>
+          )}
+        </div>
+      ) : null}
 
-                  {latestPayment ? (
-                    <p className="mt-3 text-sm text-slate-700">
-                      Latest payment status: <span className="font-medium">{latestPayment.status}</span>
-                    </p>
-                  ) : null}
-                </>
-              )}
-            </div>
-          ) : null}
-
-          {canAccessLessons ? (
-            <div className="mt-6 space-y-4">
-              {isStudent && courseProgress ? (
-                <div className="rounded-xl border border-slate-200 bg-white p-5 shadow">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">Course progress</p>
-                      <p className="text-sm text-slate-600">
-                        {courseProgress.completedLessons} of {courseProgress.totalLessons} lessons completed
-                      </p>
-                      {nextLessonId ? (
-                        <p className="mt-2 text-xs text-slate-500">Resume from the next highlighted lesson below.</p>
-                      ) : null}
+      {canAccessLessons ? (
+        <div className="mt-6">
+          <WorkspaceShell
+            sidebar={
+              <WorkspacePanel title="Course navigation" description="Move through the course like a real learning workspace.">
+                <div className="space-y-4">
+                  {courseQuery.data?.sections.map((section) => (
+                    <div key={section.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-3">
+                      <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Section {section.order}</p>
+                      <p className="mt-1 text-sm font-semibold text-slate-900">{section.title}</p>
+                      <div className="mt-3 space-y-2">
+                        {section.lessons.map((lesson) => {
+                          const isCurrent = activeLesson?.id === lesson.id;
+                          const isNext = nextLessonId === lesson.id;
+                          return (
+                            <button
+                              key={lesson.id}
+                              type="button"
+                              onClick={() => void onSelectLesson(lesson.id)}
+                              className={`w-full rounded-2xl border px-3 py-3 text-left transition ${
+                                isCurrent
+                                  ? "border-slate-950 bg-slate-950 text-white"
+                                  : isNext
+                                    ? "border-emerald-300 bg-emerald-50 text-emerald-900"
+                                    : lesson.isCompleted
+                                      ? "border-slate-200 bg-white text-slate-800"
+                                      : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between gap-3">
+                                <div>
+                                  <p className="text-sm font-medium">{lesson.title}</p>
+                                  <p className="mt-1 text-[11px] uppercase tracking-[0.2em] opacity-70">{lesson.type}</p>
+                                </div>
+                                <div className="text-right text-[11px] uppercase tracking-[0.2em] opacity-70">
+                                  {lesson.isCompleted ? "Done" : isNext ? "Next" : lesson.order}
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                    <div className="text-sm text-slate-700 sm:text-right">
-                      <p className="font-medium">{courseProgress.percentage}% complete</p>
-                      {learningState?.lastLessonId ? (
-                        <p className="mt-1 text-xs text-slate-500">Current lesson tracked</p>
-                      ) : null}
-                    </div>
-                  </div>
-                  <div className="mt-3 h-3 w-full overflow-hidden rounded-full bg-slate-200">
-                    <div
-                      className="h-full rounded-full bg-sky-600 transition-all"
-                      style={{ width: `${courseProgress.percentage}%` }}
-                    />
-                  </div>
+                  ))}
                 </div>
-              ) : null}
-              {isStudent && completionStatusQuery.data ? (
-                <div className="rounded-xl border border-slate-200 bg-white p-5 shadow">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">Completion status</p>
-                      <p className="mt-1 text-sm text-slate-600">
-                        Certificate unlocks after lessons, quizzes, and assignments are all completed.
-                      </p>
+              </WorkspacePanel>
+            }
+            main={
+              <>
+                {isStudent && courseProgress ? (
+                  <WorkspacePanel title="Progress header" description="See exactly what’s done, what’s next, and how close you are to the certificate.">
+                    <div className="grid gap-3 md:grid-cols-4">
+                      <StatPill label="Progress" value={`${courseProgress.percentage}%`} tone="info" />
+                      <StatPill label="Lessons" value={`${courseProgress.completedLessons}/${courseProgress.totalLessons}`} tone="default" />
+                      <StatPill label="Current" value={activeLesson?.title ?? "No lesson selected"} tone="warning" />
+                      <StatPill label="Next" value={upcomingLesson?.title ?? "Assessments / finish"} tone="success" />
+                    </div>
+                    {nextLessonId ? (
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <PillButton onClick={() => void onSelectLesson(nextLessonId)}>Continue learning</PillButton>
+                      </div>
+                    ) : null}
+                  </WorkspacePanel>
+                ) : null}
+
+                {activeLesson ? (
+                  <WorkspacePanel title={activeLesson.title} description={`Section: ${activeLesson.sectionTitle}`}>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-700">{activeLesson.type}</span>
+                      {activeLesson.isCompleted ? <span className="rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-800">Completed</span> : null}
+                      {learningState?.lastLessonId === activeLesson.id ? <span className="rounded-full bg-sky-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-sky-800">Current</span> : null}
+                    </div>
+                    <div className="mt-5 rounded-[28px] border border-slate-200 bg-slate-50 p-5">
+                      {activeLesson.type === "VIDEO" ? (
+                        <VideoPlayer title={activeLesson.title} url={activeLesson.content} />
+                      ) : (
+                        <div className="whitespace-pre-wrap text-sm leading-7 text-slate-700">{activeLesson.content}</div>
+                      )}
+                    </div>
+                    <div className="mt-5 flex flex-wrap gap-2">
+                      {previousLesson ? <PillButton onClick={() => void onSelectLesson(previousLesson.id)}>Previous lesson</PillButton> : null}
+                      {upcomingLesson ? <PillButton onClick={() => void onSelectLesson(upcomingLesson.id)}>Next lesson</PillButton> : null}
+                      {isStudent ? <PillButton onClick={() => completeLessonMutation.mutate(activeLesson.id)} disabled={Boolean(activeLesson.isCompleted) || completeLessonMutation.isPending}>{activeLesson.isCompleted ? "Completed" : completeLessonMutation.isPending ? "Saving..." : "Mark complete"}</PillButton> : null}
+                    </div>
+                  </WorkspacePanel>
+                ) : (
+                  <WorkspacePanel title="No lesson selected" description="Choose a lesson from the navigation to start learning.">
+                    <EmptyState title="Nothing to show yet" description="Once the course has lessons, the active lesson will appear here with progress actions." />
+                  </WorkspacePanel>
+                )}
+
+                <WorkspacePanel title="Quizzes" description="Assess understanding with structured submissions and visible result states.">
+                  <div className="space-y-4">
+                    {assessmentsQuery.data?.quizzes.length ? (
+                      assessmentsQuery.data.quizzes.map((quiz) => (
+                        <div key={quiz.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                              <p className="text-lg font-semibold text-slate-950">{quiz.title}</p>
+                              {quiz.description ? <p className="mt-2 text-sm text-slate-600">{quiz.description}</p> : null}
+                            </div>
+                            {quiz.submission ? <span className="rounded-full bg-emerald-100 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-800">Submitted</span> : null}
+                          </div>
+                          <div className="mt-4 space-y-3">
+                            {quiz.questions.map((question, index) => (
+                              <div key={question.id} className="rounded-2xl border border-slate-200 bg-white p-4">
+                                <p className="text-sm font-semibold text-slate-900">{question.order}. {question.question}</p>
+                                <div className="mt-3 space-y-2">
+                                  {question.options.map((option) => (
+                                    <label key={option} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700">
+                                      <input
+                                        type="radio"
+                                        name={`${quiz.id}-${question.id}`}
+                                        value={option}
+                                        checked={(quizAnswers[quiz.id] ?? quiz.submission?.answers ?? [])[index] === option}
+                                        onChange={(event) => setQuizAnswer(quiz.id, index, event.target.value)}
+                                        disabled={Boolean(quiz.submission)}
+                                      />
+                                      {option}
+                                    </label>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          {quiz.submission ? (
+                            <p className="mt-4 text-sm font-medium text-emerald-700">Submitted. Score: {quiz.submission.score}/{quiz.submission.totalQuestions}</p>
+                          ) : isStudent ? (
+                            <div className="mt-4 flex flex-wrap items-center gap-3">
+                              <PillButton onClick={() => void onSubmitQuiz(quiz.id, quiz.questions.length)} disabled={submitQuizMutation.isPending}>{submitQuizMutation.isPending ? "Submitting..." : "Submit quiz"}</PillButton>
+                              {quizFormErrors[quiz.id] ? <p className="text-sm text-red-600">{quizFormErrors[quiz.id]}</p> : null}
+                            </div>
+                          ) : null}
+                        </div>
+                      ))
+                    ) : (
+                      <EmptyState title="No quizzes yet" description="When the instructor adds quizzes, they’ll appear here in the course flow." />
+                    )}
+                  </div>
+                </WorkspacePanel>
+
+                <WorkspacePanel title="Assignments" description="Submit work, check review state, and see feedback without losing context.">
+                  <div className="space-y-4">
+                    {assessmentsQuery.data?.assignments.length ? (
+                      assessmentsQuery.data.assignments.map((assignment) => (
+                        <div key={assignment.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                          <p className="text-lg font-semibold text-slate-950">{assignment.title}</p>
+                          {assignment.description ? <p className="mt-2 text-sm text-slate-600">{assignment.description}</p> : null}
+                          {assignment.instructions ? <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">{assignment.instructions}</p> : null}
+                          {isStudent ? (
+                            <>
+                              <textarea
+                                className="mt-4 min-h-32 w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm"
+                                placeholder="Write your assignment response"
+                                value={assignmentDrafts[assignment.id] ?? assignment.submission?.content ?? ""}
+                                onChange={(event) => {
+                                  setAssignmentDrafts((current) => ({ ...current, [assignment.id]: event.target.value }));
+                                  setAssignmentFormErrors((current) => ({ ...current, [assignment.id]: "" }));
+                                }}
+                              />
+                              <div className="mt-3 flex flex-wrap items-center gap-3">
+                                <PillButton onClick={() => void onSubmitAssignment(assignment.id)} disabled={submitAssignmentMutation.isPending}>
+                                  {assignment.submission ? submitAssignmentMutation.isPending ? "Updating..." : "Update submission" : submitAssignmentMutation.isPending ? "Submitting..." : "Submit assignment"}
+                                </PillButton>
+                                {assignmentFormErrors[assignment.id] ? <p className="text-sm text-red-600">{assignmentFormErrors[assignment.id]}</p> : null}
+                              </div>
+                              {assignment.submission ? (
+                                <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 text-sm">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${assignment.submission.status === "REVIEWED" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>
+                                      {assignment.submission.status === "REVIEWED" ? "Reviewed" : "Pending review"}
+                                    </span>
+                                    <span className="text-xs text-slate-500">Updated {formatDate(assignment.submission.updatedAt)}</span>
+                                  </div>
+                                  {assignment.submission.score !== null && assignment.submission.score !== undefined ? <p className="mt-3 text-slate-700">Score: {assignment.submission.score}</p> : null}
+                                  {assignment.submission.feedback ? <p className="mt-2 text-slate-700">Feedback: {assignment.submission.feedback}</p> : null}
+                                </div>
+                              ) : null}
+                            </>
+                          ) : null}
+                        </div>
+                      ))
+                    ) : (
+                      <EmptyState title="No assignments yet" description="Assignments will appear here as soon as the instructor adds them to the course." />
+                    )}
+                  </div>
+                </WorkspacePanel>
+              </>
+            }
+            utility={
+              <>
+                {isStudent && completionStatusQuery.data ? (
+                  <WorkspacePanel title="Completion status" description="Track what’s done and unlock the certificate at the right time.">
+                    <div className="grid gap-3">
+                      <StatPill label="Lessons" value={`${completionStatusQuery.data.lessons.completed}/${completionStatusQuery.data.lessons.total}`} tone={completionStatusQuery.data.lessons.done ? "success" : "default"} />
+                      <StatPill label="Quizzes" value={`${completionStatusQuery.data.quizzes.completed}/${completionStatusQuery.data.quizzes.total}`} tone={completionStatusQuery.data.quizzes.done ? "success" : "default"} />
+                      <StatPill label="Assignments" value={`${completionStatusQuery.data.assignments.completed}/${completionStatusQuery.data.assignments.total}`} tone={completionStatusQuery.data.assignments.done ? "success" : "default"} />
                     </div>
                     {completionStatusQuery.data.certificate ? (
-                      <div className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-                        Certificate issued
+                      <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                        <p className="text-sm font-semibold text-emerald-800">Certificate ready</p>
+                        <p className="mt-2 text-xs text-emerald-700">#{completionStatusQuery.data.certificate.certificateNumber}</p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Link href={`/certificates/${completionStatusQuery.data.certificate.id}`} className="rounded-full border border-emerald-300 px-3 py-2 text-xs font-medium text-emerald-800">Open certificate</Link>
+                          <Link href={`/certificate-verification/${completionStatusQuery.data.certificate.certificateNumber}`} className="rounded-full border border-emerald-300 px-3 py-2 text-xs font-medium text-emerald-800">Verify publicly</Link>
+                        </div>
                       </div>
-                    ) : null}
-                  </div>
-
-                  <div className="mt-4 grid gap-3 md:grid-cols-3">
-                    <div className="rounded-lg border border-slate-200 p-3">
-                      <p className="text-xs uppercase tracking-wide text-slate-500">Lessons</p>
-                      <p className="mt-2 text-sm text-slate-800">
-                        {completionStatusQuery.data.lessons.completed}/{completionStatusQuery.data.lessons.total}
-                      </p>
-                    </div>
-                    <div className="rounded-lg border border-slate-200 p-3">
-                      <p className="text-xs uppercase tracking-wide text-slate-500">Quizzes</p>
-                      <p className="mt-2 text-sm text-slate-800">
-                        {completionStatusQuery.data.quizzes.completed}/{completionStatusQuery.data.quizzes.total}
-                      </p>
-                    </div>
-                    <div className="rounded-lg border border-slate-200 p-3">
-                      <p className="text-xs uppercase tracking-wide text-slate-500">Assignments</p>
-                      <p className="mt-2 text-sm text-slate-800">
-                        {completionStatusQuery.data.assignments.completed}/{completionStatusQuery.data.assignments.total}
-                      </p>
-                    </div>
-                  </div>
-
-                  {completionStatusQuery.data.certificate ? (
-                    <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
-                      <p className="text-sm font-medium text-emerald-800">
-                        Certificate Number: {completionStatusQuery.data.certificate.certificateNumber}
-                      </p>
-                      <p className="mt-1 text-xs text-emerald-700">
-                        Issued {new Date(completionStatusQuery.data.certificate.issuedAt).toLocaleString()}
-                      </p>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <Link
-                          href={`/certificates/${completionStatusQuery.data.certificate.id}`}
-                          className="rounded border border-emerald-300 px-3 py-2 text-xs font-medium text-emerald-800"
-                        >
-                          Open certificate
-                        </Link>
-                        <Link
-                          href={`/certificate-verification/${completionStatusQuery.data.certificate.certificateNumber}`}
-                          className="rounded border border-emerald-300 px-3 py-2 text-xs font-medium text-emerald-800"
-                        >
-                          Public verification
-                        </Link>
+                    ) : (
+                      <div className="mt-4">
+                        <PillButton onClick={() => issueCertificateMutation.mutate()} disabled={!completionStatusQuery.data.isEligible || issueCertificateMutation.isPending}>
+                          {issueCertificateMutation.isPending ? "Issuing..." : "Issue certificate"}
+                        </PillButton>
+                        {!completionStatusQuery.data.isEligible ? <p className="mt-2 text-xs text-slate-500">Complete lessons, quizzes, and assignments first.</p> : null}
                       </div>
-                    </div>
-                  ) : (
-                    <div className="mt-4">
-                      <button
-                        type="button"
-                        onClick={() => issueCertificateMutation.mutate()}
-                        disabled={!completionStatusQuery.data.isEligible || issueCertificateMutation.isPending}
-                        className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-                      >
-                        {issueCertificateMutation.isPending ? "Issuing..." : "Issue Certificate"}
-                      </button>
-                      {!completionStatusQuery.data.isEligible ? (
-                        <p className="mt-2 text-xs text-slate-500">
-                          Complete every lesson and submit every quiz and assignment first.
-                        </p>
-                      ) : null}
-                    </div>
-                  )}
-                </div>
-              ) : null}
-              {isStudent ? (
-                <div className="rounded-xl border border-slate-200 bg-white p-5 shadow">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">Course review</p>
-                      <p className="mt-1 text-sm text-slate-600">
-                        Share a quick rating and comment. Your review will appear on the instructor profile.
-                      </p>
-                    </div>
-                    {myReviewQuery.data ? (
-                      <span className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-                        Review saved
-                      </span>
-                    ) : null}
-                  </div>
+                    )}
+                  </WorkspacePanel>
+                ) : null}
 
-                  <form onSubmit={(event) => void onSubmitReview(event)} className="mt-4 space-y-4">
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-slate-500">Rating</p>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {[1, 2, 3, 4, 5].map((value) => (
-                          <button
-                            key={value}
-                            type="button"
-                            onClick={() => setReviewRating(value)}
-                            className={`rounded-full px-3 py-2 text-sm font-medium transition ${
-                              reviewRating === value
-                                ? "bg-amber-100 text-amber-800"
-                                : "border border-slate-300 bg-white text-slate-600 hover:border-slate-400"
-                            }`}
-                          >
-                            {"★".repeat(value)}
-                          </button>
-                        ))}
+                {isStudent ? (
+                  <WorkspacePanel title="Course review" description="Leave a rating and comment after working through the course.">
+                    <form onSubmit={(event) => void onSubmitReview(event)} className="space-y-4">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Rating</p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {[1, 2, 3, 4, 5].map((value) => (
+                            <button
+                              key={value}
+                              type="button"
+                              onClick={() => setReviewRating(value)}
+                              className={`rounded-full px-3 py-2 text-sm font-medium transition ${
+                                reviewRating === value
+                                  ? "bg-amber-100 text-amber-800"
+                                  : "border border-slate-300 bg-white text-slate-600 hover:border-slate-400"
+                              }`}
+                            >
+                              {"?".repeat(value)}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-
-                    <label className="block">
-                      <span className="text-xs uppercase tracking-wide text-slate-500">Comment</span>
                       <textarea
-                        className="mt-2 min-h-28 w-full rounded border border-slate-300 px-3 py-2 text-sm"
+                        className="min-h-28 w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm"
                         placeholder="What stood out about this course?"
                         value={reviewComment}
                         onChange={(event) => setReviewComment(event.target.value)}
                       />
-                    </label>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <PillButton type="submit" disabled={submitReviewMutation.isPending}>
+                          {submitReviewMutation.isPending ? "Saving review..." : myReviewQuery.data ? "Update review" : "Submit review"}
+                        </PillButton>
+                        {submitReviewMutation.isSuccess ? <p className="text-sm text-emerald-700">Review saved successfully.</p> : null}
+                      </div>
+                    </form>
+                  </WorkspacePanel>
+                ) : null}
 
-                    <div className="flex flex-wrap items-center gap-3">
-                      <button
-                        type="submit"
-                        disabled={submitReviewMutation.isPending}
-                        className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-                      >
-                        {submitReviewMutation.isPending
-                          ? "Saving review..."
-                          : myReviewQuery.data
-                            ? "Update Review"
-                            : "Submit Review"}
-                      </button>
-                      {submitReviewMutation.isError ? (
-                        <p className="text-sm text-red-600">
-                          {(submitReviewMutation.error as Error).message}
-                        </p>
-                      ) : null}
-                      {submitReviewMutation.isSuccess ? (
-                        <p className="text-sm text-emerald-700">Review saved successfully.</p>
-                      ) : null}
+                {selectedCourse.instructor ? (
+                  <WorkspacePanel title="Instructor" description="Visit the instructor’s public profile and course storefront.">
+                    <p className="text-sm font-semibold text-slate-900">{selectedCourse.instructor.fullName}</p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Link href={`/instructors/${selectedCourse.instructor.id}`} className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">Open instructor profile</Link>
                     </div>
-                  </form>
-                </div>
-              ) : null}
-              {courseQuery.data?.sections.map((section) => (
-                <div key={section.id} className="rounded-xl bg-white p-5 shadow">
-                  <p className="font-medium">
-                    {section.order}. {section.title}
-                  </p>
-                  <div className="mt-3 space-y-2">
-                    {section.lessons.map((lesson) => {
-                      const isCurrentLesson = learningState?.lastLessonId === lesson.id;
-                      const isNextLesson = nextLessonId === lesson.id;
-
-                      return (
-                        <div
-                          key={lesson.id}
-                          id={`lesson-${lesson.id}`}
-                          className={`rounded border p-3 ${
-                            isCurrentLesson
-                              ? "border-sky-300 bg-sky-50"
-                              : isNextLesson
-                                ? "border-emerald-300 bg-emerald-50"
-                                : ""
-                          }`}
-                        >
-                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                            <div>
-                              <p className="font-medium">
-                                {lesson.order}. {lesson.title}
-                              </p>
-                              <p className="text-xs text-slate-500">Type: {lesson.type}</p>
-                              {isCurrentLesson ? (
-                                <p className="mt-2 text-xs font-medium text-sky-700">Current lesson</p>
-                              ) : null}
-                              {isNextLesson ? (
-                                <p className="mt-2 text-xs font-medium text-emerald-700">Next lesson to complete</p>
-                              ) : null}
-                            </div>
-                            {isStudent ? (
-                              <div className="flex flex-wrap gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => void onViewLesson(lesson.id)}
-                                  disabled={trackLessonViewMutation.isPending}
-                                  className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 disabled:opacity-60"
-                                >
-                                  Set as current
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => completeLessonMutation.mutate(lesson.id)}
-                                  disabled={Boolean(lesson.isCompleted) || completeLessonMutation.isPending}
-                                  className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
-                                >
-                                  {lesson.isCompleted ? "Completed" : completeLessonMutation.isPending ? "Saving..." : "Mark complete"}
-                                </button>
-                              </div>
-                            ) : null}
-                          </div>
-                          <div className="mt-3">
-                            {lesson.type === "VIDEO" ? (
-                              <VideoPlayer title={lesson.title} url={lesson.content} />
-                            ) : (
-                              <p className="text-sm text-slate-700">{lesson.content}</p>
-                            )}
-                          </div>
-                          {isStudent && lesson.isCompleted ? (
-                            <p className="mt-3 text-xs font-medium text-emerald-700">Lesson completed</p>
-                          ) : null}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-
-              <div className="rounded-xl bg-white p-5 shadow">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold">Quizzes</h2>
-                  <span className="text-sm text-slate-500">{assessmentsQuery.data?.quizzes.length ?? 0}</span>
-                </div>
-                <div className="mt-4 space-y-4">
-                  {assessmentsQuery.data?.quizzes.length ? (
-                    assessmentsQuery.data.quizzes.map((quiz) => (
-                      <div key={quiz.id} className="rounded-lg border border-slate-200 p-4">
-                        <p className="font-medium">{quiz.title}</p>
-                        {quiz.description ? <p className="mt-1 text-sm text-slate-600">{quiz.description}</p> : null}
-                        <div className="mt-4 space-y-3">
-                          {quiz.questions.map((question, index) => (
-                            <div key={question.id} className="rounded bg-slate-50 p-3">
-                              <p className="text-sm font-medium">
-                                {question.order}. {question.question}
-                              </p>
-                              <div className="mt-2 space-y-2">
-                                {question.options.map((option) => (
-                                  <label key={option} className="flex items-center gap-2 text-sm text-slate-700">
-                                    <input
-                                      type="radio"
-                                      name={`${quiz.id}-${question.id}`}
-                                      value={option}
-                                      checked={(quizAnswers[quiz.id] ?? quiz.submission?.answers ?? [])[index] === option}
-                                      onChange={(event) => setQuizAnswer(quiz.id, index, event.target.value)}
-                                      disabled={Boolean(quiz.submission)}
-                                    />
-                                    {option}
-                                  </label>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        {quiz.submission ? (
-                          <p className="mt-4 text-sm font-medium text-emerald-700">
-                            Submitted. Score: {quiz.submission.score}/{quiz.submission.totalQuestions}
-                          </p>
-                        ) : isStudent ? (
-                          <button
-                            type="button"
-                            onClick={() => void onSubmitQuiz(quiz.id, quiz.questions.length)}
-                            disabled={submitQuizMutation.isPending}
-                            className="mt-4 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-                          >
-                            {submitQuizMutation.isPending ? "Submitting..." : "Submit Quiz"}
-                          </button>
-                        ) : null}
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-slate-500">No quizzes for this course yet.</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="rounded-xl bg-white p-5 shadow">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold">Assignments</h2>
-                  <span className="text-sm text-slate-500">{assessmentsQuery.data?.assignments.length ?? 0}</span>
-                </div>
-                <div className="mt-4 space-y-4">
-                  {assessmentsQuery.data?.assignments.length ? (
-                    assessmentsQuery.data.assignments.map((assignment) => (
-                      <div key={assignment.id} className="rounded-lg border border-slate-200 p-4">
-                        <p className="font-medium">{assignment.title}</p>
-                        {assignment.description ? (
-                          <p className="mt-1 text-sm text-slate-600">{assignment.description}</p>
-                        ) : null}
-                        {assignment.instructions ? (
-                          <p className="mt-2 text-sm text-slate-700">{assignment.instructions}</p>
-                        ) : null}
-                        {isStudent ? (
-                          <>
-                            <textarea
-                              className="mt-4 min-h-28 w-full rounded border border-slate-300 px-3 py-2 text-sm"
-                              placeholder="Write your assignment response"
-                              value={assignmentDrafts[assignment.id] ?? assignment.submission?.content ?? ""}
-                              onChange={(event) =>
-                                setAssignmentDrafts((current) => ({
-                                  ...current,
-                                  [assignment.id]: event.target.value
-                                }))
-                              }
-                            />
-                            <button
-                              type="button"
-                              onClick={() => void onSubmitAssignment(assignment.id)}
-                              disabled={submitAssignmentMutation.isPending}
-                              className="mt-3 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-                            >
-                              {assignment.submission
-                                ? submitAssignmentMutation.isPending
-                                  ? "Updating..."
-                                  : "Update Submission"
-                                : submitAssignmentMutation.isPending
-                                  ? "Submitting..."
-                                  : "Submit Assignment"}
-                            </button>
-                            {assignment.submission ? (
-                              <div className="mt-3 rounded-lg bg-slate-50 p-3 text-sm">
-                                <p className="text-xs uppercase tracking-wide text-slate-500">Submission status</p>
-                                <p className="mt-2 font-medium text-slate-900">
-                                  {assignment.submission.status === "REVIEWED" ? "Reviewed" : "Pending review"}
-                                </p>
-                                <p className="mt-1 text-xs text-slate-500">
-                                  Last submitted: {new Date(assignment.submission.updatedAt).toLocaleString()}
-                                </p>
-                                {assignment.submission.score !== null && assignment.submission.score !== undefined ? (
-                                  <p className="mt-2 text-sm text-slate-700">Score: {assignment.submission.score}</p>
-                                ) : null}
-                                {assignment.submission.feedback ? (
-                                  <p className="mt-2 text-sm text-slate-700">Feedback: {assignment.submission.feedback}</p>
-                                ) : null}
-                                {assignment.submission.reviewedAt ? (
-                                  <p className="mt-1 text-xs text-slate-500">
-                                    Reviewed: {new Date(assignment.submission.reviewedAt).toLocaleString()}
-                                  </p>
-                                ) : null}
-                              </div>
-                            ) : null}
-                          </>
-                        ) : null}
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-slate-500">No assignments for this course yet.</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          ) : null}
-        </>
-      ) : (
-        <p>Loading...</p>
-      )}
+                  </WorkspacePanel>
+                ) : null}
+              </>
+            }
+          />
+        </div>
+      ) : null}
     </main>
   );
 }
+

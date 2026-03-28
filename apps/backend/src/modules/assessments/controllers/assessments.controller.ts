@@ -11,6 +11,8 @@ import { CreateQuizDto } from "../dto/create-quiz.dto";
 import { ReviewAssignmentSubmissionDto } from "../dto/review-assignment-submission.dto";
 import { SubmitAssignmentDto } from "../dto/submit-assignment.dto";
 import { SubmitQuizDto } from "../dto/submit-quiz.dto";
+import { UpdateAssignmentDto } from "../dto/update-assignment.dto";
+import { UpdateQuizDto } from "../dto/update-quiz.dto";
 import { AssessmentsService } from "../services/assessments.service";
 
 @Controller("assessments")
@@ -31,9 +33,37 @@ export class AssessmentsController {
   }
 
   @Roles("INSTRUCTOR")
+  @Patch("quizzes/:quizId")
+  updateQuiz(@CurrentUser() user: JwtPayload, @Param("quizId") quizId: string, @Body() dto: UpdateQuizDto) {
+    return this.assessmentsService.updateQuiz(user, quizId, dto);
+  }
+
+  @Roles("INSTRUCTOR")
+  @Patch("assignments/:assignmentId")
+  updateAssignment(
+    @CurrentUser() user: JwtPayload,
+    @Param("assignmentId") assignmentId: string,
+    @Body() dto: UpdateAssignmentDto
+  ) {
+    return this.assessmentsService.updateAssignment(user, assignmentId, dto);
+  }
+
+  @Roles("INSTRUCTOR")
   @Post("assignments")
   createAssignment(@CurrentUser() user: JwtPayload, @Body() dto: CreateAssignmentDto) {
     return this.assessmentsService.createAssignment(user, dto);
+  }
+
+  @Roles("INSTRUCTOR")
+  @Patch("assignments/:assignmentId/delete")
+  removeAssignment(@CurrentUser() user: JwtPayload, @Param("assignmentId") assignmentId: string) {
+    return this.assessmentsService.removeAssignment(user, assignmentId);
+  }
+
+  @Roles("INSTRUCTOR")
+  @Patch("quizzes/:quizId/delete")
+  removeQuiz(@CurrentUser() user: JwtPayload, @Param("quizId") quizId: string) {
+    return this.assessmentsService.removeQuiz(user, quizId);
   }
 
   @Roles("INSTRUCTOR")

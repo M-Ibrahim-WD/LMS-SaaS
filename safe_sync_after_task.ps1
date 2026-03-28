@@ -16,9 +16,17 @@ $frontendPath = Join-Path $projectPath "apps\frontend"
 $logFolder = Join-Path $projectPath "project_backups"
 $timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
 $logFile = Join-Path $logFolder "sync_$timestamp.log"
+$nodePath = "C:\Program Files\nodejs"
+$corepackCmd = Join-Path $nodePath "corepack.cmd"
+$pnpmCmd = Join-Path $nodePath "pnpm.cmd"
+$corepackHome = Join-Path $projectPath ".corepack-cache"
 
 if (!(Test-Path $logFolder)) {
     New-Item -ItemType Directory -Path $logFolder -Force | Out-Null
+}
+
+if (!(Test-Path $corepackHome)) {
+    New-Item -ItemType Directory -Path $corepackHome -Force | Out-Null
 }
 
 function Write-Log {
@@ -58,7 +66,8 @@ function Invoke-FrontendBuildValidation {
             Remove-Item $validationDistDir -Recurse -Force -ErrorAction SilentlyContinue
         }
 
-        corepack pnpm exec next build
+        $command = "`$env:PATH='$nodePath;' + `$env:PATH; `$env:COREPACK_HOME='$corepackHome'; `$env:NEXT_DIST_DIR='$validationDistDir'; Set-Location '$frontendPath'; & '$corepackCmd' pnpm exec next build"
+        powershell -NoProfile -Command $command
         if ($LASTEXITCODE -ne 0) {
             throw "Frontend build failed."
         }
@@ -83,6 +92,24 @@ function Invoke-FrontendBuildValidation {
 
         Set-Location $projectPath
     }
+}
+
+function Invoke-Pnpm {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]]$Arguments
+    )
+
+    $escapedArguments = $Arguments | ForEach-Object {
+        if ($_ -match '\s') {
+            "'$_'"
+        } else {
+            $_
+        }
+    }
+    $argumentString = [string]::Join(" ", $escapedArguments)
+    $command = "`$env:PATH='$nodePath;' + `$env:PATH; `$env:COREPACK_HOME='$corepackHome'; & '$corepackCmd' $argumentString"
+    powershell -NoProfile -Command $command
 }
 
 function Get-GhCommand {
@@ -115,14 +142,14 @@ Invoke-Step "Backup and summary" {
 }
 
 Invoke-Step "Frontend lint" {
-    corepack pnpm --filter @lms/frontend lint
+    Invoke-Pnpm -Arguments @("pnpm", "--filter", "@lms/frontend", "lint")
     if ($LASTEXITCODE -ne 0) {
         throw "Frontend lint failed."
     }
 }
 
 Invoke-Step "Backend build" {
-    corepack pnpm --filter @lms/backend build
+    Invoke-Pnpm -Arguments @("pnpm", "--filter", "@lms/backend", "build")
     if ($LASTEXITCODE -ne 0) {
         throw "Backend build failed."
     }
@@ -130,7 +157,7 @@ Invoke-Step "Backend build" {
 
 if (-not $SkipBackendTests) {
     Invoke-Step "Backend tests" {
-        corepack pnpm --filter @lms/backend test
+        Invoke-Pnpm -Arguments @("pnpm", "--filter", "@lms/backend", "test")
         if ($LASTEXITCODE -ne 0) {
             throw "Backend tests failed."
         }

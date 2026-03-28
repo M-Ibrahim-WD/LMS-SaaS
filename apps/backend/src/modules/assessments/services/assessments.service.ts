@@ -19,6 +19,8 @@ import { CreateQuizDto } from "../dto/create-quiz.dto";
 import { ReviewAssignmentSubmissionDto } from "../dto/review-assignment-submission.dto";
 import { SubmitAssignmentDto } from "../dto/submit-assignment.dto";
 import { SubmitQuizDto } from "../dto/submit-quiz.dto";
+import { UpdateAssignmentDto } from "../dto/update-assignment.dto";
+import { UpdateQuizDto } from "../dto/update-quiz.dto";
 
 @Injectable()
 export class AssessmentsService {
@@ -253,6 +255,141 @@ export class AssessmentsService {
         instructions: dto.instructions?.trim() || null
       }
     });
+  }
+
+  async updateQuiz(user: JwtPayload, quizId: string, dto: UpdateQuizDto) {
+    await this.subscriptionsService.assertPermission(user, "canUseQuizzes");
+    const quiz = await this.prisma.quiz.findFirst({
+      where: {
+        id: quizId,
+        tenantId: user.tenantId ?? undefined,
+        instructorId: user.sub
+      },
+      select: {
+        id: true,
+        courseId: true,
+        tenantId: true
+      }
+    });
+
+    if (!quiz) {
+      throw new NotFoundException("Quiz not found");
+    }
+
+    const normalizedQuestions = dto.questions.map((question, index) => {
+      const options = question.options.map((option) => option.trim()).filter(Boolean);
+      const correctAnswer = question.correctAnswer.trim();
+
+      if (options.length < 2) {
+        throw new BadRequestException("Quiz questions must include at least two options");
+      }
+
+      if (!options.includes(correctAnswer)) {
+        throw new BadRequestException("Correct answer must match one of the provided options");
+      }
+
+      return {
+        question: question.question.trim(),
+        options,
+        correctAnswer,
+        type: QuizQuestionType.MULTIPLE_CHOICE,
+        order: index + 1
+      };
+    });
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.quizQuestion.deleteMany({
+        where: { quizId: quiz.id }
+      });
+
+      return tx.quiz.update({
+        where: { id: quiz.id },
+        data: {
+          title: dto.title.trim(),
+          description: dto.description?.trim() || null,
+          questions: {
+            create: normalizedQuestions.map((question) => ({
+              ...question,
+              options: question.options as Prisma.InputJsonValue
+            }))
+          }
+        },
+        include: {
+          questions: {
+            orderBy: { order: "asc" }
+          }
+        }
+      });
+    });
+  }
+
+  async removeQuiz(user: JwtPayload, quizId: string) {
+    await this.subscriptionsService.assertPermission(user, "canUseQuizzes");
+    const quiz = await this.prisma.quiz.findFirst({
+      where: {
+        id: quizId,
+        tenantId: user.tenantId ?? undefined,
+        instructorId: user.sub
+      },
+      select: { id: true }
+    });
+
+    if (!quiz) {
+      throw new NotFoundException("Quiz not found");
+    }
+
+    await this.prisma.quiz.delete({
+      where: { id: quiz.id }
+    });
+
+    return { deleted: true };
+  }
+
+  async updateAssignment(user: JwtPayload, assignmentId: string, dto: UpdateAssignmentDto) {
+    await this.subscriptionsService.assertPermission(user, "canUseAssignments");
+    const assignment = await this.prisma.assignment.findFirst({
+      where: {
+        id: assignmentId,
+        tenantId: user.tenantId ?? undefined,
+        instructorId: user.sub
+      },
+      select: { id: true }
+    });
+
+    if (!assignment) {
+      throw new NotFoundException("Assignment not found");
+    }
+
+    return this.prisma.assignment.update({
+      where: { id: assignment.id },
+      data: {
+        title: dto.title.trim(),
+        description: dto.description?.trim() || null,
+        instructions: dto.instructions?.trim() || null
+      }
+    });
+  }
+
+  async removeAssignment(user: JwtPayload, assignmentId: string) {
+    await this.subscriptionsService.assertPermission(user, "canUseAssignments");
+    const assignment = await this.prisma.assignment.findFirst({
+      where: {
+        id: assignmentId,
+        tenantId: user.tenantId ?? undefined,
+        instructorId: user.sub
+      },
+      select: { id: true }
+    });
+
+    if (!assignment) {
+      throw new NotFoundException("Assignment not found");
+    }
+
+    await this.prisma.assignment.delete({
+      where: { id: assignment.id }
+    });
+
+    return { deleted: true };
   }
 
   async submitQuiz(user: JwtPayload, quizId: string, dto: SubmitQuizDto) {

@@ -4,5 +4,17 @@
     "files": [
       "static/chunks/_app-pages-browser_node_modules_pnpm_next_15_5_13_react-dom_19_2_4_react_19_2_4__react_19_2_4-920e9d.js"
     ]
+  },
+  "..\\..\\..\\node_modules\\.pnpm\\next@15.5.13_react-dom@19.2.4_react@19.2.4__react@19.2.4\\node_modules\\next\\dist\\client\\index.js -> ../pages/_app": {
+    "id": "..\\..\\..\\node_modules\\.pnpm\\next@15.5.13_react-dom@19.2.4_react@19.2.4__react@19.2.4\\node_modules\\next\\dist\\client\\index.js -> ../pages/_app",
+    "files": [
+      "static/chunks/_pages-dir-browser_node_modules_pnpm_next_15_5_13_react-dom_19_2_4_react_19_2_4__react_19_2_4-1af662.js"
+    ]
+  },
+  "..\\..\\..\\node_modules\\.pnpm\\next@15.5.13_react-dom@19.2.4_react@19.2.4__react@19.2.4\\node_modules\\next\\dist\\client\\index.js -> ../pages/_error": {
+    "id": "..\\..\\..\\node_modules\\.pnpm\\next@15.5.13_react-dom@19.2.4_react@19.2.4__react@19.2.4\\node_modules\\next\\dist\\client\\index.js -> ../pages/_error",
+    "files": [
+      "static/chunks/_pages-dir-browser_node_modules_pnpm_next_15_5_13_react-dom_19_2_4_react_19_2_4__react_19_2_4-825e9e.js"
+    ]
   }
 }
