@@ -13,6 +13,7 @@ apps/backend/prisma/migrations
 uploads
 apps/backend/uploads
 project_backups
+.corepack-cache
 *.zip
 *.tsbuildinfo
 .turbo
