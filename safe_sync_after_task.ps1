@@ -61,14 +61,15 @@ function Invoke-FrontendBuildValidation {
 
     try {
         Set-Location $frontendPath
+        $env:PATH = "$nodePath;$env:PATH"
+        $env:COREPACK_HOME = $corepackHome
         $env:NEXT_DIST_DIR = $validationDistDir
         if (Test-Path $validationDistDir) {
             Remove-Item $validationDistDir -Recurse -Force -ErrorAction SilentlyContinue
         }
 
-        $command = "`$env:PATH='$nodePath;' + `$env:PATH; `$env:COREPACK_HOME='$corepackHome'; `$env:NEXT_DIST_DIR='$validationDistDir'; Set-Location '$frontendPath'; & '$corepackCmd' pnpm exec next build"
-        powershell -NoProfile -Command $command
-        if ($LASTEXITCODE -ne 0) {
+        $process = Start-Process -FilePath $corepackCmd -ArgumentList @("pnpm", "exec", "next", "build") -WorkingDirectory $frontendPath -NoNewWindow -Wait -PassThru
+        if ($process.ExitCode -ne 0) {
             throw "Frontend build failed."
         }
     } finally {
@@ -100,16 +101,10 @@ function Invoke-Pnpm {
         [string[]]$Arguments
     )
 
-    $escapedArguments = $Arguments | ForEach-Object {
-        if ($_ -match '\s') {
-            "'$_'"
-        } else {
-            $_
-        }
-    }
-    $argumentString = [string]::Join(" ", $escapedArguments)
-    $command = "`$env:PATH='$nodePath;' + `$env:PATH; `$env:COREPACK_HOME='$corepackHome'; & '$corepackCmd' $argumentString"
-    powershell -NoProfile -Command $command
+    $env:PATH = "$nodePath;$env:PATH"
+    $env:COREPACK_HOME = $corepackHome
+    $process = Start-Process -FilePath $corepackCmd -ArgumentList $Arguments -WorkingDirectory $projectPath -NoNewWindow -Wait -PassThru
+    $global:LASTEXITCODE = $process.ExitCode
 }
 
 function Get-GhCommand {
