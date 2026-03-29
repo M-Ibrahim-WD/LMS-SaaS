@@ -55,29 +55,29 @@ export function InstructorDashboardSection({
 }: InstructorDashboardSectionProps) {
   return (
     <div className="mt-4 space-y-4">
-      <div className="rounded-lg border border-slate-200 p-4">
-        <div className="mb-3 flex gap-2">
-          <Link href="/instructor/courses" className="rounded bg-slate-900 px-3 py-2 text-sm text-white">
+      <div className="rounded-[26px] border border-slate-200 bg-white/90 p-4 shadow-sm sm:p-5">
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row">
+          <Link href="/instructor/courses" className="inline-flex items-center justify-center rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white">
             Create & Manage Courses
           </Link>
-          <Link href="/courses" className="rounded border border-slate-300 px-3 py-2 text-sm">
+          <Link href="/courses" className="inline-flex items-center justify-center rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">
             View Courses
           </Link>
         </div>
         <p className="text-sm font-medium text-slate-600">Your Invite Code</p>
-        <div className="mt-2 flex items-center justify-between gap-3">
-          <code className="rounded bg-slate-100 px-3 py-2 text-sm">{inviteCode ?? "Loading..."}</code>
-          <button type="button" onClick={() => void onCopyInviteCode()} className="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+        <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <code className="overflow-x-auto rounded-2xl bg-slate-100 px-3 py-2 text-sm">{inviteCode ?? "Loading..."}</code>
+          <button type="button" onClick={() => void onCopyInviteCode()} className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium">
             Copy
           </button>
         </div>
       </div>
 
-      <div className="rounded-lg border border-slate-200 p-4">
+      <div className="rounded-[26px] border border-slate-200 bg-white/90 p-4 shadow-sm sm:p-5">
         <p className="text-sm font-semibold text-slate-700">Payment Methods</p>
         <form onSubmit={(event) => void onCreateMethod(event)} className="mt-3 space-y-3">
           <select
-            className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+            className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
             value={methodType}
             onChange={(event) => onMethodTypeChange(event.target.value as PaymentMethodType)}
           >
@@ -88,20 +88,20 @@ export function InstructorDashboardSection({
             ))}
           </select>
           <input
-            className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+            className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
             placeholder="Label (e.g. Vodafone Wallet)"
             value={methodLabel}
             onChange={(event) => onMethodLabelChange(event.target.value)}
             required
           />
           <textarea
-            className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+            className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
             placeholder={placeholderForPaymentType(methodType)}
             value={methodDetails}
             onChange={(event) => onMethodDetailsChange(event.target.value)}
           />
           {methodValidationError ? <p className="text-xs text-red-600">{methodValidationError}</p> : null}
-          <button type="submit" disabled={isCreatingMethod} className="rounded bg-slate-900 px-3 py-2 text-sm text-white disabled:opacity-60">
+          <button type="submit" disabled={isCreatingMethod} className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-medium text-white disabled:opacity-60">
             {isCreatingMethod ? "Saving..." : "Add Method"}
           </button>
         </form>
@@ -111,7 +111,7 @@ export function InstructorDashboardSection({
         <div className="mt-4 space-y-2">
           {paymentMethods?.length ? (
             paymentMethods.map((method) => (
-              <div key={method.id} className="flex items-start justify-between gap-3 rounded border border-slate-200 p-3 text-sm">
+              <div key={method.id} className="flex flex-col gap-3 rounded-2xl border border-slate-200 p-4 text-sm sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0 flex-1">
                   <p className="font-medium">{method.label}</p>
                   <p className="text-slate-600">{method.type} - {method.category}</p>
@@ -121,7 +121,7 @@ export function InstructorDashboardSection({
                   type="button"
                   onClick={() => void onDeleteMethod(method.id)}
                   disabled={isDeletingMethod}
-                  className="rounded border border-red-200 px-2 py-1 text-xs font-medium text-red-600 disabled:opacity-60"
+                  className="self-start rounded-full border border-red-200 px-3 py-1 text-xs font-medium text-red-600 disabled:opacity-60"
                   aria-label={`Delete ${method.label}`}
                 >
                   X
@@ -136,12 +136,12 @@ export function InstructorDashboardSection({
         </div>
       </div>
 
-      <div className="rounded-lg border border-slate-200 p-4">
+      <div className="rounded-[26px] border border-slate-200 bg-white/90 p-4 shadow-sm sm:p-5">
         <p className="text-sm font-semibold text-slate-700">Student Payments</p>
         <div className="mt-3 space-y-2">
           {instructorPayments?.length ? (
             instructorPayments.map((payment) => (
-              <div key={payment.id} className="rounded border border-slate-200 p-3 text-sm">
+              <div key={payment.id} className="rounded-2xl border border-slate-200 p-4 text-sm">
                 <p className="font-medium">{payment.course.title}</p>
                 <p className="text-slate-600">{payment.user.fullName} ({payment.user.email})</p>
                 <p className="text-slate-600">{payment.method.label} - {payment.method.type}</p>
@@ -153,11 +153,11 @@ export function InstructorDashboardSection({
                   proofFileName={payment.proofFileName}
                 />
                 {payment.status === "PENDING" ? (
-                  <div className="mt-2 flex gap-2">
-                    <button type="button" onClick={() => onApprovePayment(payment.id)} className="rounded border border-emerald-300 px-3 py-1 text-xs text-emerald-700">
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button type="button" onClick={() => onApprovePayment(payment.id)} className="rounded-full border border-emerald-300 px-4 py-2 text-xs font-medium text-emerald-700">
                       Approve
                     </button>
-                    <button type="button" onClick={() => onRejectPayment(payment.id)} className="rounded border border-red-300 px-3 py-1 text-xs text-red-700">
+                    <button type="button" onClick={() => onRejectPayment(payment.id)} className="rounded-full border border-red-300 px-4 py-2 text-xs font-medium text-red-700">
                       Reject
                     </button>
                   </div>

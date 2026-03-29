@@ -388,31 +388,31 @@ export default function DashboardPage() {
   }, [activeTab, filteredStudentCourses.length, searchQuery]);
 
   if (!hasHydrated) {
-    return <main className="p-8">Loading session...</main>;
+    return <main className="px-4 py-8 sm:px-6 lg:px-8">Loading session...</main>;
   }
 
   if (!accessToken) {
-    return <main className="p-8">Redirecting...</main>;
+    return <main className="px-4 py-8 sm:px-6 lg:px-8">Redirecting...</main>;
   }
 
   return (
-    <main className="mx-auto max-w-4xl p-8">
-      <div className="rounded-2xl bg-white p-6 shadow-md">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+    <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+      <div className="rounded-[30px] border border-slate-200/80 bg-white/90 p-4 shadow-sm backdrop-blur sm:p-6 lg:p-7">
+        <div className="flex flex-col gap-4 border-b border-slate-200 pb-5 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex flex-wrap items-center gap-3">
             <BackButton fallbackHref="/courses" />
-            <h1 className="text-2xl font-semibold">Dashboard</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">Dashboard</h1>
           </div>
-          <div className="flex items-center gap-2">
-            <Link href="/profile" className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700">
+          <div className="flex flex-wrap gap-2">
+            <Link href="/profile" className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm">
               Profile
             </Link>
             {profileQuery.data?.role === "ADMIN" ? (
-              <Link href="/admin" className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700">
+              <Link href="/admin" className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm">
                 Admin
               </Link>
             ) : null}
-            <button onClick={onLogout} className="rounded-lg bg-slate-900 px-4 py-2 text-white">
+            <button onClick={onLogout} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-sm">
               Logout
             </button>
           </div>
@@ -422,7 +422,7 @@ export default function DashboardPage() {
         {profileQuery.isError ? <p className="mt-4 text-red-600">Failed to load profile. Please login again.</p> : null}
 
         {profileQuery.data ? (
-          <div className="mt-6 space-y-2 text-slate-700">
+          <div className="mt-6 space-y-2 text-sm text-slate-700 sm:text-base">
             <p>
               <span className="font-medium">Name:</span> {profileQuery.data.fullName}
             </p>
@@ -437,8 +437,8 @@ export default function DashboardPage() {
               {profileQuery.data.tenant?.name ?? profileQuery.data.tenantId ?? "Not assigned"}
             </p>
 
-            <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <div className="flex items-center justify-between">
+            <div className="mt-6 rounded-[26px] border border-slate-200 bg-slate-50/90 p-4 shadow-sm sm:p-5">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm font-semibold text-slate-900">Notifications</p>
                   <p className="text-xs text-slate-500">

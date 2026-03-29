@@ -28,10 +28,9 @@ export function BackButton({
     <button
       type="button"
       onClick={onBack}
-      className={`rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50 ${className}`.trim()}
+      className={`inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 ${className}`.trim()}
     >
       {label}
     </button>
   );
 }
-

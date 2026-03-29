@@ -8,7 +8,7 @@ interface WorkspaceShellProps {
 
 export function WorkspaceShell({ sidebar, main, utility }: WorkspaceShellProps) {
   return (
-    <div className="grid gap-5 xl:grid-cols-[300px_minmax(0,1fr)_320px]">
+    <div className="grid gap-4 lg:gap-5 xl:grid-cols-[280px_minmax(0,1fr)_320px] 2xl:grid-cols-[300px_minmax(0,1fr)_340px]">
       <aside className="space-y-5">{sidebar}</aside>
       <section className="space-y-5">{main}</section>
       {utility ? <aside className="space-y-5">{utility}</aside> : null}
@@ -26,12 +26,12 @@ interface WorkspacePanelProps {
 
 export function WorkspacePanel({ title, description, actions, children, className = "" }: WorkspacePanelProps) {
   return (
-    <div className={`rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm ${className}`.trim()}>
+    <div className={`rounded-[28px] border border-slate-200 bg-white/95 p-4 shadow-sm backdrop-blur sm:p-5 ${className}`.trim()}>
       {title || description || actions ? (
         <div className="mb-4 flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             {title ? <h2 className="text-lg font-semibold tracking-tight text-slate-950">{title}</h2> : null}
-            {description ? <p className="mt-1 text-sm text-slate-600">{description}</p> : null}
+            {description ? <p className="mt-1 text-sm leading-6 text-slate-600">{description}</p> : null}
           </div>
           {actions ? <div className="flex flex-wrap gap-2">{actions}</div> : null}
         </div>
@@ -55,7 +55,7 @@ export function PillButton({ active = false, onClick, children, type = "button",
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+      className={`rounded-full px-4 py-2 text-sm font-medium shadow-sm transition ${
         active
           ? "bg-slate-950 text-white shadow-sm"
           : "border border-slate-300 bg-white text-slate-700 hover:border-slate-400"
@@ -74,9 +74,9 @@ interface EmptyStateProps {
 
 export function EmptyState({ title, description, action }: EmptyStateProps) {
   return (
-    <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50/80 p-6 text-center">
+    <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50/80 p-6 text-center sm:p-8">
       <p className="text-sm font-semibold text-slate-900">{title}</p>
-      <p className="mt-2 text-sm text-slate-600">{description}</p>
+      <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
       {action ? <div className="mt-4 flex justify-center">{action}</div> : null}
     </div>
   );

@@ -133,11 +133,11 @@ export function StudentDashboardSection({
 
   return (
     <div className="mt-4 space-y-4">
-      <div className="flex gap-2">
-        <Link href="/my-courses" className="rounded border border-slate-300 px-3 py-2 text-sm">
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Link href="/my-courses" className="inline-flex items-center justify-center rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">
           My Courses
         </Link>
-        <Link href="/courses" className="rounded bg-slate-900 px-3 py-2 text-sm text-white">
+        <Link href="/courses" className="inline-flex items-center justify-center rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white">
           Browse Courses
         </Link>
       </div>
@@ -170,7 +170,7 @@ export function StudentDashboardSection({
         </Link>
       ) : null}
 
-      <div className="rounded-lg border border-slate-200 p-4">
+        <div className="rounded-[26px] border border-slate-200 bg-white/90 p-4 shadow-sm sm:p-5">
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-sm font-semibold text-slate-700">My Instructors</p>
@@ -179,16 +179,16 @@ export function StudentDashboardSection({
           <button
             type="button"
             onClick={() => document.getElementById("student-invite-code")?.focus()}
-            className="rounded border border-slate-300 px-3 py-2 text-sm"
+            className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium"
           >
             Add Instructor
           </button>
         </div>
 
-        <form onSubmit={(event) => void onJoinInstructor(event)} className="mt-4 flex flex-col gap-3 sm:flex-row">
+        <form onSubmit={(event) => void onJoinInstructor(event)} className="mt-4 flex flex-col gap-3 md:flex-row">
           <input
             id="student-invite-code"
-            className="flex-1 rounded border border-slate-300 px-3 py-2 text-sm"
+            className="flex-1 rounded-2xl border border-slate-300 px-4 py-3 text-sm"
             placeholder="Enter invite code"
             value={studentInviteCode}
             onChange={(event) => {
@@ -201,7 +201,7 @@ export function StudentDashboardSection({
           <button
             type="submit"
             disabled={isJoiningInstructor}
-            className="rounded bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-60"
+            className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-medium text-white disabled:opacity-60"
           >
             {isJoiningInstructor ? "Adding..." : "Add Instructor"}
           </button>
@@ -305,7 +305,7 @@ export function StudentDashboardSection({
             <div className="space-y-6">
               {Object.entries(groupedCoursesByInstructor).map(([instructorName, courses]) => (
                 <section key={instructorName}>
-                  <div className="mb-3 flex items-center justify-between">
+              <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <h2 className="text-lg font-semibold text-slate-900">{instructorName}</h2>
                     <span className="text-xs uppercase tracking-wide text-slate-400">
                       {courses.length} course{courses.length === 1 ? "" : "s"}
