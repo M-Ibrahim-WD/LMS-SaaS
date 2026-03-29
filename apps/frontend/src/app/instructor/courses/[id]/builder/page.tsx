@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { apiFetch } from "../../../../../lib/api/client";
 import { BackButton } from "../../../../../components/back-button";
+import { ConfirmationModal } from "../../../../../components/confirmation-modal";
 import {
   EmptyState,
   PillButton,
@@ -14,6 +15,7 @@ import {
   WorkspaceShell
 } from "../../../../../components/course-workspace";
 import { StatusBanner } from "../../../../../components/status-banner";
+import { StatusChip } from "../../../../../components/status-chip";
 import { useRequireAuth } from "../../../../../hooks/use-require-auth";
 
 interface Lesson {
@@ -977,15 +979,40 @@ export default function CourseBuilderPage() {
       </WorkspacePanel>
     );
 
+  async function onConfirmDelete() {
+    if (!confirmDeleteKey) {
+      return;
+    }
+
+    const [entity, entityId] = confirmDeleteKey.split(":");
+    if (entity === "section") {
+      await deleteSection(entityId);
+    } else if (entity === "lesson") {
+      await deleteLesson(entityId);
+    } else if (entity === "quiz") {
+      await deleteQuiz(entityId);
+    } else if (entity === "assignment") {
+      await deleteAssignment(entityId);
+    }
+  }
+
   return (
     <main className="mx-auto max-w-[1700px] p-6 lg:p-8">
-      <div className="mb-6 flex flex-col gap-4 border-b border-slate-200 pb-5 xl:flex-row xl:items-end xl:justify-between">
+      <div className="surface-card-strong sticky top-4 z-20 mb-6 flex flex-col gap-4 rounded-[30px] p-5 xl:flex-row xl:items-end xl:justify-between">
         <div>
           <BackButton fallbackHref="/instructor/courses" />
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">Course Builder</h1>
           <p className="mt-2 max-w-3xl text-sm text-slate-600">
             Build the full learning journey here. Sections, lessons, quizzes, assignments, learner progress, and submissions now live inside one workspace instead of scattered prompt windows.
           </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <StatusChip tone={courseQuery.data?.status === "PUBLISHED" ? "success" : "warning"}>
+              {courseQuery.data?.status === "PUBLISHED" ? "Published" : "Draft"}
+            </StatusChip>
+            <StatusChip tone={builderError ? "danger" : builderSuccess ? "success" : "info"}>
+              {builderError ? "Needs attention" : builderSuccess ? "Changes saved" : "Workspace ready"}
+            </StatusChip>
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           <PillButton onClick={() => void refreshAll()}>Refresh workspace</PillButton>
@@ -1214,13 +1241,9 @@ export default function CourseBuilderPage() {
                     <div className="flex flex-wrap gap-2">
                       <PillButton type="submit">{editorMode.kind === "new-section" ? "Create section" : "Save section"}</PillButton>
                       <PillButton onClick={() => setEditorMode({ kind: "course" })}>Cancel</PillButton>
-                      {editorMode.kind === "section" ? (
-                        confirmDeleteKey === `section:${editorMode.sectionId}` ? (
-                          <PillButton onClick={() => void deleteSection(editorMode.sectionId)}>Confirm delete</PillButton>
-                        ) : (
+                        {editorMode.kind === "section" ? (
                           <PillButton onClick={() => setConfirmDeleteKey(`section:${editorMode.sectionId}`)}>Delete section</PillButton>
-                        )
-                      ) : null}
+                        ) : null}
                     </div>
                   </form>
                 </WorkspacePanel>
@@ -1251,13 +1274,9 @@ export default function CourseBuilderPage() {
                       <PillButton type="submit">{editorMode.kind === "new-lesson" ? "Create lesson" : "Save lesson"}</PillButton>
                       <PillButton onClick={() => setEditorMode({ kind: "course" })}>Cancel</PillButton>
                       {editorMode.kind === "lesson" ? <PillButton onClick={() => void duplicateLesson()}>Duplicate lesson</PillButton> : null}
-                      {editorMode.kind === "lesson" ? (
-                        confirmDeleteKey === `lesson:${editorMode.lessonId}` ? (
-                          <PillButton onClick={() => void deleteLesson(editorMode.lessonId)}>Confirm delete</PillButton>
-                        ) : (
+                        {editorMode.kind === "lesson" ? (
                           <PillButton onClick={() => setConfirmDeleteKey(`lesson:${editorMode.lessonId}`)}>Delete lesson</PillButton>
-                        )
-                      ) : null}
+                        ) : null}
                     </div>
                   </form>
                 </WorkspacePanel>
@@ -1299,13 +1318,9 @@ export default function CourseBuilderPage() {
                       </PillButton>
                       <PillButton type="submit">{editorMode.kind === "new-quiz" ? "Create quiz" : "Save quiz"}</PillButton>
                       <PillButton onClick={() => setEditorMode({ kind: "course" })}>Cancel</PillButton>
-                      {editorMode.kind === "quiz" ? (
-                        confirmDeleteKey === `quiz:${editorMode.quizId}` ? (
-                          <PillButton onClick={() => void deleteQuiz(editorMode.quizId)}>Confirm delete</PillButton>
-                        ) : (
+                        {editorMode.kind === "quiz" ? (
                           <PillButton onClick={() => setConfirmDeleteKey(`quiz:${editorMode.quizId}`)}>Delete quiz</PillButton>
-                        )
-                      ) : null}
+                        ) : null}
                     </div>
                   </form>
                 </WorkspacePanel>
@@ -1329,13 +1344,9 @@ export default function CourseBuilderPage() {
                     <div className="flex flex-wrap gap-2">
                       <PillButton type="submit">{editorMode.kind === "new-assignment" ? "Create assignment" : "Save assignment"}</PillButton>
                       <PillButton onClick={() => setEditorMode({ kind: "course" })}>Cancel</PillButton>
-                      {editorMode.kind === "assignment" ? (
-                        confirmDeleteKey === `assignment:${editorMode.assignmentId}` ? (
-                          <PillButton onClick={() => void deleteAssignment(editorMode.assignmentId)}>Confirm delete</PillButton>
-                        ) : (
+                        {editorMode.kind === "assignment" ? (
                           <PillButton onClick={() => setConfirmDeleteKey(`assignment:${editorMode.assignmentId}`)}>Delete assignment</PillButton>
-                        )
-                      ) : null}
+                        ) : null}
                     </div>
                   </form>
                 </WorkspacePanel>
@@ -1372,6 +1383,16 @@ export default function CourseBuilderPage() {
           }
         />
       </div>
+
+      <ConfirmationModal
+        open={Boolean(confirmDeleteKey)}
+        title="Delete this item?"
+        description="This action removes the selected item from the course workspace. Use this only when you are sure it should no longer be part of the learning flow."
+        confirmLabel="Delete permanently"
+        tone="danger"
+        onCancel={() => setConfirmDeleteKey(null)}
+        onConfirm={() => void onConfirmDelete()}
+      />
     </main>
   );
 }

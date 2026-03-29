@@ -8,6 +8,7 @@ import { ContentCard } from "../../components/content-card";
 import { EmptyState } from "../../components/empty-state";
 import { PageShell } from "../../components/page-shell";
 import { StatusBanner } from "../../components/status-banner";
+import { StatusChip } from "../../components/status-chip";
 import { useAuthStore } from "../../store/auth.store";
 
 interface Course {
@@ -97,9 +98,25 @@ export default function CoursesPage() {
       }
     >
       <div className="mt-6 space-y-6">
-        <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]">
+        <ContentCard className="p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="section-kicker">Discovery</p>
+              <h2 className="mt-2 text-xl font-semibold text-slate-950">Explore by topic, level, and pricing</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600">
+                Use light filters first, then jump into the course that best fits your current learning goal.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <StatusChip tone="info">{coursesQuery.data?.length ?? 0} visible courses</StatusChip>
+              <StatusChip>{availableCategories.length} categories</StatusChip>
+            </div>
+          </div>
+        </ContentCard>
+
+        <div className="grid gap-3 rounded-[28px] border border-slate-200 bg-white/95 p-4 shadow-sm lg:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]">
           <input
-            className="rounded-xl border border-slate-300 px-4 py-3 text-sm"
+            className="field-input"
             placeholder="Search by title, description, or category"
             value={search}
             onChange={(event) => {
@@ -108,7 +125,7 @@ export default function CoursesPage() {
             }}
           />
           <select
-            className="rounded-xl border border-slate-300 px-4 py-3 text-sm"
+            className="field-select"
             value={pricing}
             onChange={(event) => {
               setPricing(event.target.value as "ALL" | "FREE" | "PAID");
@@ -120,7 +137,7 @@ export default function CoursesPage() {
             <option value="PAID">Paid</option>
           </select>
           <select
-            className="rounded-xl border border-slate-300 px-4 py-3 text-sm"
+            className="field-select"
             value={category}
             onChange={(event) => {
               setCategory(event.target.value);
@@ -135,7 +152,7 @@ export default function CoursesPage() {
             ))}
           </select>
           <select
-            className="rounded-xl border border-slate-300 px-4 py-3 text-sm"
+            className="field-select"
             value={level}
             onChange={(event) => {
               setLevel(event.target.value as "ALL" | Course["level"]);
@@ -166,29 +183,32 @@ export default function CoursesPage() {
             <div className="grid gap-3">
               {courses.map((course) => (
                 <Link key={course.id} href={`/courses/${course.id}`}>
-                  <ContentCard className="overflow-hidden transition hover:border-slate-300 hover:shadow-md">
+                  <ContentCard className="overflow-hidden transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
                     <div className="flex flex-col gap-4 sm:flex-row">
-                      <div className="h-32 w-full overflow-hidden rounded-2xl bg-gradient-to-br from-sky-500 via-cyan-500 to-emerald-400 sm:w-44">
+                      <div className="h-36 w-full overflow-hidden rounded-[22px] bg-gradient-to-br from-sky-500 via-cyan-500 to-emerald-400 sm:w-48">
                         {course.thumbnailImage ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={course.thumbnailImage} alt={`${course.title} thumbnail`} className="h-full w-full object-cover" />
                         ) : null}
                       </div>
                       <div className="flex-1">
-                        <p className="font-medium">{course.title}</p>
-                        <p className="text-sm text-slate-600">{course.description}</p>
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <p className="text-lg font-semibold text-slate-950">{course.title}</p>
+                            <p className="mt-2 text-sm leading-6 text-slate-600">{course.description}</p>
+                          </div>
+                          <StatusChip tone={course.isPaid ? "warning" : "success"}>
+                            {course.isPaid ? `Paid ${course.price?.toFixed(2) ?? "0.00"}` : "Free"}
+                          </StatusChip>
+                        </div>
                         <div className="mt-2 flex flex-wrap gap-2">
                           {course.category ? (
-                            <span className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-700">
-                              {course.category}
-                            </span>
+                            <StatusChip>{course.category}</StatusChip>
                           ) : null}
-                          <span className="rounded-full bg-sky-100 px-2 py-1 text-xs text-sky-700">
-                            {course.level.toLowerCase()}
-                          </span>
+                          <StatusChip tone="info">{course.level.toLowerCase()}</StatusChip>
                         </div>
-                        <p className="mt-1 text-xs text-slate-500">
-                          {course.isPaid ? `Paid - ${course.price?.toFixed(2) ?? "0.00"}` : "Free"}
+                        <p className="mt-3 text-xs uppercase tracking-[0.18em] text-slate-400">
+                          {course.instructor?.fullName ?? "Instructor"}
                         </p>
                       </div>
                     </div>

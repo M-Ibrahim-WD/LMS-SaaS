@@ -11,7 +11,9 @@ import {
   type PaymentMethodType,
   validatePaymentMethodDetails
 } from "../../lib/payments/payment-methods";
-import { BackButton } from "../../components/back-button";
+import { ContentCard } from "../../components/content-card";
+import { PageShell } from "../../components/page-shell";
+import { StatusChip } from "../../components/status-chip";
 import { useRequireAuth } from "../../hooks/use-require-auth";
 import { useAuthStore } from "../../store/auth.store";
 import { InstructorDashboardSection } from "./_components/instructor-dashboard-section";
@@ -396,79 +398,90 @@ export default function DashboardPage() {
   }
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
-      <div className="rounded-[30px] border border-slate-200/80 bg-white/90 p-4 shadow-sm backdrop-blur sm:p-6 lg:p-7">
-        <div className="flex flex-col gap-4 border-b border-slate-200 pb-5 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex flex-wrap items-center gap-3">
-            <BackButton fallbackHref="/courses" />
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">Dashboard</h1>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Link href="/profile" className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm">
-              Profile
+    <PageShell
+      title="Dashboard"
+      description="A role-aware workspace for learning, teaching, or platform operations with clearer priorities and less noise."
+      backHref="/courses"
+      maxWidthClassName="max-w-7xl"
+      actions={
+        <>
+          <Link href="/profile" className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm">
+            Profile
+          </Link>
+          {profileQuery.data?.role === "ADMIN" ? (
+            <Link href="/admin" className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm">
+              Admin
             </Link>
-            {profileQuery.data?.role === "ADMIN" ? (
-              <Link href="/admin" className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm">
-                Admin
-              </Link>
-            ) : null}
-            <button onClick={onLogout} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-sm">
-              Logout
-            </button>
-          </div>
-        </div>
+          ) : null}
+          <button onClick={onLogout} className="rounded-full bg-slate-950 px-4 py-2 text-sm font-medium text-white shadow-sm">
+            Logout
+          </button>
+        </>
+      }
+    >
+      {profileQuery.isLoading ? <p>Loading profile...</p> : null}
+      {profileQuery.isError ? <p className="text-rose-600">Failed to load profile. Please login again.</p> : null}
 
-        {profileQuery.isLoading ? <p className="mt-4">Loading profile...</p> : null}
-        {profileQuery.isError ? <p className="mt-4 text-red-600">Failed to load profile. Please login again.</p> : null}
-
-        {profileQuery.data ? (
-          <div className="mt-6 space-y-2 text-sm text-slate-700 sm:text-base">
-            <p>
-              <span className="font-medium">Name:</span> {profileQuery.data.fullName}
-            </p>
-            <p>
-              <span className="font-medium">Email:</span> {profileQuery.data.email}
-            </p>
-            <p>
-              <span className="font-medium">Role:</span> {profileQuery.data.role}
-            </p>
-            <p>
-              <span className="font-medium">Tenant:</span>{" "}
-              {profileQuery.data.tenant?.name ?? profileQuery.data.tenantId ?? "Not assigned"}
-            </p>
-
-            <div className="mt-6 rounded-[26px] border border-slate-200 bg-slate-50/90 p-4 shadow-sm sm:p-5">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">Notifications</p>
-                  <p className="text-xs text-slate-500">
-                    {unreadCountQuery.data?.unreadCount ?? 0} unread
-                  </p>
+      {profileQuery.data ? (
+        <div className="space-y-5">
+          <section className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+            <ContentCard className="overflow-hidden p-0">
+              <div className="bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.2),transparent_34%),linear-gradient(150deg,#ffffff_0%,#f8fafc_32%,#e0f2fe_100%)] p-6 sm:p-7">
+                <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                  <div>
+                    <p className="section-kicker">Workspace Identity</p>
+                    <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">{profileQuery.data.fullName}</h2>
+                    <p className="mt-2 text-sm leading-7 text-slate-600">{profileQuery.data.email}</p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <StatusChip tone="info">{profileQuery.data.role}</StatusChip>
+                      <StatusChip>{profileQuery.data.tenant?.name ?? "No workspace assigned"}</StatusChip>
+                    </div>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:w-[18rem]">
+                    <div className="rounded-[22px] border border-slate-200 bg-white/85 p-4">
+                      <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Unread</p>
+                      <p className="mt-2 text-2xl font-semibold text-slate-950">{unreadCountQuery.data?.unreadCount ?? 0}</p>
+                    </div>
+                    <div className="rounded-[22px] border border-slate-200 bg-white/85 p-4">
+                      <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Member since</p>
+                      <p className="mt-2 text-sm font-semibold text-slate-950">{new Date(profileQuery.data.createdAt).toLocaleDateString()}</p>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="mt-4 space-y-3">
+            </ContentCard>
+
+            <ContentCard className="p-6">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="section-kicker">Notifications</p>
+                  <h3 className="mt-2 text-xl font-semibold text-slate-950">Recent updates</h3>
+                </div>
+                <StatusChip tone={(unreadCountQuery.data?.unreadCount ?? 0) > 0 ? "warning" : "success"}>
+                  {(unreadCountQuery.data?.unreadCount ?? 0) > 0 ? `${unreadCountQuery.data?.unreadCount ?? 0} unread` : "All caught up"}
+                </StatusChip>
+              </div>
+              <div className="mt-5 space-y-3">
                 {notificationsQuery.data?.length ? (
-                  notificationsQuery.data.slice(0, 6).map((notification) => (
+                  notificationsQuery.data.slice(0, 5).map((notification) => (
                     <div
                       key={notification.id}
-                      className={`rounded-lg border p-3 ${
-                        notification.isRead ? "border-slate-200 bg-white" : "border-sky-200 bg-sky-50"
+                      className={`rounded-[22px] border p-4 ${
+                        notification.isRead ? "border-slate-200 bg-slate-50/80" : "border-sky-200 bg-sky-50/90"
                       }`}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <p className="text-sm font-medium text-slate-900">{notification.title}</p>
-                          <p className="mt-1 text-sm text-slate-600">{notification.message}</p>
-                          <p className="mt-2 text-xs text-slate-500">
-                            {new Date(notification.createdAt).toLocaleString()}
-                          </p>
+                          <p className="font-medium text-slate-900">{notification.title}</p>
+                          <p className="mt-1 text-sm leading-6 text-slate-600">{notification.message}</p>
+                          <p className="mt-2 text-xs text-slate-500">{new Date(notification.createdAt).toLocaleString()}</p>
                         </div>
                         {!notification.isRead ? (
                           <button
                             type="button"
                             onClick={() => markNotificationReadMutation.mutate(notification.id)}
                             disabled={markNotificationReadMutation.isPending}
-                            className="rounded border border-slate-300 px-3 py-1 text-xs text-slate-700 disabled:opacity-60"
+                            className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 disabled:opacity-60"
                           >
                             Mark read
                           </button>
@@ -480,114 +493,129 @@ export default function DashboardPage() {
                   <p className="text-sm text-slate-500">No notifications yet.</p>
                 )}
               </div>
-            </div>
+            </ContentCard>
+          </section>
 
-            {profileQuery.data.role === "ADMIN" ? (
-              <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-6">
-                <p className="text-sm font-semibold text-slate-900">Admin Console</p>
-                <p className="mt-2 text-sm text-slate-600">
-                  Platform oversight lives in the admin workspace with tenants, users, course activity, and payment monitoring.
-                </p>
-                <div className="mt-4">
-                  <Link href="/admin" className="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white">
-                    Open Admin Dashboard
-                  </Link>
-                </div>
+          {profileQuery.data.role === "ADMIN" ? (
+            <ContentCard className="p-6">
+              <p className="section-kicker">Platform administration</p>
+              <h3 className="mt-2 text-2xl font-semibold text-slate-950">Admin control center</h3>
+              <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600">
+                Open the dedicated admin workspace for tenant oversight, plans, user review, audit logs, and delegated admin control.
+              </p>
+              <div className="mt-5">
+                <Link href="/admin" className="rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white">
+                  Open admin workspace
+                </Link>
               </div>
-            ) : profileQuery.data.role === "INSTRUCTOR" ? (
-              <>
-                {instructorSubscriptionQuery.data ? (
-                  <div
-                    className={`mt-6 rounded-2xl border p-4 ${
-                      instructorSubscriptionQuery.data.freezeCreation
-                        ? "border-amber-200 bg-amber-50"
-                        : instructorSubscriptionQuery.data.currentSubscription?.isTrial
-                          ? "border-sky-200 bg-sky-50"
-                          : "border-emerald-200 bg-emerald-50"
-                    }`}
-                  >
-                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">
+            </ContentCard>
+          ) : profileQuery.data.role === "INSTRUCTOR" ? (
+            <>
+              {instructorSubscriptionQuery.data ? (
+                <ContentCard
+                  className={`p-6 ${
+                    instructorSubscriptionQuery.data.freezeCreation
+                      ? "border-amber-200 bg-amber-50/90"
+                      : instructorSubscriptionQuery.data.currentSubscription?.isTrial
+                        ? "border-sky-200 bg-sky-50/90"
+                        : "border-emerald-200 bg-emerald-50/90"
+                  }`}
+                >
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-lg font-semibold text-slate-950">
                           {instructorSubscriptionQuery.data.selectedPlan?.name ?? "No plan selected"}
                         </p>
-                        <p className="mt-1 text-sm text-slate-600">
+                        <StatusChip
+                          tone={
+                            instructorSubscriptionQuery.data.freezeCreation
+                              ? "warning"
+                              : instructorSubscriptionQuery.data.currentSubscription?.isTrial
+                                ? "trial"
+                                : "success"
+                          }
+                        >
                           {instructorSubscriptionQuery.data.freezeCreation
-                            ? "Your workspace is frozen for creation until an admin activates a subscription."
+                            ? "Frozen"
                             : instructorSubscriptionQuery.data.currentSubscription?.isTrial
-                              ? `Trial active: ${instructorSubscriptionQuery.data.daysRemaining} day(s) remaining. Trial limits are still in effect.`
-                              : `Subscription active on the ${instructorSubscriptionQuery.data.currentSubscription?.billingPeriod.toLowerCase()} cycle.`}
-                        </p>
+                              ? "Trial"
+                              : "Active"}
+                        </StatusChip>
                       </div>
-                      <Link
-                        href="/subscription"
-                        className="inline-flex rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700"
-                      >
-                        Manage plan
-                      </Link>
+                      <p className="mt-2 text-sm leading-7 text-slate-600">
+                        {instructorSubscriptionQuery.data.freezeCreation
+                          ? "Your workspace can still be viewed, but creation is paused until an admin activates a subscription."
+                          : instructorSubscriptionQuery.data.currentSubscription?.isTrial
+                            ? `Trial active with ${instructorSubscriptionQuery.data.daysRemaining} day(s) remaining. Trial limits still apply.`
+                            : `Subscription active on the ${instructorSubscriptionQuery.data.currentSubscription?.billingPeriod.toLowerCase()} billing cycle.`}
+                      </p>
                     </div>
+                    <Link href="/subscription" className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700">
+                      Manage plan
+                    </Link>
                   </div>
-                ) : null}
-                <InstructorDashboardSection
-                  accessToken={accessToken ?? ""}
-                  inviteCode={inviteCodeQuery.data?.inviteCode}
-                  methodType={methodType}
-                  methodLabel={methodLabel}
-                  methodDetails={methodDetails}
-                  methodValidationError={methodValidationError}
-                  deleteMethodError={deleteMethodError}
-                  paymentMethods={paymentMethodsQuery.data}
-                  instructorPayments={instructorPaymentsQuery.data}
-                  isCreatingMethod={createMethodMutation.isPending}
-                  isDeletingMethod={deleteMethodMutation.isPending}
-                  onCopyInviteCode={onCopyInviteCode}
-                  onCreateMethod={onCreateMethod}
-                  onDeleteMethod={onDeleteMethod}
-                  onApprovePayment={(paymentId) => approveMutation.mutate(paymentId)}
-                  onRejectPayment={(paymentId) => rejectMutation.mutate(paymentId)}
-                  onMethodTypeChange={(nextType) => {
-                    setMethodType(nextType);
+                </ContentCard>
+              ) : null}
+              <InstructorDashboardSection
+                accessToken={accessToken ?? ""}
+                inviteCode={inviteCodeQuery.data?.inviteCode}
+                methodType={methodType}
+                methodLabel={methodLabel}
+                methodDetails={methodDetails}
+                methodValidationError={methodValidationError}
+                deleteMethodError={deleteMethodError}
+                paymentMethods={paymentMethodsQuery.data}
+                instructorPayments={instructorPaymentsQuery.data}
+                isCreatingMethod={createMethodMutation.isPending}
+                isDeletingMethod={deleteMethodMutation.isPending}
+                onCopyInviteCode={onCopyInviteCode}
+                onCreateMethod={onCreateMethod}
+                onDeleteMethod={onDeleteMethod}
+                onApprovePayment={(paymentId) => approveMutation.mutate(paymentId)}
+                onRejectPayment={(paymentId) => rejectMutation.mutate(paymentId)}
+                onMethodTypeChange={(nextType) => {
+                  setMethodType(nextType);
+                  setMethodValidationError(null);
+                  const nextLabel = PAYMENT_METHOD_OPTIONS.find((item) => item.value === nextType)?.label ?? nextType;
+                  setMethodLabel(nextLabel.replace(" (Future)", ""));
+                }}
+                onMethodLabelChange={setMethodLabel}
+                onMethodDetailsChange={(value) => {
+                  setMethodDetails(value);
+                  if (methodValidationError) {
                     setMethodValidationError(null);
-                    const nextLabel = PAYMENT_METHOD_OPTIONS.find((item) => item.value === nextType)?.label ?? nextType;
-                    setMethodLabel(nextLabel.replace(" (Future)", ""));
-                  }}
-                  onMethodLabelChange={setMethodLabel}
-                  onMethodDetailsChange={(value) => {
-                    setMethodDetails(value);
-                    if (methodValidationError) {
-                      setMethodValidationError(null);
-                    }
-                  }}
-                />
-              </>
-            ) : (
-              <StudentDashboardSection
-                studentInviteCode={studentInviteCode}
-                studentJoinError={studentJoinError}
-                activeTab={activeTab}
-                filterType={filterType}
-                searchQuery={searchQuery}
-                continueLearning={continueLearningQuery.data ?? null}
-                studentInstructors={studentInstructorsQuery.data}
-                filteredStudentCourses={filteredStudentCourses}
-                groupedCoursesByInstructor={groupedCoursesByInstructor}
-                studentEmptyStateMessage={studentEmptyStateMessage}
-                isJoiningInstructor={joinInstructorMutation.isPending}
-                isLoadingCourses={
-                  studentCoursesQuery.isLoading || studentMyCoursesQuery.isLoading || continueLearningQuery.isLoading
-                }
-                hasCourseError={studentCoursesQuery.isError || studentMyCoursesQuery.isError}
-                onJoinInstructor={onJoinInstructor}
-                onStudentInviteCodeChange={setStudentInviteCode}
-                clearStudentJoinError={() => setStudentJoinError(null)}
-                onActiveTabChange={setActiveTab}
-                onFilterTypeChange={setFilterType}
-                onSearchQueryChange={setSearchQuery}
+                  }
+                }}
               />
-            )}
-          </div>
-        ) : null}
-      </div>
-    </main>
+            </>
+          ) : (
+            <StudentDashboardSection
+              studentInviteCode={studentInviteCode}
+              studentJoinError={studentJoinError}
+              activeTab={activeTab}
+              filterType={filterType}
+              searchQuery={searchQuery}
+              continueLearning={continueLearningQuery.data ?? null}
+              studentInstructors={studentInstructorsQuery.data}
+              filteredStudentCourses={filteredStudentCourses}
+              groupedCoursesByInstructor={groupedCoursesByInstructor}
+              studentEmptyStateMessage={studentEmptyStateMessage}
+              isJoiningInstructor={joinInstructorMutation.isPending}
+              isLoadingCourses={
+                studentCoursesQuery.isLoading || studentMyCoursesQuery.isLoading || continueLearningQuery.isLoading
+              }
+              hasCourseError={studentCoursesQuery.isError || studentMyCoursesQuery.isError}
+              onJoinInstructor={onJoinInstructor}
+              onStudentInviteCodeChange={setStudentInviteCode}
+              clearStudentJoinError={() => setStudentJoinError(null)}
+              onActiveTabChange={setActiveTab}
+              onFilterTypeChange={setFilterType}
+              onSearchQueryChange={setSearchQuery}
+            />
+          )}
+        </div>
+      ) : null}
+    </PageShell>
   );
 }

@@ -58,6 +58,8 @@ function Invoke-FrontendBuildValidation {
     $nextEnvPath = Join-Path $frontendPath "next-env.d.ts"
     $originalTsconfig = if (Test-Path $tsconfigPath) { Get-Content -Raw $tsconfigPath } else { $null }
     $originalNextEnv = if (Test-Path $nextEnvPath) { Get-Content -Raw $nextEnvPath } else { $null }
+    $originalPath = $env:PATH
+    $originalCorepackHome = $env:COREPACK_HOME
 
     try {
         Set-Location $frontendPath
@@ -68,8 +70,8 @@ function Invoke-FrontendBuildValidation {
             Remove-Item $validationDistDir -Recurse -Force -ErrorAction SilentlyContinue
         }
 
-        $process = Start-Process -FilePath $corepackCmd -ArgumentList @("pnpm", "exec", "next", "build") -WorkingDirectory $frontendPath -NoNewWindow -Wait -PassThru
-        if ($process.ExitCode -ne 0) {
+        & $corepackCmd pnpm exec next build
+        if ($LASTEXITCODE -ne 0) {
             throw "Frontend build failed."
         }
     } finally {
@@ -87,6 +89,16 @@ function Invoke-FrontendBuildValidation {
             Remove-Item Env:NEXT_DIST_DIR -ErrorAction SilentlyContinue
         }
 
+        if ($null -ne $originalCorepackHome) {
+            $env:COREPACK_HOME = $originalCorepackHome
+        } else {
+            Remove-Item Env:COREPACK_HOME -ErrorAction SilentlyContinue
+        }
+
+        if ($null -ne $originalPath) {
+            $env:PATH = $originalPath
+        }
+
         if (Test-Path (Join-Path $frontendPath $validationDistDir)) {
             Remove-Item (Join-Path $frontendPath $validationDistDir) -Recurse -Force -ErrorAction SilentlyContinue
         }
@@ -101,10 +113,21 @@ function Invoke-Pnpm {
         [string[]]$Arguments
     )
 
-    $env:PATH = "$nodePath;$env:PATH"
-    $env:COREPACK_HOME = $corepackHome
-    $process = Start-Process -FilePath $corepackCmd -ArgumentList $Arguments -WorkingDirectory $projectPath -NoNewWindow -Wait -PassThru
-    $global:LASTEXITCODE = $process.ExitCode
+    $originalPath = $env:PATH
+    $originalCorepackHome = $env:COREPACK_HOME
+    try {
+        throw "Invoke-Pnpm should not be called directly after the script hardening update."
+    } finally {
+        if ($null -ne $originalCorepackHome) {
+            $env:COREPACK_HOME = $originalCorepackHome
+        } else {
+            Remove-Item Env:COREPACK_HOME -ErrorAction SilentlyContinue
+        }
+
+        if ($null -ne $originalPath) {
+            $env:PATH = $originalPath
+        }
+    }
 }
 
 function Get-GhCommand {
@@ -137,14 +160,20 @@ Invoke-Step "Backup and summary" {
 }
 
 Invoke-Step "Frontend lint" {
-    Invoke-Pnpm -Arguments @("pnpm", "--filter", "@lms/frontend", "lint")
+    $env:PATH = "$nodePath;$env:PATH"
+    $env:COREPACK_HOME = $corepackHome
+    Set-Location $projectPath
+    & $corepackCmd pnpm --filter "@lms/frontend" lint
     if ($LASTEXITCODE -ne 0) {
         throw "Frontend lint failed."
     }
 }
 
 Invoke-Step "Backend build" {
-    Invoke-Pnpm -Arguments @("pnpm", "--filter", "@lms/backend", "build")
+    $env:PATH = "$nodePath;$env:PATH"
+    $env:COREPACK_HOME = $corepackHome
+    Set-Location $projectPath
+    & $corepackCmd pnpm --filter "@lms/backend" build
     if ($LASTEXITCODE -ne 0) {
         throw "Backend build failed."
     }
@@ -152,7 +181,10 @@ Invoke-Step "Backend build" {
 
 if (-not $SkipBackendTests) {
     Invoke-Step "Backend tests" {
-        Invoke-Pnpm -Arguments @("pnpm", "--filter", "@lms/backend", "test")
+        $env:PATH = "$nodePath;$env:PATH"
+        $env:COREPACK_HOME = $corepackHome
+        Set-Location $projectPath
+        & $corepackCmd pnpm --filter "@lms/backend" test
         if ($LASTEXITCODE -ne 0) {
             throw "Backend tests failed."
         }

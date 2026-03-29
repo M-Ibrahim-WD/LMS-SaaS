@@ -5,12 +5,24 @@
 :root {
   color-scheme: light;
   --app-bg:
-    radial-gradient(circle at top, rgba(14, 165, 233, 0.12), transparent 28%),
-    radial-gradient(circle at 85% 20%, rgba(16, 185, 129, 0.12), transparent 22%),
-    linear-gradient(180deg, #f8fafc 0%, #eef2ff 52%, #e2e8f0 100%);
+    radial-gradient(circle at top left, rgba(14, 165, 233, 0.14), transparent 24%),
+    radial-gradient(circle at 88% 16%, rgba(16, 185, 129, 0.12), transparent 18%),
+    linear-gradient(180deg, #f8fafc 0%, #eff6ff 44%, #e2e8f0 100%);
+  --surface: rgba(255, 255, 255, 0.92);
+  --surface-strong: rgba(255, 255, 255, 0.98);
+  --surface-muted: rgba(248, 250, 252, 0.88);
+  --border-soft: rgba(148, 163, 184, 0.18);
+  --border-strong: rgba(148, 163, 184, 0.3);
+  --text-strong: #020617;
+  --text-body: #334155;
+  --text-muted: #64748b;
+  --shadow-soft: 0 18px 45px -30px rgba(15, 23, 42, 0.42);
+  --shadow-medium: 0 24px 55px -28px rgba(15, 23, 42, 0.34);
 }
 
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
@@ -22,9 +34,15 @@ html {
 body {
   min-height: 100vh;
   background: var(--app-bg);
-  color: #0f172a;
+  color: var(--text-strong);
   font-family:
     "Segoe UI", "Helvetica Neue", "Noto Sans", "Liberation Sans", Arial, sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: rgba(14, 165, 233, 0.2);
+  color: var(--text-strong);
 }
 
 a,
@@ -35,9 +53,114 @@ textarea {
   touch-action: manipulation;
 }
 
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
 img {
   max-width: 100%;
   display: block;
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+.surface-card {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(18px);
+}
+
+.surface-card-strong {
+  background: var(--surface-strong);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-medium);
+  backdrop-filter: blur(20px);
+}
+
+.section-kicker {
+  color: #0f766e;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 0.55rem;
+  color: var(--text-body);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.field-help {
+  margin-top: 0.45rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.field-input,
+.field-select,
+.field-textarea {
+  width: 100%;
+  border-radius: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  background: rgba(255, 255, 255, 0.98);
+  color: var(--text-strong);
+  outline: none;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.field-input,
+.field-select {
+  min-height: 3rem;
+  padding: 0.8rem 1rem;
+}
+
+.field-textarea {
+  min-height: 7.5rem;
+  padding: 0.95rem 1rem;
+  resize: vertical;
+}
+
+.field-input:focus,
+.field-select:focus,
+.field-textarea:focus {
+  border-color: rgba(14, 165, 233, 0.8);
+  box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.14);
+}
+
+.ui-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.7) transparent;
+}
+
+.ui-scrollbar::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.ui-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.55);
+  border-radius: 999px;
 }
 
 @media (max-width: 640px) {
@@ -47,7 +170,7 @@ img {
 
   body {
     background:
-      radial-gradient(circle at top, rgba(14, 165, 233, 0.1), transparent 24%),
-      linear-gradient(180deg, #f8fafc 0%, #eef2ff 45%, #e2e8f0 100%);
+      radial-gradient(circle at top, rgba(14, 165, 233, 0.09), transparent 22%),
+      linear-gradient(180deg, #f8fafc 0%, #eff6ff 38%, #e2e8f0 100%);
   }
 }

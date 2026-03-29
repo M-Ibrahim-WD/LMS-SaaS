@@ -73,7 +73,7 @@ export default function RegisterPage() {
   return (
     <AuthPanel
       title="Register"
-      description="Create your LMS account."
+      description="Choose whether you're here to teach or learn, then create the right account for that role."
       footer={
         <p className="text-center text-sm text-slate-600">
           Already have an account?{" "}
@@ -86,73 +86,81 @@ export default function RegisterPage() {
         </p>
       }
     >
-      <form onSubmit={onSubmit}>
-        <label className="mt-4 block text-sm font-medium">Full Name</label>
+      <form onSubmit={onSubmit} className="space-y-4">
+        <label className="block">
+          <span className="field-label">Full Name</span>
         <input
-          className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+          className="field-input"
           value={fullName}
           onChange={(event) => setFullName(event.target.value)}
           required
         />
+        </label>
 
-        <label className="mt-4 block text-sm font-medium">Email</label>
+        <label className="block">
+          <span className="field-label">Email</span>
         <input
-          className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+          className="field-input"
           type="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           required
         />
+        </label>
 
-        <label className="mt-4 block text-sm font-medium">Role</label>
+        <label className="block">
+          <span className="field-label">Role</span>
         <select
-          className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+          className="field-select"
           value={role}
           onChange={(event) => setRole(event.target.value as "INSTRUCTOR" | "STUDENT")}
         >
           <option value="INSTRUCTOR">Instructor</option>
           <option value="STUDENT">Student</option>
         </select>
+        </label>
 
         {role === "INSTRUCTOR" ? (
-          <>
-            <label className="mt-4 block text-sm font-medium">Organization Name</label>
+          <label className="block">
+            <span className="field-label">Organization Name</span>
             <input
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+              className="field-input"
               value={organizationName}
               onChange={(event) => setOrganizationName(event.target.value)}
               required
             />
-          </>
+          </label>
         ) : null}
 
         {role === "STUDENT" ? (
-          <>
-            <label className="mt-4 block text-sm font-medium">Instructor Invite Code</label>
+          <label className="block">
+            <span className="field-label">Instructor Invite Code</span>
             <input
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+              className="field-input"
               value={inviteCode}
               onChange={(event) => setInviteCode(event.target.value.toUpperCase())}
               required
             />
-          </>
+          </label>
         ) : null}
 
-        <label className="mt-4 block text-sm font-medium">Password</label>
+        <label className="block">
+          <span className="field-label">Password</span>
         <input
-          className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+          className="field-input"
           type="password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           required
         />
+        </label>
 
         {error ? <StatusBanner variant="error">{error}</StatusBanner> : null}
 
         <button
           type="submit"
           disabled={loading}
-          className="mt-5 w-full rounded-lg bg-slate-900 px-4 py-2 text-white disabled:opacity-60"
+          className="w-full rounded-full bg-slate-950 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
         >
           {loading ? "Creating account..." : "Register"}
         </button>

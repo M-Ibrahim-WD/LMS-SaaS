@@ -8,6 +8,7 @@ import { ContentCard } from "../../components/content-card";
 import { EmptyState } from "../../components/empty-state";
 import { PageShell } from "../../components/page-shell";
 import { StatusBanner } from "../../components/status-banner";
+import { StatusChip } from "../../components/status-chip";
 import { useRequireAuth } from "../../hooks/use-require-auth";
 import { apiFetch } from "../../lib/api/client";
 
@@ -165,18 +166,26 @@ export default function SubscriptionPage() {
           plansQuery.data.map((plan) => {
             const isSelected = selectedPlanId === plan.id;
             const isCurrent = summaryQuery.data?.selectedPlan?.id === plan.id;
+            const isFeatured = plan.code === "STUDIO" || plan.code === "GROWTH";
 
             return (
               <button
                 key={plan.id}
                 type="button"
                 onClick={() => setSelectedPlanId(plan.id)}
-                className={`rounded-3xl border p-6 text-left transition ${
+                className={`relative rounded-[30px] border p-6 text-left transition ${
                   isSelected
                     ? "border-slate-950 bg-slate-950 text-white shadow-xl"
-                    : "border-slate-200 bg-white hover:-translate-y-1 hover:border-slate-300 hover:shadow-lg"
+                    : isFeatured
+                      ? "border-sky-200 bg-white shadow-md hover:-translate-y-1 hover:border-sky-300 hover:shadow-xl"
+                      : "border-slate-200 bg-white hover:-translate-y-1 hover:border-slate-300 hover:shadow-lg"
                 }`}
               >
+                {isFeatured ? (
+                  <span className={`absolute right-5 top-5 rounded-full px-3 py-1 text-xs font-semibold ${isSelected ? "bg-white/15 text-white" : "bg-sky-100 text-sky-800"}`}>
+                    Recommended
+                  </span>
+                ) : null}
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className={`text-sm uppercase tracking-[0.22em] ${isSelected ? "text-slate-300" : "text-slate-400"}`}>
@@ -228,6 +237,12 @@ export default function SubscriptionPage() {
             <p className="mt-2 text-sm text-slate-600">
               Every selected plan starts as a 7-day trial. During the trial, you can create two free courses only, with one section and one lesson each, and up to ten students total.
             </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <StatusChip tone="trial">7-day free trial</StatusChip>
+              <StatusChip>2 courses max</StatusChip>
+              <StatusChip>1 section / 1 lesson structure</StatusChip>
+              <StatusChip tone="warning">Free courses only</StatusChip>
+            </div>
           </div>
           <div className="flex flex-wrap gap-3">
             <Link href="/dashboard" className="rounded-full border border-slate-300 px-5 py-2 text-sm font-medium text-slate-700">

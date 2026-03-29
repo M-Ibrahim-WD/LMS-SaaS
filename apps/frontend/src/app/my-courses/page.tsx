@@ -7,12 +7,16 @@ import { ContentCard } from "../../components/content-card";
 import { EmptyState } from "../../components/empty-state";
 import { PageShell } from "../../components/page-shell";
 import { StatusBanner } from "../../components/status-banner";
+import { StatusChip } from "../../components/status-chip";
 import { useRequireAuth } from "../../hooks/use-require-auth";
 
 interface Course {
   id: string;
   title: string;
   description?: string | null;
+  thumbnailImage?: string | null;
+  category?: string | null;
+  level?: "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
   status: "DRAFT" | "PUBLISHED";
   instructor?: {
     id: string;
@@ -85,16 +89,33 @@ export default function MyCoursesPage() {
 
           return (
             <Link key={enrollment.id} href={resumeHref}>
-              <ContentCard className="transition hover:border-slate-300 hover:shadow-md">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <p className="font-medium">{enrollment.course.title}</p>
-                    <p className="text-sm text-slate-600">{enrollment.course.description}</p>
-                    {enrollment.course.instructor ? (
-                      <p className="mt-1 text-xs text-slate-500">{enrollment.course.instructor.fullName}</p>
-                    ) : null}
+              <ContentCard className="transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="flex flex-col gap-4 sm:flex-row">
+                    <div className="h-36 w-full overflow-hidden rounded-[22px] bg-gradient-to-br from-sky-500 via-cyan-500 to-emerald-400 sm:w-44">
+                      {enrollment.course.thumbnailImage ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={enrollment.course.thumbnailImage} alt={`${enrollment.course.title} thumbnail`} className="h-full w-full object-cover" />
+                      ) : null}
+                    </div>
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-lg font-semibold text-slate-950">{enrollment.course.title}</p>
+                        <StatusChip tone={enrollment.progress?.isComplete ? "success" : "trial"}>
+                          {enrollment.progress?.isComplete ? "Completed" : "In progress"}
+                        </StatusChip>
+                      </div>
+                      <p className="mt-2 text-sm leading-6 text-slate-600">{enrollment.course.description}</p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {enrollment.course.category ? <StatusChip>{enrollment.course.category}</StatusChip> : null}
+                        {enrollment.course.level ? <StatusChip tone="info">{enrollment.course.level.toLowerCase()}</StatusChip> : null}
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-sm text-slate-600 sm:text-right">
+                  <div className="text-sm text-slate-600 lg:text-right">
+                    {enrollment.course.instructor ? (
+                      <p className="mb-2 text-xs uppercase tracking-[0.18em] text-slate-400">{enrollment.course.instructor.fullName}</p>
+                    ) : null}
                     {enrollment.learningState?.nextLesson ? (
                       <>
                         <p className="font-medium text-slate-900">Continue learning</p>
