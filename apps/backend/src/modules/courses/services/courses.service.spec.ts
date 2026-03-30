@@ -20,8 +20,28 @@ test("getOne rejects student access when the instructor is not followed", async 
   const plansService = {
     assertCanCreateCourse: createAsyncMock(async () => undefined)
   };
+  const thumbnailStorageService = {
+    getPublicCourseThumbnailUrl: (_courseId: string, thumbnailImage?: string | null) =>
+      thumbnailImage ?? null
+  };
+  const courseProgressService = {
+    getCourseProgressSummaryForCourse: createAsyncMock(async () => ({
+      totalLessons: 0,
+      completedLessons: 0,
+      percentage: 0,
+      isComplete: false
+    })),
+    getCompletedLessonIds: createAsyncMock(async () => new Set<string>()),
+    flattenLessons: () => []
+  };
 
-  const service = new CoursesService(prisma as never, studentAccessService as never, plansService as never);
+  const service = new CoursesService(
+    prisma as never,
+    studentAccessService as never,
+    plansService as never,
+    thumbnailStorageService as never,
+    courseProgressService as never
+  );
 
   await assert.rejects(
     () =>
@@ -74,8 +94,28 @@ test("completeLesson creates a completion record for an enrolled student", async
   const plansService = {
     assertCanCreateCourse: createAsyncMock(async () => undefined)
   };
+  const thumbnailStorageService = {
+    getPublicCourseThumbnailUrl: (_courseId: string, thumbnailImage?: string | null) =>
+      thumbnailImage ?? null
+  };
+  const courseProgressService = {
+    getCourseProgressSummaryForCourse: createAsyncMock(async () => ({
+      totalLessons: 4,
+      completedLessons: 1,
+      percentage: 25,
+      isComplete: false
+    })),
+    getCompletedLessonIds: createAsyncMock(async () => new Set<string>()),
+    flattenLessons: () => []
+  };
 
-  const service = new CoursesService(prisma as never, studentAccessService as never, plansService as never);
+  const service = new CoursesService(
+    prisma as never,
+    studentAccessService as never,
+    plansService as never,
+    thumbnailStorageService as never,
+    courseProgressService as never
+  );
 
   const result = await service.completeLesson(
     {
@@ -89,6 +129,7 @@ test("completeLesson creates a completion record for an enrolled student", async
   );
 
   assert.equal(prisma.lessonCompletion.upsert.calls.length, 1);
+  assert.equal(courseProgressService.getCourseProgressSummaryForCourse.calls.length, 1);
   assert.deepEqual(result, {
     totalLessons: 4,
     completedLessons: 1,

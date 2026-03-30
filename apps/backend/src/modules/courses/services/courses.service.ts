@@ -1,8 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { CourseLevel, CourseStatus, Prisma } from "@prisma/client";
-import { promises as fs } from "fs";
-import { extname, join } from "path";
-import { randomUUID } from "crypto";
 import { StudentAccessService } from "../../../shared/access/student-access.service";
 import { PrismaService } from "../../../shared/prisma/prisma.service";
 import type { JwtPayload } from "../../../shared/types/auth.types";
@@ -11,41 +8,21 @@ import { CreateCourseDto } from "../dto/create-course.dto";
 import { CoursePricingFilter, CourseQueryDto } from "../dto/course-query.dto";
 import { UpdateCourseStatusDto } from "../dto/update-course-status.dto";
 import { UpdateCourseDto } from "../dto/update-course.dto";
-
-type CourseProgressSummary = {
-  totalLessons: number;
-  completedLessons: number;
-  percentage: number;
-  isComplete: boolean;
-};
-
-type UploadedImageFile = {
-  buffer: Buffer;
-  mimetype: string;
-  size: number;
-  originalname: string;
-};
+import { CourseProgressService } from "./course-progress.service";
+import {
+  CourseThumbnailStorageService,
+  type UploadedImageFile
+} from "./course-thumbnail-storage.service";
 
 @Injectable()
 export class CoursesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly studentAccessService: StudentAccessService,
-    private readonly subscriptionsService: SubscriptionsService
+    private readonly subscriptionsService: SubscriptionsService,
+    private readonly thumbnailStorageService: CourseThumbnailStorageService,
+    private readonly courseProgressService: CourseProgressService
   ) {}
-
-  private readonly thumbnailStorageDir = join(process.cwd(), "uploads", "course-thumbnails");
-  private readonly maxThumbnailBytes = 4 * 1024 * 1024;
-
-  private getPublicServerBaseUrl() {
-    const explicitBaseUrl = process.env.PUBLIC_SERVER_URL?.trim();
-    if (explicitBaseUrl) {
-      return explicitBaseUrl.replace(/\/+$/, "");
-    }
-
-    const port = process.env.PORT?.trim() || "4000";
-    return `http://localhost:${port}`;
-  }
 
   private readonly includeTree = {
     sections: {
@@ -162,8 +139,7 @@ export class CoursesService {
       throw new BadRequestException("Course thumbnail is required");
     }
 
-    this.validateUploadedThumbnail(file);
-    const storedRef = await this.storeThumbnail(file);
+    const storedRef = await this.thumbnailStorageService.storeThumbnail(file);
 
     const updated = await this.prisma.course.update({
       where: { id: course.id },
@@ -189,7 +165,9 @@ export class CoursesService {
       throw new NotFoundException("Course thumbnail not found");
     }
 
-    const file = await this.readLocalThumbnailRef(course.thumbnailImage);
+    const file = await this.thumbnailStorageService.readLocalThumbnailRef(
+      course.thumbnailImage
+    );
     return {
       ...file,
       course
@@ -308,7 +286,10 @@ export class CoursesService {
 
       return {
         ...this.toPublicCourse(instructorCourse),
-        progress: await this.getCourseProgressSummaryForCourse(id, user.sub),
+        progress: await this.courseProgressService.getCourseProgressSummaryForCourse(
+          id,
+          user.sub
+        ),
         learningState: null
       };
     }
@@ -346,8 +327,9 @@ export class CoursesService {
       throw new NotFoundException("Course not found");
     }
 
-    const completedLessonIds = await this.getCompletedLessonIds(user.sub, id);
-    const allLessons = this.flattenLessons(course.sections);
+    const completedLessonIds =
+      await this.courseProgressService.getCompletedLessonIds(user.sub, id);
+    const allLessons = this.courseProgressService.flattenLessons(course.sections);
     const learnerState = await this.prisma.courseLearnerState.findUnique({
       where: {
         userId_courseId: {
@@ -370,7 +352,10 @@ export class CoursesService {
           isCompleted: completedLessonIds.has(lesson.id)
         }))
       })),
-      progress: await this.getCourseProgressSummaryForCourse(id, user.sub),
+      progress: await this.courseProgressService.getCourseProgressSummaryForCourse(
+        id,
+        user.sub
+      ),
       learningState: {
         lastLessonId: learnerState?.lastLessonId ?? null,
         nextLessonId: nextLesson?.id ?? null
@@ -437,7 +422,10 @@ export class CoursesService {
 
     return enrollments.map((enrollment) => {
       const completedLessons = completionMap.get(enrollment.userId) ?? 0;
-      const progress = this.buildCourseProgress(totalLessons, completedLessons);
+      const progress = this.courseProgressService.buildCourseProgress(
+        totalLessons,
+        completedLessons
+      );
       return {
         id: enrollment.id,
         enrolledAt: enrollment.createdAt,
@@ -495,14 +483,17 @@ export class CoursesService {
           where: { id: enrollment.courseId },
           include: this.includeTree
         }),
-        this.getCompletedLessonIds(user.sub, enrollment.courseId)
+        this.courseProgressService.getCompletedLessonIds(
+          user.sub,
+          enrollment.courseId
+        )
       ]);
 
       if (!courseGraph) {
         continue;
       }
 
-      const lessons = this.flattenLessons(courseGraph.sections);
+      const lessons = this.courseProgressService.flattenLessons(courseGraph.sections);
       const lastViewedLesson = state?.lastLessonId ? lessons.find((lesson) => lesson.id === state.lastLessonId) ?? null : null;
       const nextIncomplete = lessons.find((lesson) => !completedLessonIds.has(lesson.id)) ?? null;
       const lesson = lastViewedLesson && !completedLessonIds.has(lastViewedLesson.id) ? lastViewedLesson : nextIncomplete;
@@ -579,7 +570,10 @@ export class CoursesService {
       })
     ]);
 
-    return this.getCourseProgressSummaryForCourse(courseId, user.sub);
+    return this.courseProgressService.getCourseProgressSummaryForCourse(
+      courseId,
+      user.sub
+    );
   }
 
   async trackLessonView(user: JwtPayload, courseId: string, lessonId: string) {
@@ -641,11 +635,10 @@ export class CoursesService {
   }
 
   resolveCourseThumbnailUrl(courseId: string, thumbnailImage?: string | null) {
-    if (!thumbnailImage?.startsWith("local:")) {
-      return thumbnailImage ?? null;
-    }
-
-    return `${this.getPublicServerBaseUrl()}/api/courses/${courseId}/thumbnail`;
+    return this.thumbnailStorageService.getPublicCourseThumbnailUrl(
+      courseId,
+      thumbnailImage
+    );
   }
 
   private async ensureStudentCanAccessCourse(user: JwtPayload, courseId: string) {
@@ -758,7 +751,7 @@ export class CoursesService {
     return courses.map((course) => ({
       ...course,
       progress: enrolledCourseIds.has(course.id)
-        ? this.buildCourseProgress(
+        ? this.courseProgressService.buildCourseProgress(
             totalLessonsByCourse.get(course.id) ?? 0,
             completionCountByCourse.get(course.id) ?? 0
           )
@@ -775,128 +768,6 @@ export class CoursesService {
     return {
       ...course,
       thumbnailImage: this.resolveCourseThumbnailUrl(course.id, course.thumbnailImage ?? null)
-    };
-  }
-
-  private async storeThumbnail(file: UploadedImageFile) {
-    await fs.mkdir(this.thumbnailStorageDir, { recursive: true });
-
-    const safeName = this.sanitizeFileName(file.originalname || "course-thumbnail");
-    const extension = extname(safeName) || `.${this.extensionFromMime(file.mimetype)}`;
-    const storedName = `${Date.now()}-${randomUUID()}${extension.toLowerCase()}`;
-    const target = join(this.thumbnailStorageDir, storedName);
-
-    await fs.writeFile(target, file.buffer);
-    return `local:${storedName}`;
-  }
-
-  private async readLocalThumbnailRef(value: string) {
-    const fileName = value.replace(/^local:/, "");
-    const target = join(this.thumbnailStorageDir, fileName);
-    const buffer = await fs.readFile(target).catch(() => {
-      throw new NotFoundException("Course thumbnail not found");
-    });
-
-    return {
-      buffer,
-      fileName,
-      contentType: this.contentTypeFromExtension(fileName)
-    };
-  }
-
-  private validateUploadedThumbnail(file: UploadedImageFile) {
-    const allowedMimeTypes = new Set(["image/png", "image/jpeg", "image/jpg", "image/webp"]);
-    if (!allowedMimeTypes.has(file.mimetype)) {
-      throw new BadRequestException("Thumbnail must be a PNG, JPG, or WEBP image");
-    }
-
-    if (!file.buffer?.length) {
-      throw new BadRequestException("Thumbnail file is empty");
-    }
-
-    if (file.size > this.maxThumbnailBytes) {
-      throw new BadRequestException("Thumbnail must be 4 MB or smaller");
-    }
-  }
-
-  private sanitizeFileName(name: string) {
-    return name.replace(/[\\/:"*?<>|]+/g, "_").trim();
-  }
-
-  private extensionFromMime(mimeType: string) {
-    const map: Record<string, string> = {
-      "image/png": "png",
-      "image/jpeg": "jpg",
-      "image/jpg": "jpg",
-      "image/webp": "webp"
-    };
-
-    const derivedExtension = mimeType.split("/")[1]?.replace(/[^a-z0-9]/gi, "").toLowerCase();
-    return map[mimeType] ?? derivedExtension ?? "img";
-  }
-
-  private contentTypeFromExtension(fileName: string) {
-    const extension = extname(fileName).toLowerCase();
-    const map: Record<string, string> = {
-      ".png": "image/png",
-      ".jpg": "image/jpeg",
-      ".jpeg": "image/jpeg",
-      ".webp": "image/webp"
-    };
-
-    return map[extension] ?? "application/octet-stream";
-  }
-
-  private flattenLessons(sections: Array<{ lessons: Array<{ id: string; title: string; order: number }>; order: number }>) {
-    return sections
-      .slice()
-      .sort((left, right) => left.order - right.order)
-      .flatMap((section) => section.lessons.slice().sort((left, right) => left.order - right.order));
-  }
-
-  private async getCompletedLessonIds(userId: string, courseId: string) {
-    const completions = await this.prisma.lessonCompletion.findMany({
-      where: {
-        userId,
-        courseId
-      },
-      select: {
-        lessonId: true
-      }
-    });
-
-    return new Set(completions.map((completion) => completion.lessonId));
-  }
-
-  private async getCourseProgressSummaryForCourse(courseId: string, userId: string): Promise<CourseProgressSummary> {
-    const [totalLessons, completedLessons] = await Promise.all([
-      this.prisma.lesson.count({
-        where: {
-          section: {
-            courseId
-          }
-        }
-      }),
-      this.prisma.lessonCompletion.count({
-        where: {
-          userId,
-          courseId
-        }
-      })
-    ]);
-
-    return this.buildCourseProgress(totalLessons, completedLessons);
-  }
-
-  private buildCourseProgress(totalLessons: number, completedLessons: number): CourseProgressSummary {
-    const percentage =
-      totalLessons > 0 ? Math.round((Math.min(completedLessons, totalLessons) / totalLessons) * 100) : 0;
-
-    return {
-      totalLessons,
-      completedLessons,
-      percentage,
-      isComplete: totalLessons > 0 && completedLessons >= totalLessons
     };
   }
 
