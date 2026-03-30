@@ -1,0 +1,150 @@
+"use client";
+
+export interface Lesson {
+  id: string;
+  title: string;
+  content: string;
+  type: "VIDEO" | "TEXT" | "FILE";
+  order: number;
+}
+
+export interface Section {
+  id: string;
+  title: string;
+  order: number;
+  lessons: Lesson[];
+}
+
+export interface Course {
+  id: string;
+  title: string;
+  description?: string | null;
+  thumbnailImage?: string | null;
+  category?: string | null;
+  level?: "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
+  isPaid?: boolean;
+  price?: number | null;
+  status: "DRAFT" | "PUBLISHED";
+  sections: Section[];
+}
+
+export interface QuizQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correctAnswer?: string;
+  order: number;
+}
+
+export interface Quiz {
+  id: string;
+  title: string;
+  description?: string | null;
+  questions: QuizQuestion[];
+}
+
+export interface Assignment {
+  id: string;
+  title: string;
+  description?: string | null;
+  instructions?: string | null;
+}
+
+export interface CourseAssessments {
+  quizzes: Quiz[];
+  assignments: Assignment[];
+}
+
+export interface LearnerSummary {
+  id: string;
+  enrolledAt: string;
+  learner: {
+    id: string;
+    fullName: string;
+    email: string;
+    createdAt: string;
+  };
+  progress: {
+    totalLessons: number;
+    completedLessons: number;
+    percentage: number;
+    isComplete: boolean;
+  };
+  assessments: {
+    quizzesCompleted: number;
+    quizzesTotal: number;
+    assignmentsSubmitted: number;
+    assignmentsTotal: number;
+  };
+  certificate: {
+    id: string;
+    certificateNumber: string;
+    issuedAt: string;
+  } | null;
+  learningState: {
+    lastLessonId: string | null;
+    updatedAt: string;
+  } | null;
+}
+
+export interface AssignmentSubmissionGroup {
+  id: string;
+  title: string;
+  description?: string | null;
+  instructions?: string | null;
+  submissions: Array<{
+    id: string;
+    content: string;
+    status: "PENDING_REVIEW" | "REVIEWED";
+    feedback?: string | null;
+    score?: number | null;
+    createdAt: string;
+    updatedAt: string;
+    reviewedAt?: string | null;
+    student: {
+      id: string;
+      fullName: string;
+      email: string;
+    };
+  }>;
+}
+
+export type EditorMode =
+  | { kind: "course" }
+  | { kind: "new-section" }
+  | { kind: "section"; sectionId: string }
+  | { kind: "new-lesson"; sectionId: string }
+  | { kind: "lesson"; lessonId: string }
+  | { kind: "new-quiz" }
+  | { kind: "quiz"; quizId: string }
+  | { kind: "new-assignment" }
+  | { kind: "assignment"; assignmentId: string };
+
+export type UtilityTab = "assessments" | "learners" | "submissions";
+
+export type LessonDraft = {
+  title: string;
+  type: Lesson["type"];
+  content: string;
+};
+
+export type QuizDraft = {
+  title: string;
+  description: string;
+  questions: Array<{
+    question: string;
+    options: string;
+    correctAnswer: string;
+  }>;
+};
+
+export function formatBuilderDate(value: string) {
+  return new Date(value).toLocaleString();
+}
+
+export function moveItem<T>(items: T[], fromIndex: number, toIndex: number) {
+  const next = [...items];
+  const [item] = next.splice(fromIndex, 1);
+  next.splice(toIndex, 0, item);
+  return next;
+}
