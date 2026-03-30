@@ -2,7 +2,6 @@ import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/commo
 import { AdminPermission, PaymentStatus, Prisma, UserRole } from "@prisma/client";
 import { PrismaService } from "../../../shared/prisma/prisma.service";
 import type { JwtPayload } from "../../../shared/types/auth.types";
-import { ADMIN_PERMISSION_VALUES } from "../../../shared/auth/admin-permissions";
 import {
   AdminCoursesQueryDto,
   AdminPaymentsQueryDto,
@@ -19,8 +18,9 @@ import {
   CreateAdminUserDto,
   ResetAdminPasswordDto,
   UpdateAdminPermissionsDto,
-  type AdminAuditCategory
 } from "../dto/admin-users.dto";
+import { AdminAccessService } from "./admin-access.service";
+import { AdminAuditService } from "./admin-audit.service";
 
 @Injectable()
 export class AdminService {
@@ -28,99 +28,16 @@ export class AdminService {
     private readonly prisma: PrismaService,
     private readonly usersService: UsersService,
     private readonly plansService: PlansService,
-    private readonly subscriptionsService: SubscriptionsService
+    private readonly subscriptionsService: SubscriptionsService,
+    private readonly adminAccessService: AdminAccessService,
+    private readonly adminAuditService: AdminAuditService
   ) {}
 
-  private async loadAdminActor(currentUser: JwtPayload) {
-    const actor = await this.prisma.user.findUnique({
-      where: { id: currentUser.sub },
-      select: {
-        id: true,
-        role: true,
-        isSuperAdmin: true,
-        adminPermissions: true,
-        isActive: true
-      }
-    });
-
-    if (!actor || actor.role !== UserRole.ADMIN || !actor.isActive) {
-      throw new ForbiddenException("Admin access is required.");
-    }
-
-    return actor;
-  }
-
-  private async assertAdminPermission(currentUser: JwtPayload, permission: AdminPermission) {
-    const actor = await this.loadAdminActor(currentUser);
-    if (actor.isSuperAdmin) {
-      return actor;
-    }
-    if (!actor.adminPermissions.includes(permission)) {
-      throw new ForbiddenException("You do not have permission to perform this admin action.");
-    }
-    return actor;
-  }
-
-  private async assertSuperAdmin(currentUser: JwtPayload) {
-    const actor = await this.loadAdminActor(currentUser);
-    if (!actor.isSuperAdmin) {
-      throw new ForbiddenException("Only the super admin can manage admin accounts.");
-    }
-    return actor;
-  }
-
-  private ensureValidAdminPermissions(permissions: string[]) {
-    const invalid = permissions.find((permission) => !ADMIN_PERMISSION_VALUES.includes(permission as (typeof ADMIN_PERMISSION_VALUES)[number]));
-    if (invalid) {
-      throw new ForbiddenException(`Unknown admin permission: ${invalid}`);
-    }
-  }
-
-  private getAuditActionsForCategory(category?: AdminAuditCategory) {
-    switch (category) {
-      case "ADMINS":
-        return [
-          "ADMIN_CREATED",
-          "ADMIN_PERMISSIONS_UPDATED",
-          "ADMIN_DEACTIVATED",
-          "ADMIN_REACTIVATED",
-          "ADMIN_PASSWORD_RESET"
-        ];
-      case "PLANS":
-        return ["PLAN_CREATED", "PLAN_UPDATED", "PLAN_ARCHIVED"];
-      case "TENANTS":
-        return ["TENANT_ACTIVATED", "TENANT_DEACTIVATED", "TENANT_SUBSCRIPTION_UPDATED", "TENANT_TRIAL_RESTARTED", "TENANT_SUBSCRIPTION_ENDED"];
-      case "USERS":
-        return ["USER_ACTIVATED", "USER_DEACTIVATED"];
-      default:
-        return undefined;
-    }
-  }
-
-  private async recordAuditLog(input: {
-    actorUserId: string;
-    action: string;
-    summary: string;
-    targetUserId?: string | null;
-    targetTenantId?: string | null;
-    targetPlanId?: string | null;
-    metadata?: Prisma.InputJsonValue;
-  }) {
-    await this.prisma.adminAuditLog.create({
-      data: {
-        actorUserId: input.actorUserId,
-        action: input.action,
-        summary: input.summary,
-        targetUserId: input.targetUserId ?? null,
-        targetTenantId: input.targetTenantId ?? null,
-        targetPlanId: input.targetPlanId ?? null,
-        metadata: input.metadata
-      }
-    });
-  }
-
   async getOverview(currentUser: JwtPayload) {
-    await this.assertAdminPermission(currentUser, AdminPermission.VIEW_OVERVIEW);
+    await this.adminAccessService.assertAdminPermission(
+      currentUser,
+      AdminPermission.VIEW_OVERVIEW
+    );
     const [users, tenants, plans, courses, payments, unreadNotifications] = await Promise.all([
       this.prisma.user.count(),
       this.prisma.tenant.count(),
@@ -148,7 +65,10 @@ export class AdminService {
   }
 
   async listTenants(currentUser: JwtPayload, query: AdminTenantsQueryDto) {
-    await this.assertAdminPermission(currentUser, AdminPermission.REVIEW_TENANTS);
+    await this.adminAccessService.assertAdminPermission(
+      currentUser,
+      AdminPermission.REVIEW_TENANTS
+    );
     const where: Prisma.TenantWhereInput = {};
 
     if (query.search?.trim()) {
@@ -198,7 +118,10 @@ export class AdminService {
   }
 
   async getTenantDetail(currentUser: JwtPayload, id: string) {
-    await this.assertAdminPermission(currentUser, AdminPermission.REVIEW_TENANTS);
+    await this.adminAccessService.assertAdminPermission(
+      currentUser,
+      AdminPermission.REVIEW_TENANTS
+    );
     const tenant = await this.prisma.tenant.findUnique({
       where: { id },
       include: {
@@ -291,7 +214,10 @@ export class AdminService {
   }
 
   async setTenantStatus(currentUser: JwtPayload, id: string, isActive: boolean) {
-    const actor = await this.assertAdminPermission(currentUser, AdminPermission.MANAGE_TENANTS);
+    const actor = await this.adminAccessService.assertAdminPermission(
+      currentUser,
+      AdminPermission.MANAGE_TENANTS
+    );
     const tenant = await this.prisma.tenant.findUnique({
       where: { id },
       select: { id: true, name: true }
@@ -308,7 +234,7 @@ export class AdminService {
         deactivatedAt: isActive ? null : new Date()
       }
     });
-    await this.recordAuditLog({
+    await this.adminAuditService.recordAuditLog({
       actorUserId: actor.id,
       action: isActive ? "TENANT_REACTIVATED" : "TENANT_DEACTIVATED",
       summary: `${isActive ? "Reactivated" : "Deactivated"} tenant ${tenant.name}.`,
@@ -318,14 +244,20 @@ export class AdminService {
   }
 
   async listPlans(currentUser: JwtPayload) {
-    await this.assertAdminPermission(currentUser, AdminPermission.MANAGE_PLANS);
+    await this.adminAccessService.assertAdminPermission(
+      currentUser,
+      AdminPermission.MANAGE_PLANS
+    );
     return this.plansService.listPlans();
   }
 
   async createPlan(currentUser: JwtPayload, dto: CreatePlanDto) {
-    const actor = await this.assertAdminPermission(currentUser, AdminPermission.MANAGE_PLANS);
+    const actor = await this.adminAccessService.assertAdminPermission(
+      currentUser,
+      AdminPermission.MANAGE_PLANS
+    );
     const plan = await this.plansService.createPlan(dto);
-    await this.recordAuditLog({
+    await this.adminAuditService.recordAuditLog({
       actorUserId: actor.id,
       action: "PLAN_CREATED",
       summary: `Created subscription plan ${plan.name}.`,
@@ -335,9 +267,12 @@ export class AdminService {
   }
 
   async updatePlan(currentUser: JwtPayload, planId: string, dto: UpdatePlanDto) {
-    const actor = await this.assertAdminPermission(currentUser, AdminPermission.MANAGE_PLANS);
+    const actor = await this.adminAccessService.assertAdminPermission(
+      currentUser,
+      AdminPermission.MANAGE_PLANS
+    );
     const plan = await this.plansService.updatePlan(planId, dto);
-    await this.recordAuditLog({
+    await this.adminAuditService.recordAuditLog({
       actorUserId: actor.id,
       action: "PLAN_UPDATED",
       summary: `Updated subscription plan ${plan.name}.`,
@@ -347,9 +282,12 @@ export class AdminService {
   }
 
   async archivePlan(currentUser: JwtPayload, planId: string) {
-    const actor = await this.assertAdminPermission(currentUser, AdminPermission.MANAGE_PLANS);
+    const actor = await this.adminAccessService.assertAdminPermission(
+      currentUser,
+      AdminPermission.MANAGE_PLANS
+    );
     const plan = await this.plansService.archivePlan(planId);
-    await this.recordAuditLog({
+    await this.adminAuditService.recordAuditLog({
       actorUserId: actor.id,
       action: "PLAN_ARCHIVED",
       summary: `Archived subscription plan ${plan.name}.`,
@@ -360,7 +298,7 @@ export class AdminService {
 
   async listUsers(currentUser: JwtPayload, query: AdminUsersQueryDto) {
     const where: Prisma.UserWhereInput = {};
-    const actor = await this.loadAdminActor(currentUser);
+    const actor = await this.adminAccessService.loadAdminActor(currentUser);
 
     if (query.search?.trim()) {
       const search = query.search.trim();
@@ -372,10 +310,16 @@ export class AdminService {
 
     if (query.role) {
       if (query.role === "STUDENT") {
-        await this.assertAdminPermission(currentUser, AdminPermission.REVIEW_STUDENTS);
+        await this.adminAccessService.assertAdminPermission(
+          currentUser,
+          AdminPermission.REVIEW_STUDENTS
+        );
       }
       if (query.role === "INSTRUCTOR") {
-        await this.assertAdminPermission(currentUser, AdminPermission.REVIEW_INSTRUCTORS);
+        await this.adminAccessService.assertAdminPermission(
+          currentUser,
+          AdminPermission.REVIEW_INSTRUCTORS
+        );
       }
       if (query.role === "ADMIN") {
         throw new ForbiddenException("Admin accounts are managed separately.");
@@ -480,10 +424,16 @@ export class AdminService {
     }
 
     if (user.role === UserRole.STUDENT) {
-      await this.assertAdminPermission(currentUser, AdminPermission.REVIEW_STUDENTS);
+      await this.adminAccessService.assertAdminPermission(
+        currentUser,
+        AdminPermission.REVIEW_STUDENTS
+      );
     }
     if (user.role === UserRole.INSTRUCTOR) {
-      await this.assertAdminPermission(currentUser, AdminPermission.REVIEW_INSTRUCTORS);
+      await this.adminAccessService.assertAdminPermission(
+        currentUser,
+        AdminPermission.REVIEW_INSTRUCTORS
+      );
     }
 
     const [recentPayments, recentEnrollments] = await Promise.all([
@@ -522,7 +472,10 @@ export class AdminService {
   }
 
   async setUserStatus(currentUser: JwtPayload, id: string, isActive: boolean) {
-    const actor = await this.assertAdminPermission(currentUser, AdminPermission.MANAGE_USERS);
+    const actor = await this.adminAccessService.assertAdminPermission(
+      currentUser,
+      AdminPermission.MANAGE_USERS
+    );
     const user = await this.prisma.user.findUnique({
       where: { id },
       select: { id: true, role: true, isSuperAdmin: true, fullName: true }
@@ -537,7 +490,7 @@ export class AdminService {
     }
 
     const updated = await this.usersService.setActiveStatus(id, isActive);
-    await this.recordAuditLog({
+    await this.adminAuditService.recordAuditLog({
       actorUserId: actor.id,
       action: isActive ? "USER_REACTIVATED" : "USER_DEACTIVATED",
       summary: `${isActive ? "Reactivated" : "Deactivated"} user ${user.fullName}.`,
@@ -547,7 +500,10 @@ export class AdminService {
   }
 
   async listCourses(currentUser: JwtPayload, query: AdminCoursesQueryDto) {
-    await this.assertAdminPermission(currentUser, AdminPermission.REVIEW_COURSES);
+    await this.adminAccessService.assertAdminPermission(
+      currentUser,
+      AdminPermission.REVIEW_COURSES
+    );
     const where: Prisma.CourseWhereInput = {};
 
     if (query.tenantId) {
@@ -580,7 +536,10 @@ export class AdminService {
   }
 
   async listPayments(currentUser: JwtPayload, query: AdminPaymentsQueryDto) {
-    await this.assertAdminPermission(currentUser, AdminPermission.REVIEW_PAYMENTS);
+    await this.adminAccessService.assertAdminPermission(
+      currentUser,
+      AdminPermission.REVIEW_PAYMENTS
+    );
     const where: Prisma.PaymentWhereInput = {};
 
     if (query.tenantId) {
@@ -612,7 +571,10 @@ export class AdminService {
   }
 
   async getActivity(currentUser: JwtPayload) {
-    await this.assertAdminPermission(currentUser, AdminPermission.VIEW_OVERVIEW);
+    await this.adminAccessService.assertAdminPermission(
+      currentUser,
+      AdminPermission.VIEW_OVERVIEW
+    );
     const [recentUsers, recentCourses, recentPayments, recentNotifications] = await Promise.all([
       this.prisma.user.findMany({
         orderBy: { createdAt: "desc" },
@@ -652,7 +614,7 @@ export class AdminService {
   }
 
   async listAdminUsers(currentUser: JwtPayload, query: AdminUsersListQueryDto) {
-    await this.assertSuperAdmin(currentUser);
+    await this.adminAccessService.assertSuperAdmin(currentUser);
     const where: Prisma.UserWhereInput = {
       role: UserRole.ADMIN,
       isSuperAdmin: false
@@ -683,8 +645,8 @@ export class AdminService {
   }
 
   async createAdminUser(currentUser: JwtPayload, dto: CreateAdminUserDto) {
-    const actor = await this.assertSuperAdmin(currentUser);
-    this.ensureValidAdminPermissions(dto.permissions);
+    const actor = await this.adminAccessService.assertSuperAdmin(currentUser);
+    this.adminAccessService.ensureValidAdminPermissions(dto.permissions);
     const admin = await this.usersService.create({
       email: dto.email.trim().toLowerCase(),
       fullName: dto.fullName.trim(),
@@ -695,7 +657,7 @@ export class AdminService {
       adminPermissions: dto.permissions,
       mustChangePassword: true
     });
-    await this.recordAuditLog({
+    await this.adminAuditService.recordAuditLog({
       actorUserId: actor.id,
       action: "ADMIN_CREATED",
       summary: `Created delegated admin ${admin.fullName}.`,
@@ -706,8 +668,8 @@ export class AdminService {
   }
 
   async updateAdminPermissions(currentUser: JwtPayload, adminUserId: string, dto: UpdateAdminPermissionsDto) {
-    const actor = await this.assertSuperAdmin(currentUser);
-    this.ensureValidAdminPermissions(dto.permissions);
+    const actor = await this.adminAccessService.assertSuperAdmin(currentUser);
+    this.adminAccessService.ensureValidAdminPermissions(dto.permissions);
 
     const target = await this.prisma.user.findUnique({
       where: { id: adminUserId },
@@ -735,7 +697,7 @@ export class AdminService {
         createdAt: true
       }
     });
-    await this.recordAuditLog({
+    await this.adminAuditService.recordAuditLog({
       actorUserId: actor.id,
       action: "ADMIN_PERMISSIONS_UPDATED",
       summary: `Updated delegated admin permissions for ${updated.fullName}.`,
@@ -746,7 +708,7 @@ export class AdminService {
   }
 
   async setManagedAdminStatus(currentUser: JwtPayload, adminUserId: string, isActive: boolean) {
-    const actor = await this.assertSuperAdmin(currentUser);
+    const actor = await this.adminAccessService.assertSuperAdmin(currentUser);
     const target = await this.prisma.user.findUnique({
       where: { id: adminUserId },
       select: { id: true, role: true, isSuperAdmin: true, fullName: true }
@@ -760,7 +722,7 @@ export class AdminService {
     }
 
     const updated = await this.usersService.setActiveStatus(adminUserId, isActive);
-    await this.recordAuditLog({
+    await this.adminAuditService.recordAuditLog({
       actorUserId: actor.id,
       action: isActive ? "ADMIN_REACTIVATED" : "ADMIN_DEACTIVATED",
       summary: `${isActive ? "Reactivated" : "Deactivated"} delegated admin ${target.fullName}.`,
@@ -770,7 +732,7 @@ export class AdminService {
   }
 
   async resetManagedAdminPassword(currentUser: JwtPayload, adminUserId: string, dto: ResetAdminPasswordDto) {
-    const actor = await this.assertSuperAdmin(currentUser);
+    const actor = await this.adminAccessService.assertSuperAdmin(currentUser);
     const target = await this.prisma.user.findUnique({
       where: { id: adminUserId },
       select: { id: true, role: true, isSuperAdmin: true, fullName: true }
@@ -789,7 +751,7 @@ export class AdminService {
     if (!updated) {
       throw new NotFoundException("Admin account not found");
     }
-    await this.recordAuditLog({
+    await this.adminAuditService.recordAuditLog({
       actorUserId: actor.id,
       action: "ADMIN_PASSWORD_RESET",
       summary: `Reset password for delegated admin ${target.fullName}.`,
@@ -799,23 +761,7 @@ export class AdminService {
   }
 
   async listAuditLogs(currentUser: JwtPayload, query: AdminAuditLogsQueryDto) {
-    await this.assertSuperAdmin(currentUser);
-    const take = Math.min(Math.max(query.limit ?? 20, 1), 100);
-    const categoryActions = this.getAuditActionsForCategory(query.category);
-    return this.prisma.adminAuditLog.findMany({
-      where: categoryActions ? { action: { in: categoryActions } } : undefined,
-      orderBy: { createdAt: "desc" },
-      take,
-      include: {
-        actor: {
-          select: {
-            id: true,
-            fullName: true,
-            email: true,
-            isSuperAdmin: true
-          }
-        }
-      }
-    });
+    await this.adminAccessService.assertSuperAdmin(currentUser);
+    return this.adminAuditService.listAuditLogs(query);
   }
 }

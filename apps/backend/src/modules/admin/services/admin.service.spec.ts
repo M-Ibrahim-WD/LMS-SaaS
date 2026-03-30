@@ -44,8 +44,37 @@ test("getOverview returns aggregated platform totals", async () => {
       count: createAsyncMock(async () => 3)
     }
   };
+  const adminAccessService = {
+    assertAdminPermission: createAsyncMock(async () => ({
+      id: "admin-1",
+      isSuperAdmin: true,
+      adminPermissions: []
+    })),
+    loadAdminActor: createAsyncMock(async () => ({
+      id: "admin-1",
+      isSuperAdmin: true,
+      adminPermissions: []
+    })),
+    assertSuperAdmin: createAsyncMock(async () => ({
+      id: "admin-1",
+      isSuperAdmin: true,
+      adminPermissions: []
+    })),
+    ensureValidAdminPermissions: () => undefined
+  };
+  const adminAuditService = {
+    recordAuditLog: createAsyncMock(async () => undefined),
+    listAuditLogs: createAsyncMock(async () => [])
+  };
 
-  const service = new AdminService(prisma as never, {} as never, {} as never, {} as never);
+  const service = new AdminService(
+    prisma as never,
+    {} as never,
+    {} as never,
+    {} as never,
+    adminAccessService as never,
+    adminAuditService as never
+  );
   const result = await service.getOverview(adminActor);
 
   assert.deepEqual(result, {
@@ -97,8 +126,37 @@ test("listTenants maps usage counts and filters by active flag", async () => {
       ])
     }
   };
+  const adminAccessService = {
+    assertAdminPermission: createAsyncMock(async () => ({
+      id: "admin-1",
+      isSuperAdmin: true,
+      adminPermissions: []
+    })),
+    loadAdminActor: createAsyncMock(async () => ({
+      id: "admin-1",
+      isSuperAdmin: true,
+      adminPermissions: []
+    })),
+    assertSuperAdmin: createAsyncMock(async () => ({
+      id: "admin-1",
+      isSuperAdmin: true,
+      adminPermissions: []
+    })),
+    ensureValidAdminPermissions: () => undefined
+  };
+  const adminAuditService = {
+    recordAuditLog: createAsyncMock(async () => undefined),
+    listAuditLogs: createAsyncMock(async () => [])
+  };
 
-  const service = new AdminService(prisma as never, {} as never, {} as never, {} as never);
+  const service = new AdminService(
+    prisma as never,
+    {} as never,
+    {} as never,
+    {} as never,
+    adminAccessService as never,
+    adminAuditService as never
+  );
   const result = await service.listTenants(adminActor, {
     search: "acme",
     isActive: "true"
@@ -177,8 +235,37 @@ test("getUserDetail resolves profile image and recent activity", async () => {
     resolveProfileImageUrl: (userId: string, profileImage: string | null) =>
       profileImage ? `/api/users/${userId}/profile-image` : null
   };
+  const adminAccessService = {
+    assertAdminPermission: createAsyncMock(async () => ({
+      id: "admin-1",
+      isSuperAdmin: true,
+      adminPermissions: []
+    })),
+    loadAdminActor: createAsyncMock(async () => ({
+      id: "admin-1",
+      isSuperAdmin: true,
+      adminPermissions: []
+    })),
+    assertSuperAdmin: createAsyncMock(async () => ({
+      id: "admin-1",
+      isSuperAdmin: true,
+      adminPermissions: []
+    })),
+    ensureValidAdminPermissions: () => undefined
+  };
+  const adminAuditService = {
+    recordAuditLog: createAsyncMock(async () => undefined),
+    listAuditLogs: createAsyncMock(async () => [])
+  };
 
-  const service = new AdminService(prisma as never, usersService as never, {} as never, {} as never);
+  const service = new AdminService(
+    prisma as never,
+    usersService as never,
+    {} as never,
+    {} as never,
+    adminAccessService as never,
+    adminAuditService as never
+  );
   const result = await service.getUserDetail(adminActor, "user-1");
 
   assert.equal(result.user.profileImage, "/api/users/user-1/profile-image");
@@ -212,12 +299,43 @@ test("setUserStatus delegates to users service after existence check", async () 
       isActive: false
     }))
   };
+  const adminAccessService = {
+    assertAdminPermission: createAsyncMock(async () => ({
+      id: "admin-1",
+      isSuperAdmin: true,
+      adminPermissions: []
+    })),
+    loadAdminActor: createAsyncMock(async () => ({
+      id: "admin-1",
+      isSuperAdmin: true,
+      adminPermissions: []
+    })),
+    assertSuperAdmin: createAsyncMock(async () => ({
+      id: "admin-1",
+      isSuperAdmin: true,
+      adminPermissions: []
+    })),
+    ensureValidAdminPermissions: () => undefined
+  };
+  const adminAuditService = {
+    recordAuditLog: createAsyncMock(async () => undefined),
+    listAuditLogs: createAsyncMock(async () => [])
+  };
 
-  const service = new AdminService(prisma as never, usersService as never, {} as never, {} as never);
+  const service = new AdminService(
+    prisma as never,
+    usersService as never,
+    {} as never,
+    {} as never,
+    adminAccessService as never,
+    adminAuditService as never
+  );
   const result = await service.setUserStatus(adminActor, "user-1", false);
 
-  assert.equal(prisma.user.findUnique.calls.length, 2);
+  assert.equal(prisma.user.findUnique.calls.length, 1);
+  assert.equal(adminAccessService.assertAdminPermission.calls.length, 1);
   assert.equal(usersService.setActiveStatus.calls.length, 1);
   assert.deepEqual(usersService.setActiveStatus.calls[0], ["user-1", false]);
+  assert.equal(adminAuditService.recordAuditLog.calls.length, 1);
   assert.equal(result.isActive, false);
 });
