@@ -33,3 +33,25 @@ test("create stores a notification and marks its job as processed", async () => 
   assert.equal(prisma.notificationJob.updateMany.calls.length, 1);
   assert.equal(result?.id, "notification-1");
 });
+
+test("markAllAsRead updates unread notifications for the current user", async () => {
+  const prisma = {
+    notification: {
+      updateMany: createAsyncMock(async () => ({ count: 4 }))
+    }
+  };
+
+  const service = new NotificationsService(prisma as never);
+  const result = await service.markAllAsRead({
+    sub: "user-1",
+    role: "STUDENT"
+  } as never);
+  const firstCall = prisma.notification.updateMany.calls[0] as unknown as [{ where: { userId: string; isRead: boolean } }];
+
+  assert.equal(prisma.notification.updateMany.calls.length, 1);
+  assert.deepEqual(firstCall[0].where, {
+    userId: "user-1",
+    isRead: false
+  });
+  assert.equal(result.updatedCount, 4);
+});

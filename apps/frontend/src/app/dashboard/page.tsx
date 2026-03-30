@@ -244,6 +244,17 @@ export default function DashboardPage() {
     }
   });
 
+  const markAllNotificationsReadMutation = useMutation({
+    mutationFn: () =>
+      apiFetch("/notifications/read-all", {
+        method: "PATCH",
+        token: accessToken ?? undefined
+      }),
+    onSuccess: async () => {
+      await Promise.all([notificationsQuery.refetch(), unreadCountQuery.refetch()]);
+    }
+  });
+
   function onLogout() {
     clearSession();
     clearAuthCookie();
@@ -410,8 +421,9 @@ export default function DashboardPage() {
             items={notificationsQuery.data}
             unreadCount={unreadCountQuery.data?.unreadCount ?? 0}
             isLoading={notificationsQuery.isLoading}
-            isUpdating={markNotificationReadMutation.isPending}
+            isUpdating={markNotificationReadMutation.isPending || markAllNotificationsReadMutation.isPending}
             onMarkRead={(notificationId) => markNotificationReadMutation.mutate(notificationId)}
+            onMarkAllRead={() => markAllNotificationsReadMutation.mutate()}
           />
           <Link href="/profile" className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm">
             Profile

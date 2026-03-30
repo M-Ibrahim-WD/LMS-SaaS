@@ -1,14 +1,23 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { StatusChip } from "./status-chip";
 
 type NotificationFilter = "ALL" | "UNREAD" | "READ";
+type NotificationType =
+  | "WELCOME"
+  | "INSTRUCTOR_JOINED"
+  | "PAYMENT_SUBMITTED"
+  | "PAYMENT_APPROVED"
+  | "PAYMENT_REJECTED"
+  | "ENROLLMENT_CREATED"
+  | "CERTIFICATE_ISSUED";
 
 interface NotificationItem {
   id: string;
   title: string;
   message: string;
+  type: NotificationType;
   isRead: boolean;
   createdAt: string;
 }
@@ -19,6 +28,7 @@ interface NotificationCenterProps {
   isLoading?: boolean;
   isUpdating?: boolean;
   onMarkRead: (notificationId: string) => void;
+  onMarkAllRead: () => void;
 }
 
 function BellIcon() {
@@ -30,15 +40,99 @@ function BellIcon() {
   );
 }
 
+function NotificationTypeIcon({ type }: { type: NotificationType }) {
+  const iconClass = "h-5 w-5";
+
+  switch (type) {
+    case "WELCOME":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={iconClass}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 12h16M12 4v16" />
+        </svg>
+      );
+    case "INSTRUCTOR_JOINED":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={iconClass}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2" />
+          <circle cx="9.5" cy="7" r="3.5" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M17 8h4M19 6v4" />
+        </svg>
+      );
+    case "PAYMENT_SUBMITTED":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={iconClass}>
+          <rect x="3" y="6" width="18" height="12" rx="2" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18" />
+        </svg>
+      );
+    case "PAYMENT_APPROVED":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={iconClass}>
+          <circle cx="12" cy="12" r="9" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="m8.5 12.5 2.3 2.3 4.7-5.3" />
+        </svg>
+      );
+    case "PAYMENT_REJECTED":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={iconClass}>
+          <circle cx="12" cy="12" r="9" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="m9 9 6 6M15 9l-6 6" />
+        </svg>
+      );
+    case "ENROLLMENT_CREATED":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={iconClass}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 19.5V6.5A2.5 2.5 0 0 1 6.5 4H20v15.5H6.5A2.5 2.5 0 0 0 4 22" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8 8h8M8 12h6" />
+        </svg>
+      );
+    case "CERTIFICATE_ISSUED":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={iconClass}>
+          <circle cx="12" cy="8.5" r="4.5" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M10 13.5 8 20l4-2 4 2-2-6.5" />
+        </svg>
+      );
+    default:
+      return <BellIcon />;
+  }
+}
+
+const typeTone: Record<NotificationType, "default" | "info" | "success" | "warning" | "danger" | "trial"> = {
+  WELCOME: "info",
+  INSTRUCTOR_JOINED: "trial",
+  PAYMENT_SUBMITTED: "warning",
+  PAYMENT_APPROVED: "success",
+  PAYMENT_REJECTED: "danger",
+  ENROLLMENT_CREATED: "info",
+  CERTIFICATE_ISSUED: "success"
+};
+
 export function NotificationCenter({
   items,
   unreadCount,
   isLoading = false,
   isUpdating = false,
-  onMarkRead
+  onMarkRead,
+  onMarkAllRead
 }: NotificationCenterProps) {
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState<NotificationFilter>("ALL");
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [open]);
 
   const filteredItems = useMemo(() => {
     const notifications = items ?? [];
@@ -77,7 +171,7 @@ export function NotificationCenter({
             className="fixed inset-0 z-30 cursor-default bg-transparent"
             onClick={() => setOpen(false)}
           />
-          <div className="surface-card-strong absolute right-0 z-40 mt-3 w-[min(92vw,28rem)] rounded-[28px] p-5">
+          <div className="surface-card-strong absolute right-0 z-40 mt-3 w-[min(92vw,29rem)] rounded-[28px] p-5">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="section-kicker">Notifications</p>
@@ -88,21 +182,31 @@ export function NotificationCenter({
               </StatusChip>
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-2">
-              {(["ALL", "UNREAD", "READ"] as NotificationFilter[]).map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setFilter(value)}
-                  className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                    filter === value
-                      ? "bg-slate-950 text-white"
-                      : "border border-slate-300 bg-white text-slate-700"
-                  }`}
-                >
-                  {value === "ALL" ? "All" : value === "UNREAD" ? "Unread" : "Read"}
-                </button>
-              ))}
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap gap-2">
+                {(["ALL", "UNREAD", "READ"] as NotificationFilter[]).map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setFilter(value)}
+                    className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                      filter === value
+                        ? "bg-slate-950 text-white"
+                        : "border border-slate-300 bg-white text-slate-700"
+                    }`}
+                  >
+                    {value === "ALL" ? "All" : value === "UNREAD" ? "Unread" : "Read"}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                disabled={unreadCount === 0 || isUpdating}
+                onClick={onMarkAllRead}
+                className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 disabled:opacity-60"
+              >
+                Mark all as read
+              </button>
             </div>
 
             <div className="ui-scrollbar mt-5 max-h-[26rem] space-y-3 overflow-y-auto pr-1">
@@ -120,15 +224,25 @@ export function NotificationCenter({
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="font-semibold text-slate-950">{notification.title}</p>
-                        <StatusChip tone={notification.isRead ? "default" : "info"}>
-                          {notification.isRead ? "Read" : "Unread"}
-                        </StatusChip>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start gap-3">
+                        <div className={`mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl ${
+                          notification.isRead ? "bg-white text-slate-500" : "bg-white text-slate-900"
+                        }`}>
+                          <NotificationTypeIcon type={notification.type} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-semibold text-slate-950">{notification.title}</p>
+                            <StatusChip tone={typeTone[notification.type]}>{notification.type.replace(/_/g, " ")}</StatusChip>
+                            <StatusChip tone={notification.isRead ? "default" : "info"}>
+                              {notification.isRead ? "Read" : "Unread"}
+                            </StatusChip>
+                          </div>
+                          <p className="mt-2 text-sm leading-6 text-slate-600">{notification.message}</p>
+                          <p className="mt-2 text-xs text-slate-500">{new Date(notification.createdAt).toLocaleString()}</p>
+                        </div>
                       </div>
-                      <p className="mt-2 text-sm leading-6 text-slate-600">{notification.message}</p>
-                      <p className="mt-2 text-xs text-slate-500">{new Date(notification.createdAt).toLocaleString()}</p>
                     </div>
                     {!notification.isRead ? (
                       <button

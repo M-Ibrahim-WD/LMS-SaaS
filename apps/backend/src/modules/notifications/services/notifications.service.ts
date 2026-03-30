@@ -99,6 +99,21 @@ export class NotificationsService {
     });
   }
 
+  async markAllAsRead(user: JwtPayload) {
+    const result = await this.prisma.notification.updateMany({
+      where: {
+        userId: user.sub,
+        isRead: false
+      },
+      data: {
+        isRead: true,
+        readAt: new Date()
+      }
+    });
+
+    return { updatedCount: result.count };
+  }
+
   assertNotificationAccess(user: JwtPayload) {
     if (!["STUDENT", "INSTRUCTOR", "ADMIN"].includes(user.role)) {
       throw new ForbiddenException("Unsupported role for notifications");

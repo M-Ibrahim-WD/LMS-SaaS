@@ -29,4 +29,10 @@ export class NotificationsController {
     this.notificationsService.assertNotificationAccess(user);
     return this.notificationsService.markAsRead(user, id);
   }
+
+  @Patch("read-all")
+  markAllAsRead(@CurrentUser() user: JwtPayload) {
+    this.notificationsService.assertNotificationAccess(user);
+    return this.notificationsService.markAllAsRead(user);
+  }
 }
