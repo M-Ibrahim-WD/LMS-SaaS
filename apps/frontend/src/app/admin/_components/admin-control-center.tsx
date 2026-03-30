@@ -5,11 +5,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ContentCard } from "../../../components/content-card";
 import { EmptyState } from "../../../components/empty-state";
 import { StatusBanner } from "../../../components/status-banner";
-import { StatusChip } from "../../../components/status-chip";
 import { useRequireAuth } from "../../../hooks/use-require-auth";
 import { apiFetch } from "../../../lib/api/client";
 import type { AdminPermission } from "../../../lib/auth/token";
 import { AdminSectionKey, AdminShell } from "./admin-shell";
+import { AdminAdminsSection } from "./admin-admins-section";
+import { AdminAuditSection } from "./admin-audit-section";
+import { AdminOverviewSection } from "./admin-overview-section";
+import { AdminPlansSection } from "./admin-plans-section";
+import { AdminTenantsSection } from "./admin-tenants-section";
+import { AdminUsersSection } from "./admin-users-section";
 
 type Plan = {
   id: string;
@@ -1118,863 +1123,113 @@ export function AdminControlCenter({ section }: AdminControlCenterProps) {
       ) : null}
 
       {activeNavItem && section === "overview" ? (
-        <>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
-            {[
-              ["Users", overviewQuery.data?.totals.users ?? 0],
-              ["Tenants", overviewQuery.data?.totals.tenants ?? 0],
-              ["Plans", overviewQuery.data?.totals.plans ?? 0],
-              ["Courses", overviewQuery.data?.totals.courses ?? 0],
-              ["Approved Payments", overviewQuery.data?.totals.approvedPayments ?? 0],
-              ["Revenue", money.format(overviewQuery.data?.totals.approvedRevenue ?? 0)],
-              ["Unread Notifications", overviewQuery.data?.totals.unreadNotifications ?? 0]
-            ].map(([label, value]) => (
-              <ContentCard key={String(label)} className="p-5">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{label}</p>
-                <p className="mt-3 text-3xl font-semibold text-slate-950">{value}</p>
-              </ContentCard>
-            ))}
-          </div>
-
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
-            {canReviewOps ? (
-              <ContentCard className="p-6">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="section-kicker">Operational Snapshot</p>
-                    <h3 className="mt-2 text-xl font-semibold text-slate-950">Courses and payments</h3>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {hasAdminPermission("REVIEW_COURSES") ? <StatusChip tone="info">Courses</StatusChip> : null}
-                    {hasAdminPermission("REVIEW_PAYMENTS") ? <StatusChip tone="warning">Payments</StatusChip> : null}
-                  </div>
-                </div>
-                <div className="mt-5 grid gap-3 lg:grid-cols-2">
-                  {hasAdminPermission("REVIEW_COURSES") ? (
-                    <div className="rounded-[24px] border border-slate-200 bg-slate-50/85 p-4">
-                      <p className="text-sm font-semibold text-slate-900">Recent courses</p>
-                      <div className="mt-3 space-y-2">
-                        {coursesQuery.data?.slice(0, 4).map((course) => (
-                          <div key={course.id} className="rounded-2xl bg-white p-3 text-sm shadow-sm">
-                            <p className="font-medium text-slate-900">{course.title}</p>
-                            <p className="mt-1 text-slate-500">{course.instructor.fullName} • {course.tenant.name}</p>
-                          </div>
-                        )) ?? <p className="text-sm text-slate-500">No courses yet.</p>}
-                      </div>
-                    </div>
-                  ) : null}
-                  {hasAdminPermission("REVIEW_PAYMENTS") ? (
-                    <div className="rounded-[24px] border border-slate-200 bg-slate-50/85 p-4">
-                      <p className="text-sm font-semibold text-slate-900">Recent payments</p>
-                      <div className="mt-3 space-y-2">
-                        {paymentsQuery.data?.slice(0, 4).map((payment) => (
-                          <div key={payment.id} className="rounded-2xl bg-white p-3 text-sm shadow-sm">
-                            <p className="font-medium text-slate-900">{payment.course.title}</p>
-                            <p className="mt-1 text-slate-500">{payment.user.fullName} • {money.format(payment.amount)}</p>
-                          </div>
-                        )) ?? <p className="text-sm text-slate-500">No payments yet.</p>}
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-              </ContentCard>
-            ) : null}
-
-            <ContentCard className="p-6">
-              <p className="section-kicker">Quick links</p>
-              <h3 className="mt-2 text-xl font-semibold text-slate-950">Jump into the right management area</h3>
-              <div className="mt-5 space-y-3">
-                {navItems.filter((item) => item.visible && item.key !== "overview").map((item) => (
-                  <a key={item.key} href={item.href} className="block rounded-[24px] border border-slate-200 bg-white/90 p-4 transition hover:border-slate-300">
-                    <p className="font-semibold text-slate-900">{item.label}</p>
-                    <p className="mt-1 text-sm text-slate-500">{item.description}</p>
-                  </a>
-                ))}
-              </div>
-            </ContentCard>
-          </div>
-        </>
+        <AdminOverviewSection
+          overview={overviewQuery.data}
+          courses={coursesQuery.data}
+          payments={paymentsQuery.data}
+          activity={activityQuery.data}
+          navItems={navItems}
+          canManagePlans={canManagePlans}
+          canReviewTenants={canReviewTenants}
+          canReviewCourses={hasAdminPermission("REVIEW_COURSES")}
+          canReviewPayments={hasAdminPermission("REVIEW_PAYMENTS")}
+          coursesLoading={coursesQuery.isLoading}
+          paymentsLoading={paymentsQuery.isLoading}
+          activityLoading={activityQuery.isLoading}
+        />
       ) : null}
 
       {isSuperAdmin && section === "admins" ? (
-        <div className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
-          <ContentCard className="p-6">
-            <h2 className="text-lg font-semibold text-slate-950">Super Admin Controls</h2>
-            <p className="mt-2 text-sm text-slate-600">
-              This account has full platform authority. Other admins can be created here with only the permissions you explicitly assign.
-            </p>
-            <form
-              className="mt-5 space-y-4"
-              onSubmit={(event) => {
-                event.preventDefault();
-                createAdminUserMutation.mutate(adminForm);
-              }}
-            >
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-slate-800">Admin name</span>
-                  <input value={adminForm.fullName} onChange={(event) => setAdminForm((current) => ({ ...current, fullName: event.target.value }))} className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm" required />
-                </label>
-                <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-slate-800">Admin email</span>
-                  <input type="email" value={adminForm.email} onChange={(event) => setAdminForm((current) => ({ ...current, email: event.target.value }))} className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm" required />
-                </label>
-              </div>
-              <label className="block">
-                <span className="mb-2 block text-sm font-medium text-slate-800">Temporary password</span>
-                <input type="password" value={adminForm.password} onChange={(event) => setAdminForm((current) => ({ ...current, password: event.target.value }))} className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm" required />
-                <span className="mt-2 block text-xs text-slate-500">This delegated admin will be required to change this password on first login.</span>
-              </label>
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-slate-800">Permission preset</span>
-                  <select
-                    value={selectedAdminPreset}
-                    onChange={(event) => {
-                      const presetKey = event.target.value;
-                      setSelectedAdminPreset(presetKey);
-                      if (presetKey) {
-                        setCloneAdminId("");
-                      }
-                      const preset = adminPermissionPresets.find((entry) => entry.key === presetKey);
-                      if (preset) {
-                        setAdminForm((current) => ({ ...current, permissions: preset.permissions }));
-                      }
-                    }}
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
-                  >
-                    <option value="">Choose a preset or customize manually</option>
-                    {adminPermissionPresets.map((preset) => (
-                      <option key={preset.key} value={preset.key}>
-                        {preset.label}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="mt-2 block text-xs text-slate-500">
-                    {selectedAdminPreset
-                      ? adminPermissionPresets.find((preset) => preset.key === selectedAdminPreset)?.description
-                      : "Pick a preset to prefill permissions quickly, then adjust any permission below."}
-                  </span>
-                </label>
-                <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-slate-800">Clone from existing admin</span>
-                  <select
-                    value={cloneAdminId}
-                    onChange={(event) => {
-                      const nextAdminId = event.target.value;
-                      setCloneAdminId(nextAdminId);
-                      if (nextAdminId) {
-                        setSelectedAdminPreset("");
-                      }
-                      const sourceAdmin = adminUsersQuery.data?.find((entry) => entry.id === nextAdminId);
-                      if (sourceAdmin) {
-                        setAdminForm((current) => ({ ...current, permissions: sourceAdmin.adminPermissions }));
-                      }
-                    }}
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
-                  >
-                    <option value="">Choose an existing delegated admin</option>
-                    {adminUsersQuery.data?.map((admin) => (
-                      <option key={admin.id} value={admin.id}>
-                        {admin.fullName} ({admin.email})
-                      </option>
-                    ))}
-                  </select>
-                  <span className="mt-2 block text-xs text-slate-500">Useful when you want to duplicate a proven permission mix instead of rebuilding it manually.</span>
-                </label>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-slate-800">Admin permissions</p>
-                <div className="mt-3 grid gap-3 md:grid-cols-2">
-                  {adminPermissionOrder.map((permission) => (
-                    <label key={permission} className={`rounded-2xl border p-4 ${adminForm.permissions.includes(permission) ? "border-emerald-200 bg-emerald-50" : "border-slate-200 bg-white"}`}>
-                      <div className="flex items-start gap-3">
-                        <input
-                          type="checkbox"
-                          checked={adminForm.permissions.includes(permission)}
-                          onChange={(event) =>
-                            setAdminForm((current) => ({
-                              ...current,
-                              permissions: event.target.checked
-                                ? [...current.permissions, permission]
-                                : current.permissions.filter((entry) => entry !== permission)
-                            }))
-                          }
-                          className="mt-1"
-                        />
-                        <div>
-                          <p className="text-sm font-medium text-slate-800">{adminPermissionLabels[permission].label}</p>
-                          <p className="mt-1 text-xs text-slate-500">{adminPermissionLabels[permission].description}</p>
-                        </div>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              </div>
-              <button type="submit" className="rounded-full bg-slate-950 px-5 py-2 text-sm font-medium text-white">
-                Create Admin Account
-              </button>
-            </form>
-          </ContentCard>
-
-          <ContentCard className="p-6">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold text-slate-950">Managed Admin Accounts</h2>
-                <p className="mt-1 text-sm text-slate-600">The super admin account itself is not listed, visible, or editable here.</p>
-              </div>
-              <input value={adminSearch} onChange={(event) => setAdminSearch(event.target.value)} placeholder="Search admins" className="w-full max-w-56 rounded-xl border border-slate-300 px-4 py-3 text-sm" />
-            </div>
-            <div className="mt-4 space-y-4">
-              {adminUsersQuery.data?.length ? adminUsersQuery.data.map((admin) => (
-                <div key={admin.id} className="rounded-2xl border border-slate-200 p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <p className="font-semibold text-slate-950">{admin.fullName}</p>
-                      <p className="mt-1 text-sm text-slate-500">{admin.email}</p>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        <span className={`rounded-full px-3 py-1 text-xs font-medium ${admin.isActive ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"}`}>
-                          {admin.isActive ? "Active" : "Inactive"}
-                        </span>
-                        {admin.mustChangePassword ? (
-                          <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">Must change password</span>
-                        ) : null}
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => managedAdminStatusMutation.mutate({ id: admin.id, isActive: !admin.isActive })}
-                      className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
-                    >
-                      {admin.isActive ? "Deactivate" : "Reactivate"}
-                    </button>
-                  </div>
-                  <div className="mt-4 grid gap-3 md:grid-cols-2">
-                    {adminPermissionOrder.map((permission) => (
-                      <label key={`${admin.id}-${permission}`} className={`rounded-2xl border p-3 ${admin.adminPermissions.includes(permission) ? "border-sky-200 bg-sky-50" : "border-slate-200 bg-white"}`}>
-                        <div className="flex items-start gap-3">
-                          <input
-                            type="checkbox"
-                            checked={admin.adminPermissions.includes(permission)}
-                            onChange={(event) => {
-                              const nextPermissions = event.target.checked
-                                ? [...admin.adminPermissions, permission]
-                                : admin.adminPermissions.filter((entry) => entry !== permission);
-                              updateManagedAdminPermissionsMutation.mutate({ id: admin.id, permissions: nextPermissions });
-                            }}
-                            className="mt-1"
-                          />
-                          <div>
-                            <p className="text-sm font-medium text-slate-800">{adminPermissionLabels[permission].label}</p>
-                            <p className="mt-1 text-xs text-slate-500">{adminPermissionLabels[permission].description}</p>
-                          </div>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                  <div className="mt-4 rounded-2xl bg-slate-50 p-4">
-                    <p className="text-sm font-medium text-slate-900">Reset delegated admin password</p>
-                    <div className="mt-3 flex flex-wrap gap-3">
-                      <input
-                        type="password"
-                        value={adminPasswordDrafts[admin.id] ?? ""}
-                        onChange={(event) =>
-                          setAdminPasswordDrafts((current) => ({
-                            ...current,
-                            [admin.id]: event.target.value
-                          }))
-                        }
-                        placeholder="New temporary password"
-                        className="min-w-[220px] flex-1 rounded-xl border border-slate-300 px-4 py-3 text-sm"
-                      />
-                      <button
-                        type="button"
-                        disabled={!(adminPasswordDrafts[admin.id] ?? "").trim() || resetManagedAdminPasswordMutation.isPending}
-                        onClick={() =>
-                          resetManagedAdminPasswordMutation.mutate({
-                            id: admin.id,
-                            password: (adminPasswordDrafts[admin.id] ?? "").trim()
-                          })
-                        }
-                        className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 disabled:opacity-50"
-                      >
-                        Reset password
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )) : adminUsersQuery.isLoading ? <StatusBanner>Loading admin accounts...</StatusBanner> : <EmptyState title="No managed admins" description="Create limited admin accounts here when you want to delegate platform work safely." />}
-            </div>
-          </ContentCard>
-        </div>
+        <AdminAdminsSection
+          adminForm={adminForm}
+          setAdminForm={setAdminForm}
+          selectedAdminPreset={selectedAdminPreset}
+          setSelectedAdminPreset={setSelectedAdminPreset}
+          cloneAdminId={cloneAdminId}
+          setCloneAdminId={setCloneAdminId}
+          adminUsers={adminUsersQuery.data}
+          adminsLoading={adminUsersQuery.isLoading}
+          adminSearch={adminSearch}
+          setAdminSearch={setAdminSearch}
+          adminPasswordDrafts={adminPasswordDrafts}
+          setAdminPasswordDrafts={setAdminPasswordDrafts}
+          resetPending={resetManagedAdminPasswordMutation.isPending}
+          onCreateAdmin={() => createAdminUserMutation.mutate(adminForm)}
+          onToggleAdminStatus={(input) => managedAdminStatusMutation.mutate(input)}
+          onUpdateAdminPermissions={(input) => updateManagedAdminPermissionsMutation.mutate(input)}
+          onResetAdminPassword={(input) => resetManagedAdminPasswordMutation.mutate(input)}
+        />
       ) : null}
 
-        {isSuperAdmin && section === "audit" ? (
-        <ContentCard className="mt-8 p-6">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-950">Admin Audit Log</h2>
-              <p className="mt-1 text-sm text-slate-600">Sensitive admin actions are recorded here for the super admin only.</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {auditCategoryOptions.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setAuditCategory(option.value)}
-                  className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
-                    auditCategory === option.value
-                      ? "bg-slate-950 text-white"
-                      : "border border-slate-300 bg-white text-slate-700 hover:border-slate-400"
-                  }`}
-                  title={option.description}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <p className="mt-3 text-xs text-slate-500">
-            {auditCategoryOptions.find((option) => option.value === auditCategory)?.description}
-          </p>
-          <div className="mt-4 space-y-3">
-            {auditLogsQuery.data?.length ? (
-              auditLogsQuery.data.map((entry) => (
-                <div key={entry.id} className="rounded-2xl border border-slate-200 p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <p className="font-semibold text-slate-950">{entry.summary}</p>
-                      <p className="mt-1 text-sm text-slate-500">
-                        {entry.actor.fullName} ({entry.actor.email}) • {new Date(entry.createdAt).toLocaleString()}
-                      </p>
-                    </div>
-                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">{entry.action}</span>
-                  </div>
-                </div>
-              ))
-            ) : auditLogsQuery.isLoading ? (
-              <StatusBanner>Loading audit logs...</StatusBanner>
-            ) : (
-              <EmptyState title="No audit entries yet" description="Delegated-admin and sensitive platform actions will appear here." />
-            )}
-          </div>
-        </ContentCard>
+      {isSuperAdmin && section === "audit" ? (
+        <AdminAuditSection
+          auditCategory={auditCategory}
+          setAuditCategory={setAuditCategory}
+          auditLogs={auditLogsQuery.data}
+          isLoading={auditLogsQuery.isLoading}
+        />
       ) : null}
 
       {canManagePlans && section === "plans" ? (
-      <div className="mt-8 grid gap-6 xl:grid-cols-2">
-        <ContentCard className="p-6">
-          <h2 className="text-lg font-semibold text-slate-950">Plans</h2>
-          <div className="mt-4 space-y-3">
-            {plansQuery.data?.length ? plansQuery.data.map((plan) => (
-              <div key={plan.id} className="rounded-2xl border border-slate-200 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-semibold text-slate-950">{plan.name} <span className="text-xs uppercase tracking-[0.2em] text-slate-400">{plan.code}</span></p>
-                    <p className="mt-1 text-sm text-slate-500">{plan.description || "No description provided."}</p>
-                    <p className="mt-2 text-xs text-slate-500">
-                      {money.format(plan.monthlyPrice)}/mo | {money.format(plan.yearlyPrice)}/yr | {plan.maxCourses} courses | {plan.maxStudentsTotal} students | {plan.maxStorageMb} MB
-                    </p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      {plan._count?.tenants ?? 0} tenants | {plan._count?.subscriptions ?? 0} subscription records {plan.isArchived ? "| Archived" : ""}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`rounded-full px-3 py-1 text-xs font-medium ${plan.isActive ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"}`}>{plan.isActive ? "Active" : "Inactive"}</span>
-                    <button type="button" onClick={() => beginEditPlan(plan)} className="rounded-full border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700">Edit</button>
-                    {!plan.isArchived ? (
-                      <button type="button" onClick={() => archivePlanMutation.mutate(plan.id)} className="rounded-full border border-amber-300 px-3 py-1 text-xs font-medium text-amber-700">
-                        Archive
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
-            )) : plansQuery.isLoading ? <StatusBanner>Loading plans...</StatusBanner> : <EmptyState title="No plans yet" description="Create your first SaaS plan to start controlling tenant limits." />}
-          </div>
-        </ContentCard>
-
-        <ContentCard className="p-6">
-          <div className="flex flex-col gap-2 border-b border-slate-200 pb-4">
-            <h2 className="text-lg font-semibold text-slate-950">{selectedPlanId ? "Edit Subscription Plan" : "Create Subscription Plan"}</h2>
-            <p className="text-sm text-slate-600">
-              Only one step appears at a time. Finish the current step to move to the next one, then review the final summary before saving.
-            </p>
-          </div>
-
-          <div className="mt-5 flex flex-wrap gap-2">
-            {planStepOrder.map((step, index) => {
-              const isCurrent = step === activePlanStep;
-              const isPast = planStepOrder.indexOf(activePlanStep) > index;
-              return (
-                <span
-                  key={step}
-                  className={`rounded-full px-3 py-1 text-xs font-medium ${
-                    isCurrent
-                      ? "bg-slate-950 text-white"
-                      : isPast
-                        ? "bg-emerald-100 text-emerald-700"
-                        : "bg-slate-100 text-slate-500"
-                  }`}
-                >
-                  {index + 1}. {step}
-                </span>
-              );
-            })}
-          </div>
-
-          <div className="mt-4">
-            <div className="h-2 overflow-hidden rounded-full bg-slate-200">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-sky-500 via-cyan-500 to-emerald-400 transition-all duration-300"
-                style={{ width: `${wizardProgress}%` }}
-              />
-            </div>
-            <p className="mt-2 text-xs uppercase tracking-[0.18em] text-slate-400">
-              Progress: {currentStepIndex + 1} / {planStepOrder.length}
-            </p>
-          </div>
-
-          <form onSubmit={submitPlan} className="mt-5 space-y-5">
-            {renderPlanStepFrame({
-              title: "Identity",
-              description: "These fields define how the plan appears to admins and instructors.",
-              children: (
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-slate-800">Plan code</span>
-                  <input
-                    value={planForm.code}
-                    onChange={(event) => setPlanForm((c) => ({ ...c, code: event.target.value }))}
-                    placeholder="STUDIO"
-                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm"
-                    required
-                  />
-                  <span className="mt-2 block text-xs text-slate-500">Internal unique key used by the platform.</span>
-                </label>
-                <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-slate-800">Plan name</span>
-                  <input
-                    value={planForm.name}
-                    onChange={(event) => setPlanForm((c) => ({ ...c, name: event.target.value }))}
-                    placeholder="Studio"
-                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm"
-                    required
-                  />
-                  <span className="mt-2 block text-xs text-slate-500">Customer-facing plan name shown in the UI.</span>
-                </label>
-                <label className="block md:col-span-2">
-                  <span className="mb-2 block text-sm font-medium text-slate-800">Description</span>
-                  <textarea
-                    value={planForm.description}
-                    onChange={(event) => setPlanForm((c) => ({ ...c, description: event.target.value }))}
-                    placeholder="Balanced workspace for serious independent instructors."
-                    className="min-h-24 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm"
-                  />
-                  <span className="mt-2 block text-xs text-slate-500">Short positioning text that explains who the plan is for.</span>
-                </label>
-              </div>
-              )
-            })}
-
-            {renderPlanStepFrame({
-              title: "Pricing",
-              description: "Set the recurring price points for monthly and yearly billing.",
-              children: (
-              <div className="grid gap-4 md:grid-cols-2">
-                {numericFieldMeta
-                  .filter((field) => field.key === "monthlyPrice" || field.key === "yearlyPrice")
-                  .map((field) => (
-                    <label key={field.key} className="block rounded-2xl border border-slate-200 bg-white p-4">
-                      <span className="block text-sm font-medium text-slate-800">{field.label}</span>
-                      <span className="mt-1 block text-xs text-slate-500">{field.help}</span>
-                      <input
-                        type="number"
-                        min={field.min ?? 0}
-                        value={planForm[field.key]}
-                        onChange={(event) => setPlanForm((c) => ({ ...c, [field.key]: event.target.value }))}
-                        className="mt-3 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
-                      />
-                    </label>
-                  ))}
-              </div>
-              )
-            })}
-
-            {renderPlanStepFrame({
-              title: "Workspace Limits",
-              description: "Hard numeric caps that control content growth, learners, storage, and team size.",
-              children: (
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {numericFieldMeta
-                  .filter((field) => field.key !== "monthlyPrice" && field.key !== "yearlyPrice")
-                  .map((field) => (
-                    <label key={field.key} className="block rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                      <span className="block text-sm font-medium text-slate-800">{field.label}</span>
-                      <span className="mt-1 block text-xs text-slate-500">{field.help}</span>
-                      <input
-                        type="number"
-                        min={field.min ?? 0}
-                        value={planForm[field.key]}
-                        onChange={(event) => setPlanForm((c) => ({ ...c, [field.key]: event.target.value }))}
-                        className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm"
-                      />
-                    </label>
-                  ))}
-              </div>
-              )
-            })}
-
-            {featureFieldGroups.map((group) =>
-              renderPlanStepFrame({
-                title: group.title as PlanStepTitle,
-                description: group.description,
-                children: (
-                <div className="grid gap-3 md:grid-cols-2">
-                  {group.fields.map((field) => (
-                    <label
-                      key={field.key}
-                      className={`flex items-start gap-3 rounded-2xl border p-4 transition ${
-                        planForm[field.key]
-                          ? "border-emerald-200 bg-emerald-50"
-                          : "border-slate-200 bg-white"
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={planForm[field.key]}
-                        onChange={(event) => setPlanForm((c) => ({ ...c, [field.key]: event.target.checked }))}
-                        className="mt-1 h-4 w-4 rounded border-slate-300"
-                      />
-                      <span className="min-w-0">
-                        <span className="block text-sm font-medium text-slate-800">{field.label}</span>
-                        <span className="mt-1 block text-xs leading-5 text-slate-500">{field.help}</span>
-                      </span>
-                    </label>
-                  ))}
-                </div>
-                )
-              })
-            )}
-
-            {activePlanStep === "Plan Status" ? (
-              <>
-                <section className="rounded-2xl border border-slate-200 bg-slate-950 p-5 text-white">
-                  <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-300">Quick Summary</p>
-                  <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                    <div className="rounded-2xl bg-white/10 p-4">
-                      <p className="text-xs uppercase tracking-[0.18em] text-slate-300">Billing</p>
-                      <p className="mt-2 text-lg font-semibold">
-                        {money.format(Number(planForm.monthlyPrice || 0))} / {money.format(Number(planForm.yearlyPrice || 0))}
-                      </p>
-                    </div>
-                    <div className="rounded-2xl bg-white/10 p-4">
-                      <p className="text-xs uppercase tracking-[0.18em] text-slate-300">Content</p>
-                      <p className="mt-2 text-sm text-slate-100">
-                        {planForm.maxCourses} courses, {planForm.maxSectionsPerCourse} sections/course, {planForm.maxLessonsPerSection} lessons/section
-                      </p>
-                    </div>
-                    <div className="rounded-2xl bg-white/10 p-4">
-                      <p className="text-xs uppercase tracking-[0.18em] text-slate-300">Students</p>
-                      <p className="mt-2 text-sm text-slate-100">
-                        {planForm.maxStudentsTotal} total, {planForm.maxStudentsPerCourse} per course
-                      </p>
-                    </div>
-                    <div className="rounded-2xl bg-white/10 p-4">
-                      <p className="text-xs uppercase tracking-[0.18em] text-slate-300">Key Features</p>
-                      <p className="mt-2 text-sm text-slate-100">
-                        {[
-                          planForm.canCreatePaidCourses ? "Paid courses" : null,
-                          planForm.canUseAnalytics ? "Analytics" : null,
-                          planForm.canUseAssignments ? "Assignments" : null,
-                          planForm.canIssueCertificates ? "Certificates" : null
-                        ]
-                          .filter(Boolean)
-                          .join(", ") || "Basic teaching tools"}
-                      </p>
-                    </div>
-                  </div>
-                </section>
-
-                <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
-                  <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="max-w-2xl">
-                      <div className="flex flex-wrap items-center gap-3">
-                        <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-white">
-                          {planForm.code || "PLAN"}
-                        </span>
-                        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${planForm.isActive ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
-                          {planForm.isActive ? "Active for assignment" : "Inactive"}
-                        </span>
-                      </div>
-                      <h3 className="mt-4 text-3xl font-semibold text-slate-950">{planForm.name || "Untitled Plan"}</h3>
-                      <p className="mt-3 text-sm leading-6 text-slate-600">
-                        {planForm.description?.trim() || "No plan description yet. Add a short positioning line so instructors understand who this plan is for."}
-                      </p>
-                      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                        <div className="rounded-2xl bg-slate-50 p-4">
-                          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Monthly</p>
-                          <p className="mt-2 text-2xl font-semibold text-slate-950">{money.format(Number(planForm.monthlyPrice || 0))}</p>
-                        </div>
-                        <div className="rounded-2xl bg-slate-50 p-4">
-                          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Yearly</p>
-                          <p className="mt-2 text-2xl font-semibold text-slate-950">{money.format(Number(planForm.yearlyPrice || 0))}</p>
-                        </div>
-                        <div className="rounded-2xl bg-slate-50 p-4">
-                          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Storage</p>
-                          <p className="mt-2 text-2xl font-semibold text-slate-950">{planForm.maxStorageMb} MB</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="w-full max-w-sm rounded-[24px] bg-slate-950 p-5 text-white">
-                      <p className="text-xs uppercase tracking-[0.18em] text-slate-300">Instructor-Facing Preview</p>
-                      <p className="mt-3 text-2xl font-semibold">{planForm.name || "Untitled Plan"}</p>
-                      <p className="mt-2 text-sm text-slate-300">
-                        {planForm.canCreatePaidCourses ? "Built for instructors who want to sell and scale their academy." : "Best for free-course academies and lightweight teaching."}
-                      </p>
-                      <div className="mt-5 space-y-3 text-sm text-slate-100">
-                        <p>{planForm.maxCourses} courses included</p>
-                        <p>{planForm.maxStudentsTotal} students total</p>
-                        <p>{planForm.maxSectionsPerCourse} sections per course</p>
-                        <p>{planForm.maxLessonsPerSection} lessons per section</p>
-                        <p>{planForm.canUseQuizzes ? "Quizzes enabled" : "Quizzes disabled"}</p>
-                        <p>{planForm.canUseAssignments ? "Assignments enabled" : "Assignments disabled"}</p>
-                        <p>{planForm.canIssueCertificates ? "Certificates enabled" : "Certificates disabled"}</p>
-                      </div>
-                    </div>
-                  </div>
-                </section>
-
-                <div className="flex flex-wrap gap-3">
-                  <button type="submit" className="rounded-full bg-slate-950 px-5 py-2 text-sm font-medium text-white">
-                    {selectedPlanId ? "Update Plan" : "Create Plan"}
-                  </button>
-                  {selectedPlanId ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedPlanId(null);
-                        setPlanForm(defaultPlanForm);
-                        setActivePlanStep("Identity");
-                      }}
-                      className="rounded-full border border-slate-300 px-5 py-2 text-sm font-medium text-slate-700"
-                    >
-                      Cancel editing
-                    </button>
-                  ) : null}
-                </div>
-              </>
-            ) : null}
-          </form>
-        </ContentCard>
-      </div>
+        <AdminPlansSection
+          plans={plansQuery.data}
+          plansLoading={plansQuery.isLoading}
+          selectedPlanId={selectedPlanId}
+          setSelectedPlanId={setSelectedPlanId}
+          beginEditPlan={beginEditPlan}
+          archivePlan={(planId) => archivePlanMutation.mutate(planId)}
+          planForm={planForm}
+          setPlanForm={setPlanForm}
+          activePlanStep={activePlanStep}
+          setActivePlanStep={setActivePlanStep}
+          currentStepIndex={currentStepIndex}
+          wizardProgress={wizardProgress}
+          renderPlanStepFrame={renderPlanStepFrame}
+          submitPlan={submitPlan}
+        />
       ) : null}
 
       {canReviewTenants && section === "tenants" ? (
-      <div className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
-        <ContentCard className="p-6">
-          <h2 className="text-lg font-semibold text-slate-950">Tenants</h2>
-          <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_180px]">
-            <input value={tenantSearch} onChange={(event) => setTenantSearch(event.target.value)} placeholder="Search tenant name or invite code" className="rounded-xl border border-slate-300 px-4 py-3 text-sm" />
-            <select value={tenantStatus} onChange={(event) => setTenantStatus(event.target.value as typeof tenantStatus)} className="rounded-xl border border-slate-300 px-4 py-3 text-sm">
-              <option value="ALL">All statuses</option>
-              <option value="true">Active</option>
-              <option value="false">Inactive</option>
-            </select>
-          </div>
-          <div className="mt-4 space-y-3">
-            {tenantsQuery.data?.length ? tenantsQuery.data.map((tenant) => (
-              <button key={tenant.id} type="button" onClick={() => setSelectedTenantId(tenant.id)} className={`w-full rounded-2xl border p-4 text-left transition ${selectedTenantId === tenant.id ? "border-sky-300 bg-sky-50" : "border-slate-200 bg-white hover:border-slate-300"}`}>
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-semibold text-slate-950">{tenant.name}</p>
-                    <p className="mt-1 text-sm text-slate-500">Owner: {tenant.owner?.fullName ?? "Unassigned"}</p>
-                    <p className="mt-1 text-xs uppercase tracking-[0.2em] text-slate-400">{tenant.plan?.name ?? "No plan assigned"}</p>
-                    <p className="mt-2 text-xs text-slate-500">{tenant.usage.usersCount} users | {tenant.usage.coursesCount} courses | {tenant.usage.enrollmentsCount} enrollments</p>
-                  </div>
-                  <span className={`rounded-full px-3 py-1 text-xs font-medium ${tenant.isActive ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"}`}>{tenant.isActive ? "Active" : "Inactive"}</span>
-                </div>
-              </button>
-            )) : tenantsQuery.isLoading ? <StatusBanner>Loading tenants...</StatusBanner> : <EmptyState title="No tenants found" description="Tenant search will populate here when matching organizations exist." />}
-          </div>
-        </ContentCard>
-
-        <ContentCard className="p-6">
-          <h2 className="text-lg font-semibold text-slate-950">Tenant Detail</h2>
-          {tenantDetailQuery.data ? (
-            <div className="mt-4 space-y-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-xl font-semibold text-slate-950">{tenantDetailQuery.data.name}</p>
-                  <p className="mt-1 text-sm text-slate-500">Invite Code: {tenantDetailQuery.data.inviteCode}</p>
-                  <p className="mt-1 text-sm text-slate-500">
-                    Current Plan: {tenantDetailQuery.data.subscription?.currentSubscription?.plan.name ?? tenantDetailQuery.data.subscription?.latestSubscription?.plan.name ?? "No plan assigned"}
-                  </p>
-                </div>
-                <button type="button" onClick={() => tenantStatusMutation.mutate({ id: tenantDetailQuery.data.id, isActive: !tenantDetailQuery.data.isActive })} className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">
-                  {tenantDetailQuery.data.isActive ? "Deactivate" : "Reactivate"}
-                </button>
-              </div>
-              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_180px_auto]">
-                <select value={tenantPlanId} onChange={(event) => setTenantPlanId(event.target.value)} className="rounded-xl border border-slate-300 px-4 py-3 text-sm">
-                  <option value="">Choose a plan</option>
-                  {plansQuery.data?.filter((plan) => !plan.isArchived).map((plan) => <option key={plan.id} value={plan.id}>{plan.name} ({plan.code})</option>)}
-                </select>
-                <select value={tenantBillingPeriod} onChange={(event) => setTenantBillingPeriod(event.target.value as "MONTHLY" | "YEARLY")} className="rounded-xl border border-slate-300 px-4 py-3 text-sm">
-                  <option value="MONTHLY">Monthly</option>
-                  <option value="YEARLY">Yearly</option>
-                </select>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => tenantPlanId && upsertTenantSubscriptionMutation.mutate({ tenantId: tenantDetailQuery.data.id, planId: tenantPlanId, billingPeriod: tenantBillingPeriod })}
-                    disabled={!tenantPlanId}
-                    className="rounded-full bg-slate-950 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-                  >
-                    Activate
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => tenantPlanId && upsertTenantSubscriptionMutation.mutate({ tenantId: tenantDetailQuery.data.id, planId: tenantPlanId, billingPeriod: "MONTHLY", isTrial: true })}
-                    disabled={!tenantPlanId}
-                    className="rounded-full border border-sky-300 px-4 py-2 text-sm font-medium text-sky-700 disabled:opacity-50"
-                  >
-                    Restart trial
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => updateTenantSubscriptionMutation.mutate({ tenantId: tenantDetailQuery.data.id, markCanceled: true })}
-                    className="rounded-full border border-rose-300 px-4 py-2 text-sm font-medium text-rose-700"
-                  >
-                    End current
-                  </button>
-                </div>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-xl bg-slate-50 p-4 text-sm text-slate-700">
-                  <p className="font-medium text-slate-900">Usage</p>
-                  <p className="mt-2">{tenantDetailQuery.data.usage.usersCount} users</p>
-                  <p>{tenantDetailQuery.data.usage.studentsCount ?? 0} students</p>
-                  <p>{tenantDetailQuery.data.usage.instructorsCount ?? 0} instructors</p>
-                  <p>{tenantDetailQuery.data.usage.adminsCount ?? 0} admins</p>
-                  <p>{tenantDetailQuery.data.usage.coursesCount} courses</p>
-                  <p>{money.format(tenantDetailQuery.data.usage.approvedRevenue ?? 0)} approved revenue</p>
-                </div>
-                <div className="rounded-xl bg-slate-50 p-4 text-sm text-slate-700">
-                  <p className="font-medium text-slate-900">Subscription</p>
-                  <p className="mt-2">State: {tenantDetailQuery.data.subscription?.currentSubscription?.state ?? tenantDetailQuery.data.subscription?.latestSubscription?.state ?? "NONE"}</p>
-                  <p>Trial days remaining: {tenantDetailQuery.data.subscription?.daysRemaining ?? 0}</p>
-                  <p>Freeze creation: {tenantDetailQuery.data.subscription?.freezeCreation ? "Yes" : "No"}</p>
-                  <p>Limit snapshot: {tenantDetailQuery.data.plan?.maxCourses ?? tenantDetailQuery.data.subscription?.trialRules.maxCourses ?? "—"} courses</p>
-                  <p>Student cap: {tenantDetailQuery.data.plan?.maxStudentsTotal ?? tenantDetailQuery.data.subscription?.trialRules.maxStudentsTotal ?? "—"}</p>
-                </div>
-              </div>
-            </div>
-          ) : tenantDetailQuery.isLoading ? <StatusBanner>Loading tenant detail...</StatusBanner> : <EmptyState title="Select a tenant" description="Choose a tenant from the list to inspect its plan and usage." />}
-        </ContentCard>
-      </div>
+        <AdminTenantsSection
+          tenantSearch={tenantSearch}
+          setTenantSearch={setTenantSearch}
+          tenantStatus={tenantStatus}
+          setTenantStatus={setTenantStatus}
+          tenants={tenantsQuery.data}
+          tenantsLoading={tenantsQuery.isLoading}
+          selectedTenantId={selectedTenantId}
+          setSelectedTenantId={setSelectedTenantId}
+          tenantDetail={tenantDetailQuery.data}
+          tenantDetailLoading={tenantDetailQuery.isLoading}
+          plans={plansQuery.data}
+          tenantPlanId={tenantPlanId}
+          setTenantPlanId={setTenantPlanId}
+          tenantBillingPeriod={tenantBillingPeriod}
+          setTenantBillingPeriod={setTenantBillingPeriod}
+          onToggleTenantStatus={(input) => tenantStatusMutation.mutate(input)}
+          onActivateSubscription={(input) => upsertTenantSubscriptionMutation.mutate(input)}
+          onEndSubscription={(input) => updateTenantSubscriptionMutation.mutate(input)}
+        />
       ) : null}
 
       {canReviewUsers && section === "users" ? (
-      <div className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-        <ContentCard className="p-6">
-          <h2 className="text-lg font-semibold text-slate-950">Users</h2>
-          <p className="mt-1 text-sm text-slate-500">Platform admins are kept separate, so this list focuses on instructor and student accounts.</p>
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            <input value={userSearch} onChange={(event) => setUserSearch(event.target.value)} placeholder="Search name or email" className="rounded-xl border border-slate-300 px-4 py-3 text-sm" />
-            <select value={userRole} onChange={(event) => setUserRole(event.target.value as typeof userRole)} className="rounded-xl border border-slate-300 px-4 py-3 text-sm">
-              <option value="ALL">All roles</option>
-              <option value="INSTRUCTOR">Instructor</option>
-              <option value="STUDENT">Student</option>
-            </select>
-            <select value={userStatus} onChange={(event) => setUserStatus(event.target.value as typeof userStatus)} className="rounded-xl border border-slate-300 px-4 py-3 text-sm">
-              <option value="ALL">All statuses</option>
-              <option value="true">Active</option>
-              <option value="false">Inactive</option>
-            </select>
-          </div>
-          <div className="mt-4 space-y-3">
-            {usersQuery.data?.length ? usersQuery.data.map((user) => (
-              <button key={user.id} type="button" onClick={() => setSelectedUserId(user.id)} className={`w-full rounded-2xl border p-4 text-left transition ${selectedUserId === user.id ? "border-sky-300 bg-sky-50" : "border-slate-200 bg-white hover:border-slate-300"}`}>
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-semibold text-slate-950">{user.fullName}</p>
-                    <p className="mt-1 text-sm text-slate-500">{user.email}</p>
-                    <p className="mt-2 text-xs text-slate-500">{user.role} | {user.tenant?.name ?? "No tenant"}</p>
-                  </div>
-                  <span className={`rounded-full px-3 py-1 text-xs font-medium ${user.isActive ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"}`}>{user.isActive ? "Active" : "Inactive"}</span>
-                </div>
-              </button>
-            )) : usersQuery.isLoading ? <StatusBanner>Loading users...</StatusBanner> : <EmptyState title="No users found" description="Adjust the filters to surface users here." />}
-          </div>
-        </ContentCard>
-
-        <ContentCard className="p-6">
-          <h2 className="text-lg font-semibold text-slate-950">User Detail</h2>
-          {userDetailQuery.data ? (
-            <div className="mt-4 space-y-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-xl font-semibold text-slate-950">{userDetailQuery.data.user.fullName}</p>
-                  <p className="mt-1 text-sm text-slate-500">{userDetailQuery.data.user.email}</p>
-                </div>
-                <button type="button" onClick={() => userStatusMutation.mutate({ id: userDetailQuery.data.user.id, isActive: !userDetailQuery.data.user.isActive })} className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">
-                  {userDetailQuery.data.user.isActive ? "Deactivate" : "Reactivate"}
-                </button>
-              </div>
-              <div className="rounded-xl bg-slate-50 p-4 text-sm text-slate-700">
-                <p>Role: {userDetailQuery.data.user.role}</p>
-                <p>Tenant: {userDetailQuery.data.user.tenant?.name ?? "No tenant"}</p>
-                <p>Enrollments: {userDetailQuery.data.user._count.enrollments}</p>
-                <p>Courses: {userDetailQuery.data.user._count.instructorCourses}</p>
-              </div>
-            </div>
-          ) : userDetailQuery.isLoading ? <StatusBanner>Loading user detail...</StatusBanner> : <EmptyState title="Select a user" description="Choose a user from the list to inspect account state." />}
-        </ContentCard>
-      </div>
+        <AdminUsersSection
+          userSearch={userSearch}
+          setUserSearch={setUserSearch}
+          userRole={userRole}
+          setUserRole={setUserRole}
+          userStatus={userStatus}
+          setUserStatus={setUserStatus}
+          users={usersQuery.data}
+          usersLoading={usersQuery.isLoading}
+          selectedUserId={selectedUserId}
+          setSelectedUserId={setSelectedUserId}
+          userDetail={userDetailQuery.data}
+          userDetailLoading={userDetailQuery.isLoading}
+          onToggleUserStatus={(input) => userStatusMutation.mutate(input)}
+        />
       ) : null}
-
-      {canReviewOps && section === "overview" ? (
-      <div className="mt-8 grid gap-6 xl:grid-cols-2">
-        {hasAdminPermission("REVIEW_COURSES") ? <ContentCard className="p-6">
-          <h2 className="text-lg font-semibold text-slate-950">Platform Courses</h2>
-          <div className="mt-4 space-y-3">
-            {coursesQuery.data?.length ? coursesQuery.data.slice(0, 10).map((course) => (
-              <div key={course.id} className="rounded-2xl border border-slate-200 p-4">
-                <p className="font-semibold text-slate-950">{course.title}</p>
-                <p className="mt-1 text-sm text-slate-500">{course.instructor.fullName} | {course.tenant.name}</p>
-                <p className="mt-2 text-xs text-slate-500">{course._count.enrollments} enrollments | {course._count.reviews} reviews | {course.status}</p>
-              </div>
-            )) : coursesQuery.isLoading ? <StatusBanner>Loading courses...</StatusBanner> : <EmptyState title="No courses yet" description="Course oversight will appear here when courses exist." />}
-          </div>
-        </ContentCard> : null}
-
-        {hasAdminPermission("REVIEW_PAYMENTS") ? <ContentCard className="p-6">
-          <h2 className="text-lg font-semibold text-slate-950">Platform Payments</h2>
-          <div className="mt-4 space-y-3">
-            {paymentsQuery.data?.length ? paymentsQuery.data.slice(0, 10).map((payment) => (
-              <div key={payment.id} className="rounded-2xl border border-slate-200 p-4">
-                <p className="font-semibold text-slate-950">{payment.course.title}</p>
-                <p className="mt-1 text-sm text-slate-500">{payment.user.fullName} | {payment.tenant.name}</p>
-                <p className="mt-2 text-xs text-slate-500">{payment.method.label} | {money.format(payment.amount)} | {payment.status}</p>
-              </div>
-            )) : paymentsQuery.isLoading ? <StatusBanner>Loading payments...</StatusBanner> : <EmptyState title="No payments yet" description="Payment oversight will appear here when transactions exist." />}
-          </div>
-        </ContentCard> : null}
-      </div>
-      ) : null}
-
-      {canViewOverview && section === "overview" ? <ContentCard className="p-6">
-        <h2 className="text-lg font-semibold text-slate-950">Recent Platform Activity</h2>
-        {activityQuery.data ? (
-          <div className="mt-4 grid gap-4 xl:grid-cols-4">
-            <div><p className="text-sm font-medium text-slate-900">Users</p><div className="mt-3 space-y-2">{activityQuery.data.recentUsers.map((item) => <div key={item.id} className="rounded-xl border border-slate-200 p-3 text-sm">{item.fullName} | {item.role}</div>)}</div></div>
-            <div><p className="text-sm font-medium text-slate-900">Courses</p><div className="mt-3 space-y-2">{activityQuery.data.recentCourses.map((item) => <div key={item.id} className="rounded-xl border border-slate-200 p-3 text-sm">{item.title} | {item.status}</div>)}</div></div>
-            <div><p className="text-sm font-medium text-slate-900">Payments</p><div className="mt-3 space-y-2">{activityQuery.data.recentPayments.map((item) => <div key={item.id} className="rounded-xl border border-slate-200 p-3 text-sm">{item.user.fullName} | {item.course.title}</div>)}</div></div>
-            <div><p className="text-sm font-medium text-slate-900">Notifications</p><div className="mt-3 space-y-2">{activityQuery.data.recentNotifications.map((item) => <div key={item.id} className="rounded-xl border border-slate-200 p-3 text-sm">{item.title}</div>)}</div></div>
-          </div>
-        ) : activityQuery.isLoading ? <StatusBanner>Loading activity...</StatusBanner> : <EmptyState title="No recent activity" description="Platform activity will populate here as the system is used." />}
-      </ContentCard> : null}
     </AdminShell>
   );
 }
+

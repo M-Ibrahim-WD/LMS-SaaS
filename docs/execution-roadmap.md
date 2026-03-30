@@ -1,126 +1,55 @@
-﻿# LMS SaaS Execution Roadmap
+# Execution Roadmap
 
-## Milestone 1: Learning Progression
+## Current product stage
+The product is past the scaffold stage and currently in a maintainability + readiness phase.
 
-Goal: turn content access into an actual learning journey.
+## Priority order
+1. Safe frontend decomposition of oversized route files
+2. Safe backend decomposition of oversized orchestration services
+3. Documentation truth-sync and developer guidance
+4. Integration/e2e test expansion
+5. Production infrastructure hardening
 
-Deliverables:
-- lesson completion model
-- mark lesson complete API
-- course progress calculation
-- progress indicators in student UI
-- continue-learning shortcut
+## Near-term engineering milestones
 
-Why this matters:
-This is the minimum layer needed for the product to feel like a real LMS rather than a content access portal.
-
-## Milestone 2: Assessments
-
-Goal: add measurable learning outcomes.
+### Milestone 1: Maintainability cleanup
+Goal: reduce review risk and make the codebase easier to extend without changing behavior.
 
 Deliverables:
-- quiz module
-- assignment module
-- question model
-- submission flow
-- grading flow
-- result visibility
+- admin surface decomposition
+- dashboard and course-workspace decomposition
+- service responsibility cleanup
+- stable shared constants/contracts extraction where justified
+- updated architecture docs
 
-Why this matters:
-Assessments are one of the biggest missing blocks preventing the project from becoming a complete LMS.
-
-## Milestone 3: Certificates and Completion
-
-Goal: provide a formal course outcome.
+### Milestone 2: Test breadth
+Goal: increase confidence around the business rules that already exist.
 
 Deliverables:
-- completion rules
-- certificate generation
-- certificate storage/view page
-- verification token or public verification page
+- backend integration tests for auth, subscription enforcement, payment approval, and certificate issuance
+- frontend/e2e flows for admin, instructor, and learner journeys
 
-Why this matters:
-This closes the learning loop and creates a real end-state for the learner journey.
-
-## Milestone 4: Notifications and Jobs
-
-Goal: operationalize important async workflows.
+### Milestone 3: Infrastructure hardening
+Goal: close the gap between pilot operation and deployable production behavior.
 
 Deliverables:
-- Redis integration in actual flows
-- BullMQ queues
-- email jobs
-- enrollment/payment notification jobs
-- retry behavior for critical notifications
+- Redis in active feature flows
+- BullMQ workers
+- object storage abstraction
+- email provider integration
+- CI pipeline
 
-Why this matters:
-The architecture expects async/background processing, and product usability improves significantly once important events are delivered proactively.
-
-## Milestone 5: Admin and SaaS Layer
-
-Goal: make the platform operable as a real SaaS product.
+### Milestone 4: Security completion
+Goal: complete the missing account and session hardening work.
 
 Deliverables:
-- admin dashboard
-- tenant management
-- user moderation/support tools
-- subscription and plan design
-- feature gating and quotas
-- admin analytics
-
-Why this matters:
-Without this layer, the project remains an LMS product foundation rather than a full SaaS business platform.
-
-## Milestone 6: Production Hardening
-
-Goal: move from pilot-quality to production-quality operations.
-
-Deliverables:
-- S3 object storage migration
-- password reset and email verification
-- refresh token/session hardening
+- password reset
+- email verification
+- refresh token/session rotation
 - broader rate limiting and abuse controls
-- observability and alerting
-- CI/CD pipeline
-- integration/e2e test suite
 
-Why this matters:
-This is required before any serious public or enterprise launch.
-
-## Recommended Execution Order
-
-1. Learning progression
-2. Assessments
-3. Certificates
-4. Notifications and jobs
-5. Admin and SaaS layer
-6. Production hardening
-
-## Delivery Strategy
-
-### Keep Stable Foundations
-Do not restart architecture. Build on the existing modular structure.
-
-### Prefer Vertical Slices
-For each milestone, implement backend domain logic, API, frontend experience, and validation together.
-
-### Protect Existing Rules
-Preserve the current tested business rules around:
-- multi-instructor joins
-- paid enrollment restrictions
-- duplicate payment accounts
-- course access gating
-
-### Expand Testing Gradually
-Add tests as each milestone lands instead of deferring testing until the end.
-
-## Success Definition
-
-The project should be considered a complete LMS SaaS platform when it has:
-- content delivery
-- learner progress
-- assessments
-- completion/certificates
-- instructor operations
-- admin/SaaS controls
-- production-grade security, storage, jobs, and testing
+## Delivery strategy
+- Keep behavior stable.
+- Prefer incremental internal refactors over rewrites.
+- Validate after each cleanup pass with frontend lint/build and backend lint/test/build.
+- Update docs whenever shipped architecture meaningfully changes.

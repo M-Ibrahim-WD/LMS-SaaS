@@ -1,355 +1,71 @@
-ï»¿# LMS SaaS Project Report
+# LMS SaaS Project Report
 
 ## Executive Summary
+This repository is a substantial LMS SaaS product with real business behavior already implemented across authentication, admin operations, instructor subscriptions, course authoring, assessments, certificates, manual payments, notifications, profiles, and learner flows.
 
-This project is a strong LMS SaaS foundation with real product behavior already implemented across authentication, multi-instructor student access, course management, enrollments, manual payments, proof handling, discovery filters, dashboards, profiles, and activity surfaces.
+The system is suitable for demos, prototype pilots, and ongoing product development. It is not yet production-hardened for large-scale public use, mainly because infrastructure, security hardening, automated test breadth, and some reporting layers are still incomplete.
 
-It is no longer a scaffold. The system now contains meaningful domain rules, modular backend structure, reusable frontend primitives, and core flows that are suitable for internal demos, pilot usage, and continued product development.
+## Implemented Product Layers
 
-It is not yet a complete enterprise-grade LMS. The largest missing layers are learning progression, assessments, certificates, admin operations, SaaS billing/plan controls, production infrastructure hardening, and broader automated testing.
-
-## Project Foundations
-
-### Frontend
-- Next.js App Router
-- TypeScript
-- Zustand for auth/session state
-- React Query for server state
-- Tailwind CSS for UI
-- Reusable UI primitives for page shells, auth panels, status banners, cards, empty states, back button, proof actions, video player, and activity feed
-
-### Backend
-- NestJS modular architecture
-- Prisma ORM
-- PostgreSQL
-- JWT authentication
-- role-based guards
-- tenant-aware and instructor/student-aware access rules
-- centralized exception/logging foundation
-
-### Database and Domain Base
-Current domain model includes:
-- User
-- Tenant
-- StudentInstructor
-- Course
-- Section
-- Lesson
-- Enrollment
-- PaymentMethod
-- Payment
-
-That is a credible LMS domain base and supports both product growth and additional modules later.
-
-## Implemented Features
-
-### Authentication and User Access
-Implemented:
-- register
-- login
-- password hashing
-- JWT issuance
-- protected routes
-- reusable frontend auth guard logic
-- role-aware middleware protection
-
-Supported roles:
-- Admin
-- Instructor
-- Student
-
-### Multi-Instructor Student Model
-Implemented:
-- instructor invite codes
-- student joins instructors by invite code
-- duplicate join prevention
-- student can follow multiple instructors
-- student course visibility based on followed instructors
-
-This is one of the strongest product decisions in the system.
-
-### Course Management
-Implemented:
-- create course
-- update course
-- draft/published status
-- sections
-- lessons
-- free vs paid courses
-- metadata:
-  - category
-  - level
-- server-side discovery filters:
-  - search
-  - pricing
-  - category
-  - level
-  - page/pageSize
-
-### Student Learning Access
-Implemented:
-- direct enrollment for free courses
-- paid course access blocked until approved payment exists
-- enrolled course listing
-- student dashboard discovery across followed instructors
-- course detail access gating
-- video lesson playback support in frontend
-
-### Payment System
-Implemented:
-- instructor-defined payment methods
-- wallet/bank/custom validation
-- duplicate payment account prevention
-- soft delete for payment methods
-- student payment submission with proof upload
-- proof preview/download
-- instructor approval/rejection
-- enrollment creation after approved payment
-
-### Instructor Experience
-Implemented:
-- instructor dashboard
-- invite code visibility
-- payment method management
-- student payment review
-- instructor profile stats:
-  - students count
-  - total revenue
-- recent instructor activity feed
-
-### Student Experience
-Implemented:
-- student dashboard tabs and filters
-- course browsing across multiple instructors
-- join instructor flow
-- recent student activity feed
-- my courses page
-- paid course proof upload flow
-
-### Quality and Stability
-Implemented:
-- reusable frontend layout primitives
-- backend service-level tests for critical business rules
-- build validation across backend/frontend
-- backup snapshots and task summaries after changes
-
-## Strengths
-
-### 1. Real Product Direction
-The project has moved beyond generic CRUD. It now reflects an actual LMS SaaS product model with instructor/student separation, invite-driven access, paid/free course gating, and multi-instructor learning.
-
-### 2. Strong Domain Logic
-Business rules are increasingly coherent. The project is not just visually structured; it has meaningful access logic and transaction rules.
-
-### 3. Good Backend Modularity
-NestJS feature modules are in place and the project is organized by domain rather than by technical sprawl.
-
-### 4. Practical Payment Flow
-The manual payment model is realistic and regionally useful. The proof workflow, validation, and approval flow are already stronger than many early-stage LMS builds.
-
-### 5. Multi-Instructor Student Support
-This is a meaningful differentiator and a better fit for real-world learning marketplaces or instructor networks than a rigid one-tenant-per-student model.
-
-### 6. Reusable Frontend Base
-The frontend is no longer only page-specific. Reusable shell and feedback components now reduce future inconsistency.
-
-### 7. Critical Rule Coverage Exists
-Important business rules now have automated backend tests, which reduces regression risk during continued product work.
-
-## Weaknesses
-
-### 1. Hybrid Multi-Tenancy Model
-The system still mixes tenant-owned instructor data with student access driven by instructor-follow relations. It works, but it remains conceptually hybrid.
-
-### 2. Learning Depth Is Limited
-Students can access lessons, but there is no full learning progression engine yet.
-
-Missing:
-- lesson completion
-- course progress
-- continue-learning flow
-- completion rules
-- study tracking
-
-### 3. No Assessment Layer Yet
-Missing:
-- quizzes
-- assignments
-- submissions
-- grading
-- pass/fail logic
-- review workflows
-
-### 4. No Certificate/Completion Layer
-Missing:
-- completion detection
-- certificate generation
-- certificate verification/history
-
-### 5. Admin Surface Is Thin
-The Admin role exists, but not as a developed product surface.
-
-Missing:
-- tenant management UI
-- moderation tools
-- audit review
-- support tooling
-- system reporting
-
-### 6. Production Infrastructure Is Incomplete
-Missing:
-- Redis in active feature flows
-- BullMQ jobs
-- S3-compatible storage integration
-- email notifications
-- monitoring and alerting
-- deployment automation
-
-### 7. Security Hardening Is Not Complete
-Missing:
-- password reset
-- email verification
-- refresh token / session rotation
-- stronger anti-abuse strategy
-- upload scanning/content security
-- broader auth/integration test coverage
-
-### 8. UX Is Coherent but Not Fully Polished
-The UI is much better than before, but still more functional than premium.
-
-## Gaps and Risks
-
-### Product Gaps
-- no assessments
-- no certifications
-- no progress engine
-- no notifications
-- no discussion/community layer
-- no advanced analytics
-
-### SaaS Gaps
-- no billing/plans/subscriptions
-- no plan-based feature limits
-- no usage quotas
-- no tenant admin operations
-- no subscription management
-
-### Operational Risks
-- local-first proof storage pattern still needs object storage migration for production
-- no dedicated audit-event store
-- activity is reconstructed from domain data rather than stored as formal events
-
-### Scaling Risks
-- course discovery is better now, but similar pagination/filtering discipline will be needed for future modules
-- analytics/reporting will need stronger query design later
-
-## UI/UX Assessment
-
-### Current Strengths
-- shared page structure is improving
-- auth pages are cleaner
-- student dashboard is more product-like
-- profile has meaningful value
-- activity feed improves product feel
-- course discovery is more useful and scalable
-
-### Current Weaknesses
-- some pages are still operational rather than polished
-- course builder UX is basic
-- loading states are still simple
-- visual identity is not yet distinctive
-- success/failure feedback can be richer in some flows
-
-### Current UI Maturity
-- usability: good
-- consistency: good and improving
-- polish: moderate
-- premium feel: not yet
-
-## What Is Missing for a Complete LMS
-
-### Learning Core
-- lesson completion
-- course progress tracking
-- continue-learning flow
-- prerequisites and drip content
-- learner notes/bookmarks
-
-### Assessments
-- quizzes
-- assignments
-- submissions
-- grading
-- question banks
-- review workflows
-
-### Certification
-- course completion rules
-- certificate generation
-- certificate history/verification
-
-### Communication
-- notifications
-- email events
-- announcements
-- discussion/comments
-- instructor-to-student messaging
-
-### Instructor Operations
-- student roster per course
-- learner progress monitoring
-- course analytics
-- revenue by course
-- payment review notes
-- invite management tools
+### Identity and Roles
+- Register and login flows
+- JWT auth with protected routes and middleware
+- Roles: `ADMIN`, `INSTRUCTOR`, `STUDENT`
+- Super admin protection and delegated admin permissions
+- Forced password change flow for delegated admins
 
 ### Admin and SaaS Operations
-- admin dashboard
-- tenant management
-- plan/subscription management
-- usage limits
-- audit logs
-- support/moderation tools
+- Admin route group with overview, plans, tenants, users, admins, and audit surfaces
+- Tenant oversight and soft activation/deactivation
+- User oversight and soft activation/deactivation
+- Delegated admin creation, permission management, password reset, and audit visibility
+- Instructor subscription plans with monthly/yearly assignment
+- 7-day instructor trial flow and backend plan-limit enforcement
 
-### Infrastructure
-- Redis-backed caching/queue usage
-- BullMQ jobs
-- S3 object storage
-- email provider integration
-- observability and deployment pipeline
+### Learning Product
+- Course creation, editing, publish/draft state, thumbnails, free/paid pricing
+- Sections and lessons with builder-style authoring UI
+- Quiz and assignment authoring plus learner submission/review flows
+- Learner course workspace and continue-learning behavior
+- Completion and certificate issuance with verification page
 
-### Quality and Documentation
-- integration tests
-- e2e tests
-- API docs
-- seed/demo data
-- deployment runbooks
-- architecture decision records
+### Commerce and Enrollment
+- Instructor payment methods
+- Manual payment proof upload
+- Instructor payment approval/rejection
+- Enrollment gating for paid courses
+- Revenue and payment visibility in instructor/admin surfaces
 
-## Production Readiness Summary
+### Experience Layer
+- Public and private profile pages
+- Instructor storefront behavior
+- Review and rating surfaces
+- Notification center with read/unread filtering and bulk mark-as-read
+- Shared UI primitives for shells, cards, banners, empty states, and confirmation flows
 
-Ready for:
-- internal demos
-- prototype pilots
-- continued development
-- limited controlled testing
+## Current Strengths
+- The domain model is real and coherent, not generic CRUD.
+- The backend is still fundamentally modular and domain-oriented.
+- The frontend has a growing reusable UI foundation.
+- Subscription enforcement and admin permissions are enforced server-side.
+- The course authoring and learner experiences are substantially more product-like than an early scaffold.
 
-Not ready for:
-- large-scale public production
-- enterprise environments
-- compliance-heavy launch
-- high-volume operational use
+## Main Weak Areas
+- Some core route files and service files are oversized and carry too many responsibilities.
+- Infrastructure docs previously overstated what is already operational.
+- Redis/BullMQ, object storage, email delivery, and monitoring are still future work.
+- Broader integration/e2e coverage is still missing.
+- Several pages have strong UX direction but still need another maintainability and polish pass.
 
-## Recommended Next Direction
+## Current Engineering Risk
+The highest maintainability risk is not the repo layout. It is concentration of logic in a few large frontend pages and backend services, especially around admin, builder, learner course flow, courses, subscriptions, and admin service orchestration.
 
-Recommended next milestones:
-1. Learning progression layer
-2. Assessment layer
-3. Certificate/completion layer
-4. Notifications and background jobs
-5. Admin and SaaS operations
-6. Production hardening
+## Recommended Cleanup Direction
+1. Keep the current architecture.
+2. Decompose oversized route files into local hooks and focused presentational sections.
+3. Decompose oversized services by responsibility, not by abstract theory.
+4. Keep docs aligned with actual shipped features.
+5. Treat placeholder architecture folders as placeholders until real code exists there.
 
 ## Bottom Line
-
-This project has a strong LMS SaaS foundation. The implemented base is good enough to keep building without architectural restart. What is missing is not the core foundation, but the upper product layers and production hardening that turn a strong foundation into a complete LMS platform.
+The repo has crossed the “foundation only” stage. It now needs maintainability-focused refinement more than architectural reinvention. Safe refactoring, clearer boundaries, and better documentation will create the biggest long-term engineering gains without disrupting working product behavior.
