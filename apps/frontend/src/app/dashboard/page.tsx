@@ -12,6 +12,7 @@ import {
   validatePaymentMethodDetails
 } from "../../lib/payments/payment-methods";
 import { ContentCard } from "../../components/content-card";
+import { NotificationCenter } from "../../components/notification-center";
 import { PageShell } from "../../components/page-shell";
 import { StatusChip } from "../../components/status-chip";
 import { useRequireAuth } from "../../hooks/use-require-auth";
@@ -405,6 +406,13 @@ export default function DashboardPage() {
       maxWidthClassName="max-w-7xl"
       actions={
         <>
+          <NotificationCenter
+            items={notificationsQuery.data}
+            unreadCount={unreadCountQuery.data?.unreadCount ?? 0}
+            isLoading={notificationsQuery.isLoading}
+            isUpdating={markNotificationReadMutation.isPending}
+            onMarkRead={(notificationId) => markNotificationReadMutation.mutate(notificationId)}
+          />
           <Link href="/profile" className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm">
             Profile
           </Link>
@@ -452,46 +460,15 @@ export default function DashboardPage() {
             </ContentCard>
 
             <ContentCard className="p-6">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="section-kicker">Notifications</p>
-                  <h3 className="mt-2 text-xl font-semibold text-slate-950">Recent updates</h3>
-                </div>
+              <p className="section-kicker">Activity</p>
+              <h3 className="mt-2 text-xl font-semibold text-slate-950">Stay focused on the next task</h3>
+              <p className="mt-3 text-sm leading-7 text-slate-600">
+                Notifications now live behind the bell button in the header so the dashboard stays cleaner and more focused.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
                 <StatusChip tone={(unreadCountQuery.data?.unreadCount ?? 0) > 0 ? "warning" : "success"}>
-                  {(unreadCountQuery.data?.unreadCount ?? 0) > 0 ? `${unreadCountQuery.data?.unreadCount ?? 0} unread` : "All caught up"}
+                  {(unreadCountQuery.data?.unreadCount ?? 0) > 0 ? `${unreadCountQuery.data?.unreadCount ?? 0} unread notifications` : "No unread notifications"}
                 </StatusChip>
-              </div>
-              <div className="mt-5 space-y-3">
-                {notificationsQuery.data?.length ? (
-                  notificationsQuery.data.slice(0, 5).map((notification) => (
-                    <div
-                      key={notification.id}
-                      className={`rounded-[22px] border p-4 ${
-                        notification.isRead ? "border-slate-200 bg-slate-50/80" : "border-sky-200 bg-sky-50/90"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-medium text-slate-900">{notification.title}</p>
-                          <p className="mt-1 text-sm leading-6 text-slate-600">{notification.message}</p>
-                          <p className="mt-2 text-xs text-slate-500">{new Date(notification.createdAt).toLocaleString()}</p>
-                        </div>
-                        {!notification.isRead ? (
-                          <button
-                            type="button"
-                            onClick={() => markNotificationReadMutation.mutate(notification.id)}
-                            disabled={markNotificationReadMutation.isPending}
-                            className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 disabled:opacity-60"
-                          >
-                            Mark read
-                          </button>
-                        ) : null}
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-slate-500">No notifications yet.</p>
-                )}
               </div>
             </ContentCard>
           </section>
