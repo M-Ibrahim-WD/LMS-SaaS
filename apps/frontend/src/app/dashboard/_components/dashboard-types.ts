@@ -173,3 +173,17 @@ export interface NotificationItem {
   isRead: boolean;
   createdAt: string;
 }
+
+export interface InstructorSubscriptionSummary {
+  requiresPlanSelection: boolean;
+  freezeCreation: boolean;
+  daysRemaining: number;
+  selectedPlan: { id: string; name: string } | null;
+  currentSubscription: {
+    id: string;
+    state: "TRIAL" | "ACTIVE" | "EXPIRED" | "CANCELED";
+    billingPeriod: "MONTHLY" | "YEARLY";
+    endsAt: string;
+    isTrial: boolean;
+  } | null;
+}
