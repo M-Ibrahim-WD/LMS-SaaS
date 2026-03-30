@@ -1,7 +1,6 @@
 import {
   AssignmentSubmissionStatus,
-  Prisma,
-  QuizQuestionType
+  Prisma
 } from "@prisma/client";
 import {
   BadRequestException,
@@ -21,13 +20,15 @@ import { SubmitAssignmentDto } from "../dto/submit-assignment.dto";
 import { SubmitQuizDto } from "../dto/submit-quiz.dto";
 import { UpdateAssignmentDto } from "../dto/update-assignment.dto";
 import { UpdateQuizDto } from "../dto/update-quiz.dto";
+import { AssessmentAuthoringService } from "./assessment-authoring.service";
 
 @Injectable()
 export class AssessmentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly studentAccessService: StudentAccessService,
-    private readonly subscriptionsService: SubscriptionsService
+    private readonly subscriptionsService: SubscriptionsService,
+    private readonly assessmentAuthoringService: AssessmentAuthoringService
   ) {}
 
   async getCourseAssessments(user: JwtPayload, courseId: string) {
@@ -198,26 +199,8 @@ export class AssessmentsService {
     await this.subscriptionsService.assertPermission(user, "canUseQuizzes");
     const course = await this.assertInstructorOwnsCourse(dto.courseId, user);
 
-    const normalizedQuestions = dto.questions.map((question, index) => {
-      const options = question.options.map((option) => option.trim()).filter(Boolean);
-      const correctAnswer = question.correctAnswer.trim();
-
-      if (options.length < 2) {
-        throw new BadRequestException("Quiz questions must include at least two options");
-      }
-
-      if (!options.includes(correctAnswer)) {
-        throw new BadRequestException("Correct answer must match one of the provided options");
-      }
-
-      return {
-        question: question.question.trim(),
-        options,
-        correctAnswer,
-        type: QuizQuestionType.MULTIPLE_CHOICE,
-        order: index + 1
-      };
-    });
+    const normalizedQuestions =
+      this.assessmentAuthoringService.normalizeQuizQuestions(dto.questions);
 
     return this.prisma.quiz.create({
       data: {
@@ -227,10 +210,9 @@ export class AssessmentsService {
         title: dto.title.trim(),
         description: dto.description?.trim() || null,
         questions: {
-          create: normalizedQuestions.map((question) => ({
-            ...question,
-            options: question.options as Prisma.InputJsonValue
-          }))
+          create: normalizedQuestions.map((question) =>
+            this.assessmentAuthoringService.toQuizQuestionCreateInput(question)
+          )
         }
       },
       include: {
@@ -276,26 +258,8 @@ export class AssessmentsService {
       throw new NotFoundException("Quiz not found");
     }
 
-    const normalizedQuestions = dto.questions.map((question, index) => {
-      const options = question.options.map((option) => option.trim()).filter(Boolean);
-      const correctAnswer = question.correctAnswer.trim();
-
-      if (options.length < 2) {
-        throw new BadRequestException("Quiz questions must include at least two options");
-      }
-
-      if (!options.includes(correctAnswer)) {
-        throw new BadRequestException("Correct answer must match one of the provided options");
-      }
-
-      return {
-        question: question.question.trim(),
-        options,
-        correctAnswer,
-        type: QuizQuestionType.MULTIPLE_CHOICE,
-        order: index + 1
-      };
-    });
+    const normalizedQuestions =
+      this.assessmentAuthoringService.normalizeQuizQuestions(dto.questions);
 
     return this.prisma.$transaction(async (tx) => {
       await tx.quizQuestion.deleteMany({
@@ -308,10 +272,9 @@ export class AssessmentsService {
           title: dto.title.trim(),
           description: dto.description?.trim() || null,
           questions: {
-            create: normalizedQuestions.map((question) => ({
-              ...question,
-              options: question.options as Prisma.InputJsonValue
-            }))
+            create: normalizedQuestions.map((question) =>
+              this.assessmentAuthoringService.toQuizQuestionCreateInput(question)
+            )
           }
         },
         include: {

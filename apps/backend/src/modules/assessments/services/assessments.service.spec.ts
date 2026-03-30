@@ -39,8 +39,24 @@ test("submitQuiz scores answers and stores the submission", async () => {
       isPaid: false
     }))
   };
+  const assessmentAuthoringService = {
+    normalizeQuizQuestions: (questions: Array<{ question?: string; options: string[]; correctAnswer: string }>) =>
+      questions.map((question, index) => ({
+        question: question.question ?? "",
+        options: question.options,
+        correctAnswer: question.correctAnswer,
+        type: "MULTIPLE_CHOICE",
+        order: index + 1
+      })),
+    toQuizQuestionCreateInput: (question: unknown) => question
+  };
 
-  const service = new AssessmentsService(prisma as never, studentAccessService as never, {} as never);
+  const service = new AssessmentsService(
+    prisma as never,
+    studentAccessService as never,
+    {} as never,
+    assessmentAuthoringService as never
+  );
 
   const result = await service.submitQuiz(
     {
