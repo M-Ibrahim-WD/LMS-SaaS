@@ -14,168 +14,21 @@ import {
 import { PrismaService } from "../../../shared/prisma/prisma.service";
 import type { JwtPayload } from "../../../shared/types/auth.types";
 import { PlansService } from "../../plans/services/plans.service";
-
-const TRIAL_DAYS = 7;
-
-const trialPermissions = {
-  maxCourses: 2,
-  maxSectionsPerCourse: 1,
-  maxLessonsPerSection: 1,
-  canPublishCourses: true,
-  canCreatePaidCourses: false,
-  maxStudentsTotal: 10,
-  maxStudentsPerCourse: 10,
-  canUseQuizzes: true,
-  canUseAssignments: true,
-  canIssueCertificates: true,
-  canUseAnalytics: false,
-  canUseReviews: true,
-  maxStorageMb: 256,
-  canUploadThumbnails: true,
-  canUploadProfileImage: true,
-  canUseManualPayments: true,
-  canUseOnlinePayments: false,
-  maxAdminUsers: 3,
-  maxInstructorUsers: 1,
-  hasAdvancedAnalytics: false,
-  hasOnlinePayments: false
-};
-
-type EffectivePermissions = typeof trialPermissions;
+import {
+  type EffectivePermissions,
+  SubscriptionPolicyService
+} from "./subscription-policy.service";
 
 @Injectable()
 export class SubscriptionsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly plansService: PlansService
+    private readonly plansService: PlansService,
+    private readonly subscriptionPolicyService: SubscriptionPolicyService
   ) {}
 
   async ensureCorePlans() {
-    const corePlans: Array<{
-      code: string;
-      name: string;
-      description: string;
-      monthlyPrice: number;
-      yearlyPrice: number;
-      permissions: Partial<Plan>;
-    }> = [
-      {
-        code: "LAUNCH",
-        name: "Launch",
-        description: "Creator starter plan for early teaching momentum.",
-        monthlyPrice: 19,
-        yearlyPrice: 190,
-        permissions: {
-          maxCourses: 5,
-          maxSectionsPerCourse: 10,
-          maxLessonsPerSection: 20,
-          canPublishCourses: true,
-          canCreatePaidCourses: true,
-          maxStudentsTotal: 100,
-          maxStudentsPerCourse: 50,
-          canUseQuizzes: true,
-          canUseAssignments: true,
-          canIssueCertificates: true,
-          canUseAnalytics: false,
-          canUseReviews: true,
-          maxStorageMb: 1024,
-          canUploadThumbnails: true,
-          canUploadProfileImage: true,
-          canUseManualPayments: true,
-          hasAdvancedAnalytics: false,
-          hasOnlinePayments: false,
-          maxAdminUsers: 2,
-          maxInstructorUsers: 1
-        }
-      },
-      {
-        code: "STUDIO",
-        name: "Studio",
-        description: "Balanced workspace for serious independent instructors.",
-        monthlyPrice: 49,
-        yearlyPrice: 490,
-        permissions: {
-          maxCourses: 15,
-          maxSectionsPerCourse: 20,
-          maxLessonsPerSection: 40,
-          canPublishCourses: true,
-          canCreatePaidCourses: true,
-          maxStudentsTotal: 500,
-          maxStudentsPerCourse: 200,
-          canUseQuizzes: true,
-          canUseAssignments: true,
-          canIssueCertificates: true,
-          canUseAnalytics: true,
-          canUseReviews: true,
-          maxStorageMb: 5120,
-          canUploadThumbnails: true,
-          canUploadProfileImage: true,
-          canUseManualPayments: true,
-          hasAdvancedAnalytics: true,
-          hasOnlinePayments: false,
-          maxAdminUsers: 4,
-          maxInstructorUsers: 2
-        }
-      },
-      {
-        code: "GROWTH",
-        name: "Growth",
-        description: "Expanded teaching and learner capacity for growing academies.",
-        monthlyPrice: 99,
-        yearlyPrice: 990,
-        permissions: {
-          maxCourses: 40,
-          maxSectionsPerCourse: 30,
-          maxLessonsPerSection: 60,
-          canPublishCourses: true,
-          canCreatePaidCourses: true,
-          maxStudentsTotal: 2000,
-          maxStudentsPerCourse: 750,
-          canUseQuizzes: true,
-          canUseAssignments: true,
-          canIssueCertificates: true,
-          canUseAnalytics: true,
-          canUseReviews: true,
-          maxStorageMb: 20480,
-          canUploadThumbnails: true,
-          canUploadProfileImage: true,
-          canUseManualPayments: true,
-          hasAdvancedAnalytics: true,
-          hasOnlinePayments: false,
-          maxAdminUsers: 8,
-          maxInstructorUsers: 5
-        }
-      },
-      {
-        code: "EMPIRE",
-        name: "Empire",
-        description: "Top-tier scale and control for advanced academies.",
-        monthlyPrice: 199,
-        yearlyPrice: 1990,
-        permissions: {
-          maxCourses: 200,
-          maxSectionsPerCourse: 50,
-          maxLessonsPerSection: 100,
-          canPublishCourses: true,
-          canCreatePaidCourses: true,
-          maxStudentsTotal: 10000,
-          maxStudentsPerCourse: 5000,
-          canUseQuizzes: true,
-          canUseAssignments: true,
-          canIssueCertificates: true,
-          canUseAnalytics: true,
-          canUseReviews: true,
-          maxStorageMb: 102400,
-          canUploadThumbnails: true,
-          canUploadProfileImage: true,
-          canUseManualPayments: true,
-          hasAdvancedAnalytics: true,
-          hasOnlinePayments: false,
-          maxAdminUsers: 20,
-          maxInstructorUsers: 10
-        }
-      }
-    ];
+    const corePlans = this.subscriptionPolicyService.getCorePlans();
 
     for (const plan of corePlans) {
       await this.prisma.plan.upsert({
@@ -215,52 +68,6 @@ export class SubscriptionsService {
       },
       orderBy: [{ isCore: "desc" }, { monthlyPrice: "asc" }]
     });
-  }
-
-  private addDays(date: Date, days: number) {
-    const next = new Date(date);
-    next.setDate(next.getDate() + days);
-    return next;
-  }
-
-  private addMonths(date: Date, months: number) {
-    const next = new Date(date);
-    next.setMonth(next.getMonth() + months);
-    return next;
-  }
-
-  private mapPlanPermissions(plan: Plan): EffectivePermissions {
-    return {
-      maxCourses: plan.maxCourses,
-      maxSectionsPerCourse: plan.maxSectionsPerCourse,
-      maxLessonsPerSection: plan.maxLessonsPerSection,
-      canPublishCourses: plan.canPublishCourses,
-      canCreatePaidCourses: plan.canCreatePaidCourses,
-      maxStudentsTotal: plan.maxStudentsTotal,
-      maxStudentsPerCourse: plan.maxStudentsPerCourse,
-      canUseQuizzes: plan.canUseQuizzes,
-      canUseAssignments: plan.canUseAssignments,
-      canIssueCertificates: plan.canIssueCertificates,
-      canUseAnalytics: plan.canUseAnalytics,
-      canUseReviews: plan.canUseReviews,
-      maxStorageMb: plan.maxStorageMb,
-      canUploadThumbnails: plan.canUploadThumbnails,
-      canUploadProfileImage: plan.canUploadProfileImage,
-      canUseManualPayments: plan.canUseManualPayments,
-      canUseOnlinePayments: plan.hasOnlinePayments,
-      maxAdminUsers: plan.maxAdminUsers,
-      maxInstructorUsers: plan.maxInstructorUsers,
-      hasAdvancedAnalytics: plan.hasAdvancedAnalytics,
-      hasOnlinePayments: plan.hasOnlinePayments
-    };
-  }
-
-  private buildDaysRemaining(endsAt: Date | null) {
-    if (!endsAt) {
-      return 0;
-    }
-
-    return Math.max(0, Math.ceil((endsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
   }
 
   private async expireStaleSubscriptions(tenantId: string) {
@@ -341,7 +148,11 @@ export class SubscriptionsService {
     await this.cancelCurrentSubscriptions(tenantId);
 
     const startsAt = new Date();
-    const endsAt = this.addDays(startsAt, TRIAL_DAYS);
+    const endsAt = this.subscriptionPolicyService.buildSubscriptionEndDate(
+      startsAt,
+      BillingPeriod.MONTHLY,
+      { isTrial: true }
+    );
 
     await this.prisma.tenant.update({
       where: { id: tenantId },
@@ -384,10 +195,11 @@ export class SubscriptionsService {
     await this.cancelCurrentSubscriptions(tenantId);
 
     const startsAt = new Date();
-    const endsAt =
-      options?.isTrial
-        ? this.addDays(startsAt, TRIAL_DAYS)
-        : this.addMonths(startsAt, billingPeriod === BillingPeriod.YEARLY ? 12 : 1);
+    const endsAt = this.subscriptionPolicyService.buildSubscriptionEndDate(
+      startsAt,
+      billingPeriod,
+      options
+    );
 
     await this.prisma.tenant.update({
       where: { id: tenantId },
@@ -447,7 +259,7 @@ export class SubscriptionsService {
       return null;
     }
 
-    return current.state === SubscriptionState.TRIAL ? trialPermissions : this.mapPlanPermissions(current.plan);
+    return this.subscriptionPolicyService.mapEntitlementSummary(current);
   }
 
   async getTenantEntitlement(tenantId: string | null) {
@@ -470,13 +282,11 @@ export class SubscriptionsService {
       currentSubscription,
       latestSubscription,
       effectivePermissions:
-        currentSubscription?.state === SubscriptionState.TRIAL
-          ? trialPermissions
-          : currentSubscription
-            ? this.mapPlanPermissions(currentSubscription.plan)
-            : null,
+        this.subscriptionPolicyService.mapEntitlementSummary(currentSubscription),
       freezeCreation: !currentSubscription,
-      daysRemaining: this.buildDaysRemaining(currentSubscription?.endsAt ?? null)
+      daysRemaining: this.subscriptionPolicyService.buildDaysRemaining(
+        currentSubscription?.endsAt ?? null
+      )
     };
   }
 
@@ -501,7 +311,7 @@ export class SubscriptionsService {
       tenantId,
       requiresPlanSelection: !latest,
       freezeCreation: !current,
-      trialRules: trialPermissions,
+      trialRules: this.subscriptionPolicyService.getTrialPermissions(),
       selectedPlan,
       currentSubscription: current,
       latestSubscription: latest,
@@ -531,7 +341,7 @@ export class SubscriptionsService {
       currentSubscription: current,
       latestSubscription: latest,
       usage,
-      trialRules: trialPermissions,
+      trialRules: this.subscriptionPolicyService.getTrialPermissions(),
       daysRemaining,
       freezeCreation: !current
     };
