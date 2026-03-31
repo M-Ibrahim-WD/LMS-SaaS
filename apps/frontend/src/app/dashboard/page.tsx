@@ -184,38 +184,6 @@ export default function DashboardPage() {
       maxWidthClassName="max-w-7xl"
       actions={
         <>
-          <HeaderIconButton onClick={dashboard.onLogout} label="Logout" tone="danger">
-            <LogoutIcon />
-          </HeaderIconButton>
-          {profile?.role === "ADMIN" ? (
-            <HeaderActionLink href="/admin" label="Admin">
-              <AdminShieldIcon />
-              Admin
-            </HeaderActionLink>
-          ) : null}
-          <HeaderIconLink href="/profile" label="Profile">
-            <ProfileIcon />
-          </HeaderIconLink>
-          {profile?.role !== "ADMIN" ? (
-            <HeaderIconLink
-              href="/messages"
-              label="Messages"
-              badgeCount={directUnreadCount}
-            >
-              {directUnreadCount > 0 ? <MessageClosedIcon /> : <MessageOpenIcon />}
-            </HeaderIconLink>
-          ) : null}
-          {profile?.role !== "ADMIN" ||
-          profile.isSuperAdmin ||
-          profile.adminPermissions?.includes("HANDLE_SUPPORT") ? (
-            <HeaderIconLink
-              href="/support"
-              label="Support"
-              badgeCount={supportUnreadCount}
-            >
-              <SupportIcon />
-            </HeaderIconLink>
-          ) : null}
           <NotificationCenter
             items={dashboard.notificationsQuery.data}
             unreadCount={dashboard.unreadCountQuery.data?.unreadCount ?? 0}
@@ -231,6 +199,38 @@ export default function DashboardPage() {
               dashboard.markAllNotificationsReadMutation.mutate()
             }
           />
+          {profile?.role !== "ADMIN" ||
+          profile.isSuperAdmin ||
+          profile.adminPermissions?.includes("HANDLE_SUPPORT") ? (
+            <HeaderIconLink
+              href="/support"
+              label="Support"
+              badgeCount={supportUnreadCount}
+            >
+              <SupportIcon />
+            </HeaderIconLink>
+          ) : null}
+          {profile?.role !== "ADMIN" ? (
+            <HeaderIconLink
+              href="/messages"
+              label="Messages"
+              badgeCount={directUnreadCount}
+            >
+              {directUnreadCount > 0 ? <MessageClosedIcon /> : <MessageOpenIcon />}
+            </HeaderIconLink>
+          ) : null}
+          <HeaderIconLink href="/profile" label="Profile">
+            <ProfileIcon />
+          </HeaderIconLink>
+          {profile?.role === "ADMIN" ? (
+            <HeaderActionLink href="/admin" label="Admin">
+              <AdminShieldIcon />
+              Admin
+            </HeaderActionLink>
+          ) : null}
+          <HeaderIconButton onClick={dashboard.onLogout} label="Logout" tone="danger">
+            <LogoutIcon />
+          </HeaderIconButton>
         </>
       }
     >
