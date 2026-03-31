@@ -48,6 +48,33 @@ function HeaderIconLink({
   );
 }
 
+function HeaderActionLink({
+  href,
+  label,
+  children,
+  tone = "accent"
+}: {
+  href: string;
+  label: string;
+  children: ReactNode;
+  tone?: "accent" | "default";
+}) {
+  return (
+    <Link
+      href={href}
+      aria-label={label}
+      title={label}
+      className={`group relative inline-flex h-11 items-center gap-2 rounded-full border px-4 text-sm font-semibold shadow-sm transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 hover:-translate-y-0.5 hover:shadow-md ${
+        tone === "accent"
+          ? "border-emerald-300 bg-emerald-50 text-emerald-700 hover:border-emerald-400 hover:bg-emerald-100 focus-visible:ring-emerald-200"
+          : "border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:text-emerald-700 focus-visible:ring-emerald-200"
+      }`}
+    >
+      {children}
+    </Link>
+  );
+}
+
 function HeaderIconButton({
   onClick,
   label,
@@ -126,6 +153,15 @@ function LogoutIcon() {
   );
 }
 
+function AdminShieldIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4.5 w-4.5">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3 5.5 5.5v5.6c0 4.2 2.9 8 6.5 9.9 3.6-1.9 6.5-5.7 6.5-9.9V5.5L12 3Z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="m9.5 12 1.7 1.7 3.3-3.7" />
+    </svg>
+  );
+}
+
 export default function DashboardPage() {
   const dashboard = useDashboardWorkspace();
 
@@ -187,12 +223,10 @@ export default function DashboardPage() {
             </HeaderIconLink>
           ) : null}
           {profile?.role === "ADMIN" ? (
-            <Link
-              href="/admin"
-              className="rounded-full border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:border-emerald-400 hover:bg-emerald-100"
-            >
+            <HeaderActionLink href="/admin" label="Admin">
+              <AdminShieldIcon />
               Admin
-            </Link>
+            </HeaderActionLink>
           ) : null}
           <HeaderIconButton onClick={dashboard.onLogout} label="Logout" tone="danger">
             <LogoutIcon />
