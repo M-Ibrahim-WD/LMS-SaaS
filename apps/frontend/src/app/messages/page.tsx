@@ -5,14 +5,10 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { PageShell } from "../../components/page-shell";
 import { useConversationsWorkspace } from "../../hooks/use-conversations-workspace";
-
-function formatDate(value?: string | null) {
-  if (!value) {
-    return "";
-  }
-
-  return new Date(value).toLocaleString();
-}
+import {
+  formatConversationDate,
+  groupConversationMessages
+} from "../../lib/communication/types";
 
 export default function MessagesPage() {
   const workspace = useConversationsWorkspace({ kind: "DIRECT" });
@@ -25,8 +21,9 @@ export default function MessagesPage() {
     return <p className="p-6 text-sm text-slate-500">Redirecting...</p>;
   }
 
-  const conversations = workspace.conversationsQuery.data ?? [];
+  const conversations = workspace.filteredConversations ?? [];
   const active = workspace.activeConversation;
+  const groupedMessages = active ? groupConversationMessages(active.messages) : [];
 
   return (
     <PageShell
@@ -91,6 +88,12 @@ export default function MessagesPage() {
                 Unread only
               </label>
             </div>
+            <input
+              value={workspace.searchQuery}
+              onChange={(event) => workspace.setSearchQuery(event.target.value)}
+              placeholder="Search conversations"
+              className="mt-4 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700"
+            />
             <div className="mt-4 space-y-3">
               {workspace.conversationsQuery.isLoading ? (
                 <p className="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-sm text-slate-500">
@@ -128,7 +131,7 @@ export default function MessagesPage() {
                       ) : null}
                     </div>
                     <p className="mt-3 text-xs text-slate-400">
-                      {formatDate(conversation.lastMessageAt)}
+                      {formatConversationDate(conversation.lastMessageAt)}
                     </p>
                   </button>
                 ))
@@ -164,29 +167,38 @@ export default function MessagesPage() {
                     No messages yet. Send the first one.
                   </p>
                 ) : (
-                  active.messages.map((message) => {
-                    const isMine = message.sender.id === workspace.user?.id;
-                    return (
-                      <div
-                        key={message.id}
-                        className={`max-w-[85%] rounded-[24px] px-4 py-3 shadow-sm ${
-                          isMine
-                            ? "ml-auto bg-emerald-600 text-white"
-                            : "bg-slate-100 text-slate-900"
-                        }`}
-                      >
-                        <p className="text-xs font-semibold opacity-80">
-                          {isMine ? "You" : message.sender.fullName}
-                        </p>
-                        <p className="mt-2 whitespace-pre-wrap text-sm leading-6">
-                          {message.body}
-                        </p>
-                        <p className={`mt-3 text-xs ${isMine ? "text-emerald-100" : "text-slate-500"}`}>
-                          {formatDate(message.createdAt)}
-                        </p>
+                  groupedMessages.map((group) => (
+                    <div key={group.label} className="space-y-4">
+                      <div className="sticky top-0 z-10 flex justify-center">
+                        <span className="rounded-full border border-slate-200 bg-white/95 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 shadow-sm">
+                          {group.label}
+                        </span>
                       </div>
-                    );
-                  })
+                      {group.items.map((message) => {
+                        const isMine = message.sender.id === workspace.user?.id;
+                        return (
+                          <div
+                            key={message.id}
+                            className={`max-w-[85%] rounded-[24px] px-4 py-3 shadow-sm ${
+                              isMine
+                                ? "ml-auto bg-emerald-600 text-white"
+                                : "bg-slate-100 text-slate-900"
+                            }`}
+                          >
+                            <p className="text-xs font-semibold opacity-80">
+                              {isMine ? "You" : message.sender.fullName}
+                            </p>
+                            <p className="mt-2 whitespace-pre-wrap text-sm leading-6">
+                              {message.body}
+                            </p>
+                            <p className={`mt-3 text-xs ${isMine ? "text-emerald-100" : "text-slate-500"}`}>
+                              {formatConversationDate(message.createdAt)}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))
                 )}
               </div>
 

@@ -27,6 +27,7 @@ export function useConversationsWorkspace({ kind }: UseConversationsWorkspaceOpt
   const [supportSubject, setSupportSubject] = useState("");
   const [supportMessage, setSupportMessage] = useState("");
   const [supportError, setSupportError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [directTargetId, setDirectTargetId] = useState("");
   const [directStartError, setDirectStartError] = useState<string | null>(null);
   const lastMarkedConversationRef = useRef<string | null>(null);
@@ -299,6 +300,30 @@ export function useConversationsWorkspace({ kind }: UseConversationsWorkspaceOpt
   }, [accessToken, activeConversationId, isAuthorized, queryClient]);
 
   const activeConversation = activeConversationQuery.data ?? null;
+  const filteredConversations = useMemo(() => {
+    const items = conversationsQuery.data ?? [];
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+
+    if (!normalizedQuery) {
+      return items;
+    }
+
+    return items.filter((conversation) => {
+      const searchable = [
+        conversation.otherParticipant?.fullName,
+        conversation.otherParticipant?.email,
+        conversation.requester?.fullName,
+        conversation.requester?.email,
+        conversation.assignedAdmin?.fullName,
+        conversation.latestMessage?.body
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return searchable.includes(normalizedQuery);
+    });
+  }, [conversationsQuery.data, searchQuery]);
 
   const canUseSupportInbox =
     user?.role !== "ADMIN" ||
@@ -347,6 +372,8 @@ export function useConversationsWorkspace({ kind }: UseConversationsWorkspaceOpt
     supportMessage,
     setSupportMessage,
     supportError,
+    searchQuery,
+    setSearchQuery,
     directTargetId,
     setDirectTargetId,
     directStartError,
@@ -355,6 +382,7 @@ export function useConversationsWorkspace({ kind }: UseConversationsWorkspaceOpt
     createSupportMutation,
     updateStatusMutation,
     assignToSelfMutation,
+    filteredConversations,
     supportStatusLabel,
     onSendMessage: async () => {
       const body = composerText.trim();
