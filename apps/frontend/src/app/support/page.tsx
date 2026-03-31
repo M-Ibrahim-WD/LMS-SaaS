@@ -2,6 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
+import { useEffect, useRef } from "react";
 import { PageShell } from "../../components/page-shell";
 import { useConversationsWorkspace } from "../../hooks/use-conversations-workspace";
 import {
@@ -11,6 +12,20 @@ import {
 
 export default function SupportPage() {
   const workspace = useConversationsWorkspace({ kind: "SUPPORT" });
+  const composeRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("compose") !== "1") {
+      return;
+    }
+
+    composeRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
 
   if (!workspace.hasHydrated) {
     return <p className="p-6 text-sm text-slate-500">Loading support inbox...</p>;
@@ -39,7 +54,7 @@ export default function SupportPage() {
       <div className="grid gap-6 xl:grid-cols-[320px,minmax(0,1fr)]">
         <aside className="space-y-4">
           {!isSupportAdmin ? (
-            <section className="rounded-[28px] border border-slate-200 bg-white/90 p-5 shadow-sm">
+            <section ref={composeRef} className="rounded-[28px] border border-slate-200 bg-white/90 p-5 shadow-sm">
               <h2 className="text-lg font-semibold text-slate-950">Create support request</h2>
               <p className="mt-2 text-sm text-slate-600">
                 Open a technical support conversation with the platform team.
