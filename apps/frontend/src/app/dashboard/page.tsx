@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 
 import { NotificationCenter } from "../../components/notification-center";
@@ -9,6 +10,115 @@ import { DashboardOverviewPanels } from "./_components/dashboard-overview-panels
 import { InstructorDashboardSection } from "./_components/instructor-dashboard-section";
 import { StudentDashboardSection } from "./_components/student-dashboard-section";
 import { useDashboardWorkspace } from "./_hooks/use-dashboard-workspace";
+
+function HeaderIconLink({
+  href,
+  label,
+  children,
+  tone = "default",
+  badgeCount
+}: {
+  href: string;
+  label: string;
+  children: ReactNode;
+  tone?: "default" | "accent";
+  badgeCount?: number;
+}) {
+  return (
+    <Link
+      href={href}
+      aria-label={label}
+      title={label}
+      className={`relative inline-flex h-11 w-11 items-center justify-center rounded-full border bg-white shadow-sm transition ${
+        tone === "accent"
+          ? "border-emerald-300 text-emerald-700 hover:border-emerald-400 hover:bg-emerald-50"
+          : "border-slate-200 text-slate-700 hover:border-emerald-300 hover:text-emerald-700"
+      }`}
+    >
+      {children}
+      {badgeCount && badgeCount > 0 ? (
+        <span className="absolute -right-1 -top-1 inline-flex min-w-6 items-center justify-center rounded-full bg-emerald-600 px-2 py-0.5 text-[11px] font-semibold text-white">
+          {badgeCount}
+        </span>
+      ) : null}
+    </Link>
+  );
+}
+
+function HeaderIconButton({
+  onClick,
+  label,
+  children,
+  tone = "default"
+}: {
+  onClick: () => void;
+  label: string;
+  children: ReactNode;
+  tone?: "default" | "danger";
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      className={`inline-flex h-11 w-11 items-center justify-center rounded-full border bg-white shadow-sm transition ${
+        tone === "danger"
+          ? "border-rose-200 text-rose-600 hover:border-rose-300 hover:bg-rose-50"
+          : "border-slate-200 text-slate-700 hover:border-emerald-300 hover:text-emerald-700"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function ProfileIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+      <circle cx="12" cy="8" r="3.5" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 19a7 7 0 0 1 14 0" />
+    </svg>
+  );
+}
+
+function MessageOpenIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 7.5A2.5 2.5 0 0 1 6.5 5h11A2.5 2.5 0 0 1 20 7.5v9A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5v-9Z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="m5.5 7 6.5 5 6.5-5" />
+    </svg>
+  );
+}
+
+function MessageClosedIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+      <rect x="4" y="5" width="16" height="14" rx="2.5" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="m5.5 7 6.5 5 6.5-5" />
+    </svg>
+  );
+}
+
+function SupportIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12a7.5 7.5 0 1 1 15 0" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12v2.5A2.5 2.5 0 0 0 7 17h1.5v-5H7a2.5 2.5 0 0 0-2.5 2.5Zm15 0A2.5 2.5 0 0 0 17 12h-1.5v5H17a2.5 2.5 0 0 0 2.5-2.5V12Z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9.5 20.5h5" />
+    </svg>
+  );
+}
+
+function LogoutIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M14 7V5.5A2.5 2.5 0 0 0 11.5 3h-5A2.5 2.5 0 0 0 4 5.5v13A2.5 2.5 0 0 0 6.5 21h5a2.5 2.5 0 0 0 2.5-2.5V17" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M10 12h10" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="m17 8 4 4-4 4" />
+    </svg>
+  );
+}
 
 export default function DashboardPage() {
   const dashboard = useDashboardWorkspace();
@@ -22,6 +132,8 @@ export default function DashboardPage() {
   }
 
   const profile = dashboard.profileQuery.data;
+  const directUnreadCount = dashboard.directUnreadConversationsQuery.data?.length ?? 0;
+  const supportUnreadCount = dashboard.supportUnreadConversationsQuery.data?.length ?? 0;
 
   return (
     <PageShell
@@ -45,39 +157,28 @@ export default function DashboardPage() {
               dashboard.markAllNotificationsReadMutation.mutate()
             }
           />
-          <Link
-            href="/profile"
-            className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700"
-          >
-            Profile
-          </Link>
+          <HeaderIconLink href="/profile" label="Profile">
+            <ProfileIcon />
+          </HeaderIconLink>
           {profile?.role !== "ADMIN" ? (
-            <Link
+            <HeaderIconLink
               href="/messages"
-              className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700"
+              label="Messages"
+              badgeCount={directUnreadCount}
             >
-              Messages
-              {(dashboard.directUnreadConversationsQuery.data?.length ?? 0) > 0 ? (
-                <span className="ml-2 rounded-full bg-emerald-600 px-2 py-0.5 text-[11px] font-semibold text-white">
-                  {dashboard.directUnreadConversationsQuery.data?.length}
-                </span>
-              ) : null}
-            </Link>
+              {directUnreadCount > 0 ? <MessageClosedIcon /> : <MessageOpenIcon />}
+            </HeaderIconLink>
           ) : null}
           {profile?.role !== "ADMIN" ||
           profile.isSuperAdmin ||
           profile.adminPermissions?.includes("HANDLE_SUPPORT") ? (
-            <Link
+            <HeaderIconLink
               href="/support"
-              className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700"
+              label="Support"
+              badgeCount={supportUnreadCount}
             >
-              Support
-              {(dashboard.supportUnreadConversationsQuery.data?.length ?? 0) > 0 ? (
-                <span className="ml-2 rounded-full bg-emerald-600 px-2 py-0.5 text-[11px] font-semibold text-white">
-                  {dashboard.supportUnreadConversationsQuery.data?.length}
-                </span>
-              ) : null}
-            </Link>
+              <SupportIcon />
+            </HeaderIconLink>
           ) : null}
           {profile?.role === "ADMIN" ? (
             <Link
@@ -87,13 +188,9 @@ export default function DashboardPage() {
               Admin
             </Link>
           ) : null}
-          <button
-            type="button"
-            onClick={dashboard.onLogout}
-            className="rounded-full border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-600 transition hover:border-rose-300 hover:bg-rose-50"
-          >
-            Logout
-          </button>
+          <HeaderIconButton onClick={dashboard.onLogout} label="Logout" tone="danger">
+            <LogoutIcon />
+          </HeaderIconButton>
         </>
       }
     >

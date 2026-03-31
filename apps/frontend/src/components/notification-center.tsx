@@ -31,11 +31,22 @@ interface NotificationCenterProps {
   onMarkAllRead: () => void;
 }
 
-function BellIcon() {
+function BellSilentIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
       <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.4-1.4a2 2 0 0 1-.6-1.4V11a6 6 0 1 0-12 0v3.2c0 .53-.21 1.04-.59 1.41L4 17h5" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M9.5 17a2.5 2.5 0 0 0 5 0" />
+    </svg>
+  );
+}
+
+function BellRingingIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.4-1.4a2 2 0 0 1-.6-1.4V11a6 6 0 1 0-12 0v3.2c0 .53-.21 1.04-.59 1.41L4 17h5" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9.5 17a2.5 2.5 0 0 0 5 0" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6.5 5.5 5 4" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M17.5 5.5 19 4" />
     </svg>
   );
 }
@@ -94,7 +105,7 @@ function NotificationTypeIcon({ type }: { type: NotificationType }) {
         </svg>
       );
     default:
-      return <BellIcon />;
+      return <BellSilentIcon />;
   }
 }
 
@@ -118,6 +129,7 @@ export function NotificationCenter({
 }: NotificationCenterProps) {
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState<NotificationFilter>("ALL");
+  const hasUnread = unreadCount > 0;
 
   useEffect(() => {
     if (!open) {
@@ -150,14 +162,18 @@ export function NotificationCenter({
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className="relative inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-400"
+        className={`relative inline-flex h-11 w-11 items-center justify-center rounded-full border bg-white text-slate-700 shadow-sm transition ${
+          hasUnread
+            ? "border-amber-300 text-amber-700 hover:border-amber-400"
+            : "border-slate-300 hover:border-slate-400"
+        }`}
         aria-expanded={open}
         aria-label="Open notifications"
+        title="Notifications"
       >
-        <BellIcon />
-        <span className="ml-2 hidden sm:inline">Notifications</span>
-        {unreadCount > 0 ? (
-          <span className="ml-2 inline-flex min-w-6 items-center justify-center rounded-full bg-slate-950 px-2 py-0.5 text-[11px] font-semibold text-white">
+        {hasUnread ? <BellRingingIcon /> : <BellSilentIcon />}
+        {hasUnread ? (
+          <span className="absolute -right-1 -top-1 inline-flex min-w-6 items-center justify-center rounded-full bg-slate-950 px-2 py-0.5 text-[11px] font-semibold text-white">
             {unreadCount}
           </span>
         ) : null}
