@@ -22,6 +22,7 @@ export function useConversationsWorkspace({ kind }: UseConversationsWorkspaceOpt
   const [statusFilter, setStatusFilter] = useState<"ALL" | "OPEN" | "CLOSED">("OPEN");
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [assignedToMe, setAssignedToMe] = useState(false);
+  const [unassignedOnly, setUnassignedOnly] = useState(false);
   const [composerText, setComposerText] = useState("");
   const [supportSubject, setSupportSubject] = useState("");
   const [supportMessage, setSupportMessage] = useState("");
@@ -60,11 +61,14 @@ export function useConversationsWorkspace({ kind }: UseConversationsWorkspaceOpt
     if (assignedToMe) {
       params.set("assignedToMe", "true");
     }
+    if (unassignedOnly) {
+      params.set("unassignedOnly", "true");
+    }
     return params.toString();
-  }, [assignedToMe, kind, statusFilter, unreadOnly]);
+  }, [assignedToMe, kind, statusFilter, unreadOnly, unassignedOnly]);
 
   const conversationsQuery = useQuery({
-    queryKey: ["conversations", kind, statusFilter, unreadOnly, assignedToMe],
+    queryKey: ["conversations", kind, statusFilter, unreadOnly, assignedToMe, unassignedOnly],
     queryFn: () =>
       apiFetch<ConversationSummary[]>(`/conversations?${conversationQueryString}`, {
         token: accessToken ?? undefined
@@ -334,6 +338,8 @@ export function useConversationsWorkspace({ kind }: UseConversationsWorkspaceOpt
     setUnreadOnly,
     assignedToMe,
     setAssignedToMe,
+    unassignedOnly,
+    setUnassignedOnly,
     composerText,
     setComposerText,
     supportSubject,

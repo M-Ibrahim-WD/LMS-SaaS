@@ -14,6 +14,7 @@ import { useRequireAuth } from "../../../hooks/use-require-auth";
 import { useAuthStore } from "../../../store/auth.store";
 import type {
   ContinueLearningItem,
+  ConversationUnreadItem,
   CourseFilter,
   EnrolledCourse,
   InstructorPayment,
@@ -103,6 +104,29 @@ export function useDashboardWorkspace() {
     queryKey: ["notifications", "unread-count"],
     queryFn: () => apiFetch<{ unreadCount: number }>("/notifications/unread-count", { token: accessToken ?? undefined }),
     enabled: Boolean(accessToken)
+  });
+
+  const directUnreadConversationsQuery = useQuery({
+    queryKey: ["conversations", "dashboard", "direct-unread"],
+    queryFn: () =>
+      apiFetch<ConversationUnreadItem[]>("/conversations?kind=DIRECT&unreadOnly=true", {
+        token: accessToken ?? undefined
+      }),
+    enabled: Boolean(accessToken && user?.role !== "ADMIN")
+  });
+
+  const supportUnreadConversationsQuery = useQuery({
+    queryKey: ["conversations", "dashboard", "support-unread"],
+    queryFn: () =>
+      apiFetch<ConversationUnreadItem[]>("/conversations?kind=SUPPORT&unreadOnly=true", {
+        token: accessToken ?? undefined
+      }),
+    enabled: Boolean(
+      accessToken &&
+        (user?.role !== "ADMIN" ||
+          user?.isSuperAdmin ||
+          user?.adminPermissions?.includes("HANDLE_SUPPORT"))
+    )
   });
 
   const instructorSubscriptionQuery = useQuery({
@@ -410,6 +434,8 @@ export function useDashboardWorkspace() {
     continueLearningQuery,
     notificationsQuery,
     unreadCountQuery,
+    directUnreadConversationsQuery,
+    supportUnreadConversationsQuery,
     instructorSubscriptionQuery,
     methodType,
     methodLabel,

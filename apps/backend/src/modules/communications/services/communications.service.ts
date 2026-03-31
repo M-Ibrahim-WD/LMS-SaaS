@@ -646,7 +646,11 @@ export class CommunicationsService {
                 adminUserId: currentUser.sub
               }
             }
-          : {})
+          : query.unassignedOnly
+            ? {
+                supportAssignment: null
+              }
+            : {})
       };
     }
 

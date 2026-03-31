@@ -102,14 +102,34 @@ export default function SupportPage() {
                 Unread only
               </label>
               {isSupportAdmin ? (
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={workspace.assignedToMe}
-                    onChange={(event) => workspace.setAssignedToMe(event.target.checked)}
-                  />
-                  Assigned to me
-                </label>
+                <>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={workspace.assignedToMe}
+                      onChange={(event) => {
+                        workspace.setAssignedToMe(event.target.checked);
+                        if (event.target.checked) {
+                          workspace.setUnassignedOnly(false);
+                        }
+                      }}
+                    />
+                    Assigned to me
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={workspace.unassignedOnly}
+                      onChange={(event) => {
+                        workspace.setUnassignedOnly(event.target.checked);
+                        if (event.target.checked) {
+                          workspace.setAssignedToMe(false);
+                        }
+                      }}
+                    />
+                    Unassigned only
+                  </label>
+                </>
               ) : null}
             </div>
 
@@ -152,7 +172,9 @@ export default function SupportPage() {
                     <p className="mt-3 text-xs text-slate-400">
                       {conversation.assignedAdmin
                         ? `Assigned to ${conversation.assignedAdmin.fullName}`
-                        : conversation.status}
+                        : conversation.status === "OPEN"
+                          ? "Open · Unassigned"
+                          : "Closed · Unassigned"}
                     </p>
                   </button>
                 ))

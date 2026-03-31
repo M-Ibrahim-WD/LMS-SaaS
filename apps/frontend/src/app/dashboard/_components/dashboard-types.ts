@@ -176,6 +176,11 @@ export interface NotificationItem {
   createdAt: string;
 }
 
+export interface ConversationUnreadItem {
+  id: string;
+  unreadCount: number;
+}
+
 export interface InstructorSubscriptionSummary {
   requiresPlanSelection: boolean;
   freezeCreation: boolean;

@@ -32,4 +32,9 @@ export class ConversationQueryDto {
   @Transform(({ value }) => toBoolean(value))
   @IsBoolean()
   assignedToMe?: boolean;
+
+  @IsOptional()
+  @Transform(({ value }) => toBoolean(value))
+  @IsBoolean()
+  unassignedOnly?: boolean;
 }

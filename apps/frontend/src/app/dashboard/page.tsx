@@ -57,6 +57,11 @@ export default function DashboardPage() {
               className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700"
             >
               Messages
+              {(dashboard.directUnreadConversationsQuery.data?.length ?? 0) > 0 ? (
+                <span className="ml-2 rounded-full bg-emerald-600 px-2 py-0.5 text-[11px] font-semibold text-white">
+                  {dashboard.directUnreadConversationsQuery.data?.length}
+                </span>
+              ) : null}
             </Link>
           ) : null}
           {profile?.role !== "ADMIN" ||
@@ -67,6 +72,11 @@ export default function DashboardPage() {
               className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700"
             >
               Support
+              {(dashboard.supportUnreadConversationsQuery.data?.length ?? 0) > 0 ? (
+                <span className="ml-2 rounded-full bg-emerald-600 px-2 py-0.5 text-[11px] font-semibold text-white">
+                  {dashboard.supportUnreadConversationsQuery.data?.length}
+                </span>
+              ) : null}
             </Link>
           ) : null}
           {profile?.role === "ADMIN" ? (
