@@ -29,6 +29,7 @@ export function useConversationsWorkspace({ kind }: UseConversationsWorkspaceOpt
   const [directTargetId, setDirectTargetId] = useState("");
   const [directStartError, setDirectStartError] = useState<string | null>(null);
   const lastMarkedConversationRef = useRef<string | null>(null);
+  const initialDirectTargetRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -37,8 +38,13 @@ export function useConversationsWorkspace({ kind }: UseConversationsWorkspaceOpt
 
     const params = new URLSearchParams(window.location.search);
     const conversationId = params.get("conversationId");
+    const targetUserId = params.get("target");
     if (conversationId) {
       setActiveConversationId(conversationId);
+    }
+    if (targetUserId) {
+      initialDirectTargetRef.current = targetUserId;
+      setDirectTargetId(targetUserId);
     }
   }, []);
 
@@ -170,6 +176,29 @@ export function useConversationsWorkspace({ kind }: UseConversationsWorkspaceOpt
       );
     }
   });
+
+  useEffect(() => {
+    if (kind !== "DIRECT") {
+      return;
+    }
+
+    const initialTargetUserId = initialDirectTargetRef.current;
+    if (!initialTargetUserId || createDirectMutation.isPending || activeConversationId) {
+      return;
+    }
+
+    if (!directTargetsQuery.data?.some((target) => target.id === initialTargetUserId)) {
+      return;
+    }
+
+    initialDirectTargetRef.current = null;
+    void createDirectMutation.mutateAsync(initialTargetUserId);
+  }, [
+    activeConversationId,
+    createDirectMutation,
+    directTargetsQuery.data,
+    kind
+  ]);
 
   const createSupportMutation = useMutation({
     mutationFn: () =>

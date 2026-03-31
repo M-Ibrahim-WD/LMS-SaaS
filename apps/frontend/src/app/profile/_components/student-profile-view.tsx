@@ -176,11 +176,19 @@ export function StudentProfileView({
             {following?.length ? (
               <div className="grid gap-4 md:grid-cols-2">
                 {following.map((relation) => (
-                  <Link key={relation.id} href={`/instructors/${relation.instructor.id}`} className="rounded-[22px] border border-slate-200 bg-slate-50/70 p-4 transition hover:-translate-y-0.5 hover:shadow-sm">
+                  <div key={relation.id} className="rounded-[22px] border border-slate-200 bg-slate-50/70 p-4 transition hover:-translate-y-0.5 hover:shadow-sm">
                     <p className="text-lg font-semibold text-slate-950">{relation.instructor.fullName}</p>
                     <p className="mt-1 text-sm text-slate-500">{relation.instructor.tenant?.name ?? relation.instructor.email}</p>
                     <p className="mt-3 text-xs uppercase tracking-[0.18em] text-slate-400">Joined {new Date(relation.createdAt).toLocaleDateString()}</p>
-                  </Link>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Link href={`/instructors/${relation.instructor.id}`} className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700">
+                        Open profile
+                      </Link>
+                      <Link href={`/messages?target=${relation.instructor.id}`} className="rounded-full border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700">
+                        Message instructor
+                      </Link>
+                    </div>
+                  </div>
                 ))}
               </div>
             ) : (

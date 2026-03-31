@@ -472,8 +472,16 @@ export default function CourseDetailsPage() {
                 {selectedCourse.instructor ? (
                   <WorkspacePanel title="Instructor" description="Visit the instructor’s public profile and course storefront.">
                     <p className="text-sm font-semibold text-slate-900">{selectedCourse.instructor.fullName}</p>
-                    <div className="mt-4 flex flex-wrap gap-2">
+                  <div className="mt-4 flex flex-wrap gap-2">
                       <Link href={`/instructors/${selectedCourse.instructor.id}`} className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">Open instructor profile</Link>
+                      {isStudent ? (
+                        <Link
+                          href={`/messages?target=${selectedCourse.instructor.id}`}
+                          className="rounded-full border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700"
+                        >
+                          Message instructor
+                        </Link>
+                      ) : null}
                     </div>
                   </WorkspacePanel>
                 ) : null}

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { EmptyState, PillButton, WorkspacePanel } from "../../../../../../components/course-workspace";
 
 import type {
@@ -138,6 +139,14 @@ export function CourseBuilderUtilityRail({
                   <p>Quizzes: {learner.assessments.quizzesCompleted}/{learner.assessments.quizzesTotal}</p>
                   <p>Assignments: {learner.assessments.assignmentsSubmitted}/{learner.assessments.assignmentsTotal}</p>
                   <p>Last activity: {learner.learningState ? formatBuilderDate(learner.learningState.updatedAt) : "Not tracked yet"}</p>
+                </div>
+                <div className="mt-4">
+                  <Link
+                    href={`/messages?target=${learner.learner.id}`}
+                    className="inline-flex rounded-full border border-emerald-300 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-700 transition hover:border-emerald-400 hover:bg-emerald-100"
+                  >
+                    Message learner
+                  </Link>
                 </div>
               </div>
             ))
