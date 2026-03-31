@@ -184,21 +184,15 @@ export default function DashboardPage() {
       maxWidthClassName="max-w-7xl"
       actions={
         <>
-          <NotificationCenter
-            items={dashboard.notificationsQuery.data}
-            unreadCount={dashboard.unreadCountQuery.data?.unreadCount ?? 0}
-            isLoading={dashboard.notificationsQuery.isLoading}
-            isUpdating={
-              dashboard.markNotificationReadMutation.isPending ||
-              dashboard.markAllNotificationsReadMutation.isPending
-            }
-            onMarkRead={(notificationId: string) =>
-              dashboard.markNotificationReadMutation.mutate(notificationId)
-            }
-            onMarkAllRead={() =>
-              dashboard.markAllNotificationsReadMutation.mutate()
-            }
-          />
+          <HeaderIconButton onClick={dashboard.onLogout} label="Logout" tone="danger">
+            <LogoutIcon />
+          </HeaderIconButton>
+          {profile?.role === "ADMIN" ? (
+            <HeaderActionLink href="/admin" label="Admin">
+              <AdminShieldIcon />
+              Admin
+            </HeaderActionLink>
+          ) : null}
           <HeaderIconLink href="/profile" label="Profile">
             <ProfileIcon />
           </HeaderIconLink>
@@ -222,15 +216,21 @@ export default function DashboardPage() {
               <SupportIcon />
             </HeaderIconLink>
           ) : null}
-          {profile?.role === "ADMIN" ? (
-            <HeaderActionLink href="/admin" label="Admin">
-              <AdminShieldIcon />
-              Admin
-            </HeaderActionLink>
-          ) : null}
-          <HeaderIconButton onClick={dashboard.onLogout} label="Logout" tone="danger">
-            <LogoutIcon />
-          </HeaderIconButton>
+          <NotificationCenter
+            items={dashboard.notificationsQuery.data}
+            unreadCount={dashboard.unreadCountQuery.data?.unreadCount ?? 0}
+            isLoading={dashboard.notificationsQuery.isLoading}
+            isUpdating={
+              dashboard.markNotificationReadMutation.isPending ||
+              dashboard.markAllNotificationsReadMutation.isPending
+            }
+            onMarkRead={(notificationId: string) =>
+              dashboard.markNotificationReadMutation.mutate(notificationId)
+            }
+            onMarkAllRead={() =>
+              dashboard.markAllNotificationsReadMutation.mutate()
+            }
+          />
         </>
       }
     >
