@@ -6,6 +6,7 @@ import { AssessmentsModule } from "./modules/assessments/assessments.module";
 import { AdminModule } from "./modules/admin/admin.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { CertificatesModule } from "./modules/certificates/certificates.module";
+import { CommunicationsModule } from "./modules/communications/communications.module";
 import { CoursesModule } from "./modules/courses/courses.module";
 import { EnrollmentsModule } from "./modules/enrollments/enrollments.module";
 import { InstructorModule } from "./modules/instructor/instructor.module";
@@ -35,6 +36,7 @@ import { PrismaModule } from "./shared/prisma/prisma.module";
     AdminModule,
     AssessmentsModule,
     CertificatesModule,
+    CommunicationsModule,
     NotificationsModule,
     PlansModule,
     ReviewsModule,

@@ -5,6 +5,8 @@ export interface Profile {
   email: string;
   fullName: string;
   role: "ADMIN" | "INSTRUCTOR" | "STUDENT";
+  isSuperAdmin?: boolean;
+  adminPermissions?: string[];
   tenantId: string | null;
   tenant?: {
     id: string;

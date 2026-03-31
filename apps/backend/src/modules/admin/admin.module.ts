@@ -10,6 +10,7 @@ import { UsersModule } from "../users/users.module";
 @Module({
   imports: [UsersModule, PlansModule, SubscriptionsModule],
   controllers: [AdminController],
-  providers: [AdminService, AdminAccessService, AdminAuditService]
+  providers: [AdminService, AdminAccessService, AdminAuditService],
+  exports: [AdminAccessService, AdminAuditService]
 })
 export class AdminModule {}

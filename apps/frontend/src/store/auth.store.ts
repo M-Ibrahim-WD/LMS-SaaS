@@ -23,6 +23,7 @@ interface AuthUser {
     | "REVIEW_PAYMENTS"
     | "MANAGE_PLANS"
     | "REVIEW_ADMINS"
+    | "HANDLE_SUPPORT"
   >;
   tenantId: string | null;
   tenant?: {

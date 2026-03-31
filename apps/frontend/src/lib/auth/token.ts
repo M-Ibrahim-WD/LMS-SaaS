@@ -9,7 +9,8 @@ export type AdminPermission =
   | "REVIEW_COURSES"
   | "REVIEW_PAYMENTS"
   | "MANAGE_PLANS"
-  | "REVIEW_ADMINS";
+  | "REVIEW_ADMINS"
+  | "HANDLE_SUPPORT";
 
 interface JwtPayload {
   sub?: string;

@@ -430,7 +430,11 @@ export const adminPermissionLabels: Record<AdminPermission, { label: string; des
   REVIEW_COURSES: { label: "Review courses", description: "Inspect platform course content." },
   REVIEW_PAYMENTS: { label: "Review payments", description: "Inspect payments and payment states." },
   MANAGE_PLANS: { label: "Manage plans", description: "Create, edit, archive, and assign plans." },
-  REVIEW_ADMINS: { label: "Review admins", description: "Create and manage other admin accounts." }
+  REVIEW_ADMINS: { label: "Review admins", description: "Create and manage other admin accounts." },
+  HANDLE_SUPPORT: {
+    label: "Handle support",
+    description: "Access and reply to platform support conversations."
+  }
 };
 
 export const adminPermissionOrder = Object.keys(adminPermissionLabels) as AdminPermission[];

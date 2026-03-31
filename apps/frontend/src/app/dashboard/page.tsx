@@ -51,6 +51,24 @@ export default function DashboardPage() {
           >
             Profile
           </Link>
+          {profile?.role !== "ADMIN" ? (
+            <Link
+              href="/messages"
+              className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700"
+            >
+              Messages
+            </Link>
+          ) : null}
+          {profile?.role !== "ADMIN" ||
+          profile.isSuperAdmin ||
+          profile.adminPermissions?.includes("HANDLE_SUPPORT") ? (
+            <Link
+              href="/support"
+              className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700"
+            >
+              Support
+            </Link>
+          ) : null}
           {profile?.role === "ADMIN" ? (
             <Link
               href="/admin"

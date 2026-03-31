@@ -8,7 +8,8 @@ export const ADMIN_PERMISSION_VALUES = [
   "REVIEW_COURSES",
   "REVIEW_PAYMENTS",
   "MANAGE_PLANS",
-  "REVIEW_ADMINS"
+  "REVIEW_ADMINS",
+  "HANDLE_SUPPORT"
 ] as const;
 
 export type AdminPermissionValue = (typeof ADMIN_PERMISSION_VALUES)[number];
@@ -53,5 +54,9 @@ export const ADMIN_PERMISSION_LABELS: Record<AdminPermissionValue, { label: stri
   REVIEW_ADMINS: {
     label: "Review admins",
     description: "Create and manage other admin accounts."
+  },
+  HANDLE_SUPPORT: {
+    label: "Handle support",
+    description: "Access the platform support inbox and reply to support conversations."
   }
 };
