@@ -16,11 +16,6 @@ export function BackButton({
   const router = useRouter();
 
   function onBack() {
-    if (typeof window !== "undefined" && window.history.length > 1) {
-      router.back();
-      return;
-    }
-
     router.push(fallbackHref);
   }
 
