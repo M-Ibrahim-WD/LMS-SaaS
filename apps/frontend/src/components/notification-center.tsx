@@ -162,16 +162,19 @@ export function NotificationCenter({
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className={`relative inline-flex h-11 w-11 items-center justify-center rounded-full border bg-white text-slate-700 shadow-sm transition ${
+        className={`group relative inline-flex h-11 w-11 items-center justify-center rounded-full border bg-white text-slate-700 shadow-sm transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 hover:-translate-y-0.5 hover:shadow-md ${
           hasUnread
-            ? "border-amber-300 text-amber-700 hover:border-amber-400"
-            : "border-slate-300 hover:border-slate-400"
+            ? "border-amber-300 text-amber-700 hover:border-amber-400 focus-visible:ring-amber-200"
+            : "border-slate-300 hover:border-slate-400 focus-visible:ring-slate-200"
         }`}
         aria-expanded={open}
         aria-label="Open notifications"
         title="Notifications"
       >
         {hasUnread ? <BellRingingIcon /> : <BellSilentIcon />}
+        <span className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 -translate-x-1/2 rounded-full bg-slate-950 px-2.5 py-1 text-[11px] font-semibold text-white opacity-0 shadow-lg transition duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
+          Notifications
+        </span>
         {hasUnread ? (
           <span className="absolute -right-1 -top-1 inline-flex min-w-6 items-center justify-center rounded-full bg-slate-950 px-2 py-0.5 text-[11px] font-semibold text-white">
             {unreadCount}

@@ -29,13 +29,16 @@ function HeaderIconLink({
       href={href}
       aria-label={label}
       title={label}
-      className={`relative inline-flex h-11 w-11 items-center justify-center rounded-full border bg-white shadow-sm transition ${
+      className={`group relative inline-flex h-11 w-11 items-center justify-center rounded-full border bg-white shadow-sm transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200 focus-visible:ring-offset-2 hover:-translate-y-0.5 hover:shadow-md ${
         tone === "accent"
           ? "border-emerald-300 text-emerald-700 hover:border-emerald-400 hover:bg-emerald-50"
           : "border-slate-200 text-slate-700 hover:border-emerald-300 hover:text-emerald-700"
       }`}
     >
       {children}
+      <span className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 -translate-x-1/2 rounded-full bg-slate-950 px-2.5 py-1 text-[11px] font-semibold text-white opacity-0 shadow-lg transition duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
+        {label}
+      </span>
       {badgeCount && badgeCount > 0 ? (
         <span className="absolute -right-1 -top-1 inline-flex min-w-6 items-center justify-center rounded-full bg-emerald-600 px-2 py-0.5 text-[11px] font-semibold text-white">
           {badgeCount}
@@ -62,13 +65,16 @@ function HeaderIconButton({
       onClick={onClick}
       aria-label={label}
       title={label}
-      className={`inline-flex h-11 w-11 items-center justify-center rounded-full border bg-white shadow-sm transition ${
+      className={`group relative inline-flex h-11 w-11 items-center justify-center rounded-full border bg-white shadow-sm transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 hover:-translate-y-0.5 hover:shadow-md ${
         tone === "danger"
-          ? "border-rose-200 text-rose-600 hover:border-rose-300 hover:bg-rose-50"
-          : "border-slate-200 text-slate-700 hover:border-emerald-300 hover:text-emerald-700"
+          ? "border-rose-200 text-rose-600 hover:border-rose-300 hover:bg-rose-50 focus-visible:ring-rose-200"
+          : "border-slate-200 text-slate-700 hover:border-emerald-300 hover:text-emerald-700 focus-visible:ring-emerald-200"
       }`}
     >
       {children}
+      <span className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 -translate-x-1/2 rounded-full bg-slate-950 px-2.5 py-1 text-[11px] font-semibold text-white opacity-0 shadow-lg transition duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
+        {label}
+      </span>
     </button>
   );
 }
