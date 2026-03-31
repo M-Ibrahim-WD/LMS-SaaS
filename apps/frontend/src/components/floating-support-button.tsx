@@ -51,8 +51,13 @@ export function FloatingSupportButton() {
       href="/support"
       aria-label="Open support chat"
       title="Support"
-      className="group fixed bottom-5 right-5 z-50 inline-flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white shadow-[0_20px_45px_-18px_rgba(5,150,105,0.75)] transition duration-200 hover:-translate-y-1 hover:bg-emerald-700 hover:shadow-[0_24px_55px_-18px_rgba(5,150,105,0.82)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-200"
+      className={`group fixed bottom-5 right-5 z-50 inline-flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white shadow-[0_20px_45px_-18px_rgba(5,150,105,0.75)] transition duration-200 hover:-translate-y-1 hover:bg-emerald-700 hover:shadow-[0_24px_55px_-18px_rgba(5,150,105,0.82)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-200 ${
+        unreadCount > 0 ? "support-launcher-pulse" : ""
+      }`}
     >
+      {unreadCount > 0 ? (
+        <span className="pointer-events-none absolute inset-0 rounded-full border border-emerald-300/80 support-launcher-ring" />
+      ) : null}
       <SupportHeadsetIcon />
       {unreadCount > 0 ? (
         <span className="absolute -right-1 -top-1 inline-flex min-w-6 items-center justify-center rounded-full bg-slate-950 px-2 py-0.5 text-[11px] font-semibold text-white">

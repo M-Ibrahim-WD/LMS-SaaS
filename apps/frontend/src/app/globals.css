@@ -163,6 +163,49 @@ img {
   border-radius: 999px;
 }
 
+@keyframes support-launcher-pulse {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+
+  50% {
+    transform: translateY(-1px) scale(1.02);
+  }
+}
+
+@keyframes support-launcher-ring {
+  0% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+
+  70% {
+    opacity: 0;
+    transform: scale(1.22);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.28);
+  }
+}
+
+.support-launcher-pulse {
+  animation: support-launcher-pulse 2.3s ease-in-out infinite;
+}
+
+.support-launcher-ring {
+  animation: support-launcher-ring 2.3s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .support-launcher-pulse,
+  .support-launcher-ring {
+    animation: none;
+  }
+}
+
 @media (max-width: 640px) {
   html {
     font-size: 15px;
