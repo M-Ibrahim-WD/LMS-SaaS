@@ -2,6 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
+import { FloatingMessagesButton } from "../components/floating-messages-button";
 import { FloatingSupportButton } from "../components/floating-support-button";
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
@@ -10,6 +11,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       {children}
+      <FloatingMessagesButton />
       <FloatingSupportButton />
     </QueryClientProvider>
   );
