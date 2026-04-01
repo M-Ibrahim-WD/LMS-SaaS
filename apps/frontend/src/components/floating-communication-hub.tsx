@@ -5,7 +5,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { apiFetch } from "../lib/api/client";
-import type { ConversationSummary } from "../lib/communication/types";
+import {
+  formatRelativeConversationTime,
+  type ConversationSummary
+} from "../lib/communication/types";
 import { useAuthStore } from "../store/auth.store";
 
 function HubIcon() {
@@ -165,6 +168,11 @@ export function FloatingCommunicationHub() {
                   <p className="mt-1 line-clamp-2 text-sm leading-6 text-slate-600">
                     {unreadMessages[0]?.latestMessage?.body ?? "Jump into your direct chat inbox."}
                   </p>
+                  {unreadMessages[0]?.lastMessageAt ? (
+                    <p className="mt-2 text-xs font-semibold uppercase tracking-[0.14em] text-sky-700/70">
+                      {formatRelativeConversationTime(unreadMessages[0].lastMessageAt)}
+                    </p>
+                  ) : null}
                 </div>
                 <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-sky-700 shadow-sm">
                   <MessageIcon />
@@ -205,6 +213,11 @@ export function FloatingCommunicationHub() {
                   <p className="mt-1 line-clamp-2 text-sm leading-6 text-slate-600">
                     {unreadSupport[0]?.latestMessage?.body ?? "Open a request or continue with support."}
                   </p>
+                  {unreadSupport[0]?.lastMessageAt ? (
+                    <p className="mt-2 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700/70">
+                      {formatRelativeConversationTime(unreadSupport[0].lastMessageAt)}
+                    </p>
+                  ) : null}
                 </div>
                 <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-emerald-700 shadow-sm">
                   <SupportIcon />
