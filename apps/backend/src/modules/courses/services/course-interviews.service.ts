@@ -25,24 +25,21 @@ export class CourseInterviewsService {
 
   async listForCourse(currentUser: JwtPayload, courseId: string) {
     const course = await this.getCourseAccess(currentUser, courseId);
+    const now = new Date();
 
     const items = await this.prisma.courseInterviewSession.findMany({
       where: {
         courseId,
-        ...(currentUser.role === UserRole.INSTRUCTOR
-          ? {}
-          : {
-              status: {
-                in: [InterviewSessionStatus.SCHEDULED, InterviewSessionStatus.COMPLETED]
-              }
-            })
+        status: InterviewSessionStatus.SCHEDULED
       },
       orderBy: {
         scheduledAt: "asc"
       }
     });
 
-    return items.map((item) => ({
+    return items
+      .filter((item) => this.getInterviewEndAt(item).getTime() > now.getTime())
+      .map((item) => ({
       ...item,
       scheduledAt: item.scheduledAt.toISOString(),
       createdAt: item.createdAt.toISOString(),
@@ -53,6 +50,43 @@ export class CourseInterviewsService {
       },
       canManage: currentUser.role === UserRole.INSTRUCTOR
     }));
+  }
+
+  async listForInstructorDashboard(currentUser: JwtPayload) {
+    if (currentUser.role !== UserRole.INSTRUCTOR) {
+      throw new ForbiddenException("Instructor access is required.");
+    }
+
+    const now = new Date();
+    const items = await this.prisma.courseInterviewSession.findMany({
+      where: {
+        createdByInstructorId: currentUser.sub
+      },
+      orderBy: [{ status: "asc" }, { scheduledAt: "asc" }],
+      include: {
+        course: {
+          select: {
+            id: true,
+            title: true
+          }
+        }
+      }
+    });
+
+    return items
+      .filter((item) =>
+        item.status === InterviewSessionStatus.DRAFT ||
+        this.getInterviewEndAt(item).getTime() > now.getTime()
+      )
+      .map((item) => ({
+        ...item,
+        scheduledAt: item.scheduledAt.toISOString(),
+        createdAt: item.createdAt.toISOString(),
+        updatedAt: item.updatedAt.toISOString(),
+        canManage: true,
+        canEdit: this.canEditInterview(item.scheduledAt),
+        isJoinReady: this.isJoinReady(item.scheduledAt)
+      }));
   }
 
   async getOne(currentUser: JwtPayload, interviewId: string) {
@@ -93,7 +127,12 @@ export class CourseInterviewsService {
       scheduledAt: interview.scheduledAt.toISOString(),
       createdAt: interview.createdAt.toISOString(),
       updatedAt: interview.updatedAt.toISOString(),
-      canManage: currentUser.role === UserRole.INSTRUCTOR
+      canManage: currentUser.role === UserRole.INSTRUCTOR,
+      canEdit:
+        currentUser.role === UserRole.INSTRUCTOR
+          ? this.canEditInterview(interview.scheduledAt)
+          : false,
+      isJoinReady: this.isJoinReady(interview.scheduledAt)
     };
   }
 
@@ -129,6 +168,11 @@ export class CourseInterviewsService {
 
   async update(currentUser: JwtPayload, interviewId: string, dto: UpdateCourseInterviewDto) {
     const interview = await this.getInterviewForInstructor(currentUser, interviewId);
+    if (!this.canEditInterview(interview.scheduledAt)) {
+      throw new ForbiddenException(
+        "Interview editing locks 30 minutes before the scheduled time."
+      );
+    }
 
     const updated = await this.prisma.courseInterviewSession.update({
       where: { id: interview.id },
@@ -157,7 +201,9 @@ export class CourseInterviewsService {
       scheduledAt: updated.scheduledAt.toISOString(),
       createdAt: updated.createdAt.toISOString(),
       updatedAt: updated.updatedAt.toISOString(),
-      canManage: true
+      canManage: true,
+      canEdit: this.canEditInterview(updated.scheduledAt),
+      isJoinReady: this.isJoinReady(updated.scheduledAt)
     };
   }
 
@@ -204,7 +250,9 @@ export class CourseInterviewsService {
       scheduledAt: updated.scheduledAt.toISOString(),
       createdAt: updated.createdAt.toISOString(),
       updatedAt: updated.updatedAt.toISOString(),
-      canManage: true
+      canManage: true,
+      canEdit: this.canEditInterview(updated.scheduledAt),
+      isJoinReady: this.isJoinReady(updated.scheduledAt)
     };
   }
 
@@ -277,7 +325,8 @@ export class CourseInterviewsService {
         courseId: true,
         createdByInstructorId: true,
         meetingUrl: true,
-        title: true
+        title: true,
+        scheduledAt: true
       }
     });
 
@@ -322,5 +371,23 @@ export class CourseInterviewsService {
         })
       )
     );
+  }
+
+  private canEditInterview(scheduledAt: Date) {
+    const cutoff = scheduledAt.getTime() - 30 * 60 * 1000;
+    return Date.now() < cutoff;
+  }
+
+  private isJoinReady(scheduledAt: Date) {
+    const diffMs = scheduledAt.getTime() - Date.now();
+    return diffMs <= 15 * 60 * 1000 && diffMs >= -5 * 60 * 1000;
+  }
+
+  private getInterviewEndAt(interview: {
+    scheduledAt: Date;
+    durationMinutes: number | null;
+  }) {
+    const durationMinutes = interview.durationMinutes ?? 60;
+    return new Date(interview.scheduledAt.getTime() + durationMinutes * 60 * 1000);
   }
 }

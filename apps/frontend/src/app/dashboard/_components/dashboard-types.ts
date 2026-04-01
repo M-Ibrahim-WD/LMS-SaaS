@@ -194,3 +194,26 @@ export interface InstructorSubscriptionSummary {
     isTrial: boolean;
   } | null;
 }
+
+export interface InstructorCourseOption {
+  id: string;
+  title: string;
+}
+
+export interface DashboardInterviewSession {
+  id: string;
+  title: string;
+  description?: string | null;
+  provider: "ZOOM" | "GOOGLE_MEET";
+  meetingUrl: string;
+  scheduledAt: string;
+  durationMinutes?: number | null;
+  status: "DRAFT" | "SCHEDULED";
+  canManage: boolean;
+  canEdit: boolean;
+  isJoinReady: boolean;
+  course: {
+    id: string;
+    title: string;
+  };
+}

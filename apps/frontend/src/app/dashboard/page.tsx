@@ -261,8 +261,21 @@ export default function DashboardPage() {
               deleteMethodError={dashboard.deleteMethodError}
               paymentMethods={dashboard.paymentMethodsQuery.data}
               instructorPayments={dashboard.instructorPaymentsQuery.data}
+              instructorCourses={dashboard.instructorCoursesQuery.data}
+              interviewSessions={dashboard.dashboardInterviewsQuery.data}
+              interviewCourseId={dashboard.interviewCourseId}
+              interviewTitle={dashboard.interviewTitle}
+              interviewDescription={dashboard.interviewDescription}
+              interviewProvider={dashboard.interviewProvider}
+              interviewMeetingUrl={dashboard.interviewMeetingUrl}
+              interviewScheduledAt={dashboard.interviewScheduledAt}
+              interviewDurationMinutes={dashboard.interviewDurationMinutes}
+              interviewError={dashboard.interviewError}
               isCreatingMethod={dashboard.createMethodMutation.isPending}
               isDeletingMethod={dashboard.deleteMethodMutation.isPending}
+              isCreatingInterview={dashboard.createInterviewMutation.isPending}
+              isUpdatingInterview={dashboard.updateInterviewMutation.isPending || dashboard.updateInterviewStatusMutation.isPending}
+              isDeletingInterview={dashboard.deleteInterviewMutation.isPending}
               onCopyInviteCode={dashboard.onCopyInviteCode}
               onCreateMethod={dashboard.onCreateMethod}
               onDeleteMethod={dashboard.onDeleteMethod}
@@ -275,6 +288,26 @@ export default function DashboardPage() {
               onMethodTypeChange={dashboard.onMethodTypeChange}
               onMethodLabelChange={dashboard.setMethodLabel}
               onMethodDetailsChange={dashboard.onMethodDetailsChange}
+              onInterviewCourseChange={dashboard.setInterviewCourseId}
+              onInterviewTitleChange={dashboard.setInterviewTitle}
+              onInterviewDescriptionChange={dashboard.setInterviewDescription}
+              onInterviewProviderChange={dashboard.setInterviewProvider}
+              onInterviewMeetingUrlChange={dashboard.setInterviewMeetingUrl}
+              onInterviewScheduledAtChange={dashboard.setInterviewScheduledAt}
+              onInterviewDurationMinutesChange={dashboard.setInterviewDurationMinutes}
+              onCreateInterview={() => void dashboard.createInterviewMutation.mutateAsync()}
+              onScheduleInterview={(interviewId) =>
+                dashboard.updateInterviewStatusMutation.mutate({ interviewId, status: "SCHEDULED" })
+              }
+              onCompleteInterview={(interviewId) =>
+                dashboard.updateInterviewStatusMutation.mutate({ interviewId, status: "COMPLETED" })
+              }
+              onDeleteInterview={(interviewId) =>
+                dashboard.deleteInterviewMutation.mutate(interviewId)
+              }
+              onUpdateInterview={(interviewId, payload) =>
+                dashboard.updateInterviewMutation.mutate({ interviewId, payload })
+              }
             />
           ) : null}
 

@@ -16,6 +16,29 @@ import { StatusBanner } from "../../../components/status-banner";
 import { formatCourseDate } from "./_components/course-details-types";
 import { useCourseDetailsWorkspace } from "./_hooks/use-course-details-workspace";
 
+function formatInterviewCountdown(value: string) {
+  const diffMs = new Date(value).getTime() - Date.now();
+  const diffMinutes = Math.round(diffMs / (1000 * 60));
+
+  if (diffMinutes <= -5) {
+    return "Live now";
+  }
+  if (diffMinutes <= 15) {
+    return "Join now";
+  }
+  if (diffMinutes < 60) {
+    return `In ${diffMinutes} min`;
+  }
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) {
+    return `In ${diffHours}h`;
+  }
+
+  const diffDays = Math.floor(diffHours / 24);
+  return `In ${diffDays}d`;
+}
+
 export default function CourseDetailsPage() {
   const {
     activeLesson,
@@ -333,9 +356,26 @@ export default function CourseDetailsPage() {
                                     <p className="mt-2 text-sm leading-6 text-slate-600">{session.description}</p>
                                   ) : null}
                                 </div>
-                                <span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${session.status === "COMPLETED" ? "bg-emerald-100 text-emerald-800" : "bg-sky-100 text-sky-800"}`}>
-                                  {session.status}
-                                </span>
+                                <div className="flex flex-wrap gap-2">
+                                  <span
+                                    className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${
+                                      session.isJoinReady
+                                        ? "bg-emerald-100 text-emerald-800"
+                                        : "bg-sky-100 text-sky-800"
+                                    }`}
+                                  >
+                                    {session.isJoinReady ? "Join now" : session.status}
+                                  </span>
+                                  <span
+                                    className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${
+                                      session.isJoinReady
+                                        ? "bg-emerald-100 text-emerald-800"
+                                        : "bg-amber-100 text-amber-800"
+                                    }`}
+                                  >
+                                    {formatInterviewCountdown(session.scheduledAt)}
+                                  </span>
+                                </div>
                               </div>
                             </button>
                           ))
@@ -544,6 +584,26 @@ export default function CourseDetailsPage() {
                 <p className="mt-2 text-sm text-slate-600">
                   {activeInterviewQuery.data.provider === "ZOOM" ? "Zoom" : "Google Meet"} • {formatCourseDate(activeInterviewQuery.data.scheduledAt)}
                 </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <span
+                    className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${
+                      activeInterviewQuery.data.isJoinReady
+                        ? "bg-emerald-100 text-emerald-800"
+                        : "bg-sky-100 text-sky-800"
+                    }`}
+                  >
+                    {activeInterviewQuery.data.isJoinReady ? "Join now" : activeInterviewQuery.data.status}
+                  </span>
+                  <span
+                    className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${
+                      activeInterviewQuery.data.isJoinReady
+                        ? "bg-emerald-100 text-emerald-800"
+                        : "bg-amber-100 text-amber-800"
+                    }`}
+                  >
+                    {formatInterviewCountdown(activeInterviewQuery.data.scheduledAt)}
+                  </span>
+                </div>
               </div>
               <button
                 type="button"
@@ -573,9 +633,11 @@ export default function CourseDetailsPage() {
                   href={activeInterviewQuery.data.meetingUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white"
+                  className={`inline-flex rounded-full px-5 py-3 text-sm font-semibold text-white ${
+                    activeInterviewQuery.data.isJoinReady ? "bg-emerald-600 shadow-lg shadow-emerald-200" : "bg-slate-950"
+                  }`}
                 >
-                  Open join fallback
+                  {activeInterviewQuery.data.isJoinReady ? "Join now" : "Open join fallback"}
                 </a>
               </div>
               <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-950">

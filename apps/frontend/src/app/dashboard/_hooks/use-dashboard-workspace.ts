@@ -16,7 +16,9 @@ import type {
   ContinueLearningItem,
   ConversationUnreadItem,
   CourseFilter,
+  DashboardInterviewSession,
   EnrolledCourse,
+  InstructorCourseOption,
   InstructorPayment,
   InstructorSubscriptionSummary,
   InviteCodeResponse,
@@ -45,6 +47,14 @@ export function useDashboardWorkspace() {
   const [activeTab, setActiveTab] = useState<StudentTab>("ALL");
   const [filterType, setFilterType] = useState<CourseFilter>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
+  const [interviewCourseId, setInterviewCourseId] = useState("");
+  const [interviewTitle, setInterviewTitle] = useState("");
+  const [interviewDescription, setInterviewDescription] = useState("");
+  const [interviewProvider, setInterviewProvider] = useState<"ZOOM" | "GOOGLE_MEET">("ZOOM");
+  const [interviewMeetingUrl, setInterviewMeetingUrl] = useState("");
+  const [interviewScheduledAt, setInterviewScheduledAt] = useState("");
+  const [interviewDurationMinutes, setInterviewDurationMinutes] = useState("60");
+  const [interviewError, setInterviewError] = useState<string | null>(null);
 
   const profileQuery = useQuery({
     queryKey: ["me"],
@@ -80,6 +90,21 @@ export function useDashboardWorkspace() {
     queryKey: ["courses", "student-dashboard"],
     queryFn: () => apiFetch<StudentCourse[]>("/courses", { token: accessToken ?? undefined }),
     enabled: Boolean(accessToken && user?.role === "STUDENT")
+  });
+
+  const instructorCoursesQuery = useQuery({
+    queryKey: ["courses", "instructor-dashboard"],
+    queryFn: () => apiFetch<InstructorCourseOption[]>("/courses", { token: accessToken ?? undefined }),
+    enabled: Boolean(accessToken && user?.role === "INSTRUCTOR")
+  });
+
+  const dashboardInterviewsQuery = useQuery({
+    queryKey: ["course-interviews", "dashboard"],
+    queryFn: () =>
+      apiFetch<DashboardInterviewSession[]>("/courses/interviews/dashboard", {
+        token: accessToken ?? undefined
+      }),
+    enabled: Boolean(accessToken && user?.role === "INSTRUCTOR")
   });
 
   const studentMyCoursesQuery = useQuery({
@@ -260,6 +285,95 @@ export function useDashboardWorkspace() {
     }
   });
 
+  const createInterviewMutation = useMutation({
+    mutationFn: () =>
+      apiFetch(`/courses/${interviewCourseId}/interviews`, {
+        method: "POST",
+        token: accessToken ?? undefined,
+        body: JSON.stringify({
+          title: interviewTitle,
+          description: interviewDescription || undefined,
+          provider: interviewProvider,
+          meetingUrl: interviewMeetingUrl,
+          scheduledAt: interviewScheduledAt,
+          durationMinutes: interviewDurationMinutes ? Number(interviewDurationMinutes) : undefined
+        })
+      }),
+    onSuccess: async () => {
+      setInterviewCourseId("");
+      setInterviewTitle("");
+      setInterviewDescription("");
+      setInterviewProvider("ZOOM");
+      setInterviewMeetingUrl("");
+      setInterviewScheduledAt("");
+      setInterviewDurationMinutes("60");
+      setInterviewError(null);
+      await dashboardInterviewsQuery.refetch();
+    },
+    onError: (error) => {
+      setInterviewError(error instanceof Error ? error.message : "Could not create the interview.");
+    }
+  });
+
+  const updateInterviewMutation = useMutation({
+    mutationFn: ({
+      interviewId,
+      payload
+    }: {
+      interviewId: string;
+      payload: Record<string, unknown>;
+    }) =>
+      apiFetch(`/courses/interviews/${interviewId}`, {
+        method: "PATCH",
+        token: accessToken ?? undefined,
+        body: JSON.stringify(payload)
+      }),
+    onSuccess: async () => {
+      setInterviewError(null);
+      await dashboardInterviewsQuery.refetch();
+    },
+    onError: (error) => {
+      setInterviewError(error instanceof Error ? error.message : "Could not update the interview.");
+    }
+  });
+
+  const updateInterviewStatusMutation = useMutation({
+    mutationFn: ({
+      interviewId,
+      status
+    }: {
+      interviewId: string;
+      status: "DRAFT" | "SCHEDULED" | "COMPLETED";
+    }) =>
+      apiFetch(`/courses/interviews/${interviewId}/status`, {
+        method: "PATCH",
+        token: accessToken ?? undefined,
+        body: JSON.stringify({ status })
+      }),
+    onSuccess: async () => {
+      setInterviewError(null);
+      await dashboardInterviewsQuery.refetch();
+    },
+    onError: (error) => {
+      setInterviewError(error instanceof Error ? error.message : "Could not update the interview state.");
+    }
+  });
+
+  const deleteInterviewMutation = useMutation({
+    mutationFn: (interviewId: string) =>
+      apiFetch(`/courses/interviews/${interviewId}/delete`, {
+        method: "PATCH",
+        token: accessToken ?? undefined
+      }),
+    onSuccess: async () => {
+      setInterviewError(null);
+      await dashboardInterviewsQuery.refetch();
+    },
+    onError: (error) => {
+      setInterviewError(error instanceof Error ? error.message : "Could not delete the interview.");
+    }
+  });
+
   function onLogout() {
     clearSession();
     clearAuthCookie();
@@ -432,6 +546,8 @@ export function useDashboardWorkspace() {
     studentCoursesQuery,
     studentMyCoursesQuery,
     continueLearningQuery,
+    instructorCoursesQuery,
+    dashboardInterviewsQuery,
     notificationsQuery,
     unreadCountQuery,
     directUnreadConversationsQuery,
@@ -447,6 +563,14 @@ export function useDashboardWorkspace() {
     activeTab,
     filterType,
     searchQuery,
+    interviewCourseId,
+    interviewTitle,
+    interviewDescription,
+    interviewProvider,
+    interviewMeetingUrl,
+    interviewScheduledAt,
+    interviewDurationMinutes,
+    interviewError,
     filteredStudentCourses,
     groupedCoursesByInstructor,
     studentEmptyStateMessage,
@@ -460,6 +584,13 @@ export function useDashboardWorkspace() {
     setActiveTab,
     setFilterType,
     setSearchQuery,
+    setInterviewCourseId,
+    setInterviewTitle,
+    setInterviewDescription,
+    setInterviewProvider,
+    setInterviewMeetingUrl,
+    setInterviewScheduledAt,
+    setInterviewDurationMinutes,
     onMethodTypeChange,
     setMethodLabel,
     onMethodDetailsChange,
@@ -469,6 +600,10 @@ export function useDashboardWorkspace() {
     approveMutation,
     rejectMutation,
     markNotificationReadMutation,
-    markAllNotificationsReadMutation
+    markAllNotificationsReadMutation,
+    createInterviewMutation,
+    updateInterviewMutation,
+    updateInterviewStatusMutation,
+    deleteInterviewMutation
   };
 }

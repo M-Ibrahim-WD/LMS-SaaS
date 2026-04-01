@@ -11,6 +11,15 @@ import {
   groupConversationMessages
 } from "../../lib/communication/types";
 
+function avatarLabel(name: string) {
+  return name
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
+
 export default function MessagesPage() {
   const workspace = useConversationsWorkspace({ kind: "MESSAGES" });
 
@@ -216,7 +225,26 @@ export default function MessagesPage() {
                         : "Messages update live while the conversation is open."}
                     </p>
                     {active.kind === "GROUP" ? (
-                      <div className="mt-4 grid gap-3 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                      <div className="mt-4 space-y-3 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                        <div className="flex flex-wrap gap-2">
+                          {active.participantPreview.slice(0, 6).map((participant) => (
+                            <div
+                              key={participant.id}
+                              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700"
+                              title={participant.fullName}
+                            >
+                              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-[10px] font-semibold text-white">
+                                {avatarLabel(participant.fullName)}
+                              </span>
+                              <span className="max-w-[120px] truncate">{participant.fullName}</span>
+                            </div>
+                          ))}
+                          {active.participantCount > active.participantPreview.length ? (
+                            <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-500">
+                              +{active.participantCount - active.participantPreview.length} more
+                            </span>
+                          ) : null}
+                        </div>
                         <input
                           value={workspace.groupEditTitle}
                           onChange={(event) => workspace.setGroupEditTitle(event.target.value)}

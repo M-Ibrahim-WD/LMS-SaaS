@@ -112,6 +112,12 @@ export class CoursesController {
     return this.courseInterviewsService.listForCourse(user, id);
   }
 
+  @Roles("INSTRUCTOR")
+  @Get("interviews/dashboard")
+  listDashboardInterviews(@CurrentUser() user: JwtPayload) {
+    return this.courseInterviewsService.listForInstructorDashboard(user);
+  }
+
   @Get("interviews/:interviewId")
   getInterview(@CurrentUser() user: JwtPayload, @Param("interviewId") interviewId: string) {
     return this.courseInterviewsService.getOne(user, interviewId);

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import type { FormEvent } from "react";
@@ -10,7 +10,12 @@ import {
   type PaymentMethodType,
   placeholderForPaymentType
 } from "../../../lib/payments/payment-methods";
-import type { InstructorPayment, PaymentMethod } from "./dashboard-types";
+import type {
+  DashboardInterviewSession,
+  InstructorCourseOption,
+  InstructorPayment,
+  PaymentMethod
+} from "./dashboard-types";
 
 interface InstructorDashboardSectionProps {
   accessToken: string;
@@ -20,10 +25,23 @@ interface InstructorDashboardSectionProps {
   methodDetails: string;
   methodValidationError: string | null;
   deleteMethodError: string | null;
+  instructorCourses?: InstructorCourseOption[];
+  interviewSessions?: DashboardInterviewSession[];
+  interviewCourseId: string;
+  interviewTitle: string;
+  interviewDescription: string;
+  interviewProvider: "ZOOM" | "GOOGLE_MEET";
+  interviewMeetingUrl: string;
+  interviewScheduledAt: string;
+  interviewDurationMinutes: string;
+  interviewError: string | null;
   paymentMethods?: PaymentMethod[];
   instructorPayments?: InstructorPayment[];
   isCreatingMethod: boolean;
   isDeletingMethod: boolean;
+  isCreatingInterview: boolean;
+  isUpdatingInterview: boolean;
+  isDeletingInterview: boolean;
   onCopyInviteCode: () => Promise<void>;
   onCreateMethod: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   onDeleteMethod: (methodId: string) => Promise<void>;
@@ -32,6 +50,57 @@ interface InstructorDashboardSectionProps {
   onMethodTypeChange: (value: PaymentMethodType) => void;
   onMethodLabelChange: (value: string) => void;
   onMethodDetailsChange: (value: string) => void;
+  onInterviewCourseChange: (value: string) => void;
+  onInterviewTitleChange: (value: string) => void;
+  onInterviewDescriptionChange: (value: string) => void;
+  onInterviewProviderChange: (value: "ZOOM" | "GOOGLE_MEET") => void;
+  onInterviewMeetingUrlChange: (value: string) => void;
+  onInterviewScheduledAtChange: (value: string) => void;
+  onInterviewDurationMinutesChange: (value: string) => void;
+  onCreateInterview: () => void;
+  onScheduleInterview: (interviewId: string) => void;
+  onCompleteInterview: (interviewId: string) => void;
+  onDeleteInterview: (interviewId: string) => void;
+  onUpdateInterview: (interviewId: string, payload: Record<string, unknown>) => void;
+}
+
+function formatInterviewCountdown(value: string) {
+  const diffMs = new Date(value).getTime() - Date.now();
+  const diffMinutes = Math.round(diffMs / (1000 * 60));
+
+  if (diffMinutes <= -5) {
+    return "Live now";
+  }
+  if (diffMinutes <= 15) {
+    return "Join now";
+  }
+  if (diffMinutes < 60) {
+    return `In ${diffMinutes} min`;
+  }
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) {
+    return `In ${diffHours}h`;
+  }
+
+  const diffDays = Math.floor(diffHours / 24);
+  return `In ${diffDays}d`;
+}
+
+function interviewCountdownTone(session: DashboardInterviewSession) {
+  if (session.isJoinReady) {
+    return "success" as const;
+  }
+
+  const diffMinutes = Math.round(
+    (new Date(session.scheduledAt).getTime() - Date.now()) / (1000 * 60)
+  );
+
+  if (diffMinutes <= 60) {
+    return "warning" as const;
+  }
+
+  return "default" as const;
 }
 
 export function InstructorDashboardSection({
@@ -42,10 +111,23 @@ export function InstructorDashboardSection({
   methodDetails,
   methodValidationError,
   deleteMethodError,
+  instructorCourses,
+  interviewSessions,
+  interviewCourseId,
+  interviewTitle,
+  interviewDescription,
+  interviewProvider,
+  interviewMeetingUrl,
+  interviewScheduledAt,
+  interviewDurationMinutes,
+  interviewError,
   paymentMethods,
   instructorPayments,
   isCreatingMethod,
   isDeletingMethod,
+  isCreatingInterview,
+  isUpdatingInterview,
+  isDeletingInterview,
   onCopyInviteCode,
   onCreateMethod,
   onDeleteMethod,
@@ -53,7 +135,19 @@ export function InstructorDashboardSection({
   onRejectPayment,
   onMethodTypeChange,
   onMethodLabelChange,
-  onMethodDetailsChange
+  onMethodDetailsChange,
+  onInterviewCourseChange,
+  onInterviewTitleChange,
+  onInterviewDescriptionChange,
+  onInterviewProviderChange,
+  onInterviewMeetingUrlChange,
+  onInterviewScheduledAtChange,
+  onInterviewDurationMinutesChange,
+  onCreateInterview,
+  onScheduleInterview,
+  onCompleteInterview,
+  onDeleteInterview,
+  onUpdateInterview
 }: InstructorDashboardSectionProps) {
   const pendingPayments = instructorPayments?.filter((payment) => payment.status === "PENDING") ?? [];
   const approvedRevenue = instructorPayments
@@ -285,6 +379,214 @@ export function InstructorDashboardSection({
           </div>
         </ContentCard>
       </section>
+
+      <section className="grid gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+        <ContentCard className="p-6">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="section-kicker">Interviews</p>
+              <h3 className="mt-2 text-xl font-semibold text-slate-950">Schedule course interviews</h3>
+            </div>
+            <StatusChip tone="info">Dashboard only</StatusChip>
+          </div>
+          <div className="mt-3 rounded-[24px] border border-slate-200 bg-slate-50/90 p-4 text-sm leading-6 text-slate-600">
+            Pick any of your courses here. Scheduled interviews appear in the course for both you and enrolled learners, then disappear automatically once they end.
+          </div>
+          <div className="mt-5 grid gap-3">
+            <select className="field-select" value={interviewCourseId} onChange={(event) => onInterviewCourseChange(event.target.value)}>
+              <option value="">Choose a course</option>
+              {(instructorCourses ?? []).map((course) => (
+                <option key={course.id} value={course.id}>{course.title}</option>
+              ))}
+            </select>
+            <input className="field-input" placeholder="Interview title" value={interviewTitle} onChange={(event) => onInterviewTitleChange(event.target.value)} />
+            <textarea className="field-textarea" placeholder="Agenda or note" value={interviewDescription} onChange={(event) => onInterviewDescriptionChange(event.target.value)} />
+            <select className="field-select" value={interviewProvider} onChange={(event) => onInterviewProviderChange(event.target.value as "ZOOM" | "GOOGLE_MEET")}>
+              <option value="ZOOM">Zoom</option>
+              <option value="GOOGLE_MEET">Google Meet</option>
+            </select>
+            <input className="field-input" placeholder="Meeting link" value={interviewMeetingUrl} onChange={(event) => onInterviewMeetingUrlChange(event.target.value)} />
+            <div className="grid gap-3 md:grid-cols-2">
+              <input type="datetime-local" className="field-input" value={interviewScheduledAt} onChange={(event) => onInterviewScheduledAtChange(event.target.value)} />
+              <input type="number" min={1} className="field-input" value={interviewDurationMinutes} onChange={(event) => onInterviewDurationMinutesChange(event.target.value)} placeholder="Duration in minutes" />
+            </div>
+            {interviewError ? <p className="text-sm text-rose-600">{interviewError}</p> : null}
+            <button
+              type="button"
+              onClick={onCreateInterview}
+              disabled={isCreatingInterview}
+              className="rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+            >
+              {isCreatingInterview ? "Creating..." : "Create interview draft"}
+            </button>
+          </div>
+        </ContentCard>
+
+        <ContentCard className="p-6">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="section-kicker">Upcoming sessions</p>
+              <h3 className="mt-2 text-xl font-semibold text-slate-950">Active interview queue</h3>
+            </div>
+            <StatusChip tone={(interviewSessions?.length ?? 0) > 0 ? "warning" : "success"}>
+              {(interviewSessions?.length ?? 0) > 0 ? `${interviewSessions?.length ?? 0} live items` : "No active interviews"}
+            </StatusChip>
+          </div>
+          <div className="mt-5 space-y-4">
+            {(interviewSessions?.length ?? 0) > 0 ? (
+              interviewSessions?.map((session) => (
+                <div key={session.id} className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-slate-950">{session.title}</p>
+                      <p className="mt-1 text-sm text-slate-500">{session.course.title}</p>
+                      <p className="mt-1 text-sm text-slate-600">
+                        {session.provider === "ZOOM" ? "Zoom" : "Google Meet"} • {new Date(session.scheduledAt).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <StatusChip tone={session.isJoinReady ? "success" : session.status === "DRAFT" ? "warning" : "info"}>
+                        {session.isJoinReady ? "Join now" : session.status}
+                      </StatusChip>
+                      <StatusChip tone={interviewCountdownTone(session)}>
+                        {formatInterviewCountdown(session.scheduledAt)}
+                      </StatusChip>
+                    </div>
+                  </div>
+                  {session.description ? <p className="mt-3 text-sm leading-6 text-slate-600">{session.description}</p> : null}
+                  <div className="mt-4 grid gap-3 md:grid-cols-2">
+                    <input
+                      className="field-input"
+                      defaultValue={session.title}
+                      disabled={!session.canEdit}
+                      onBlur={(event) => {
+                        const nextTitle = event.target.value.trim();
+                        if (nextTitle && nextTitle !== session.title) {
+                          onUpdateInterview(session.id, { title: nextTitle });
+                        }
+                      }}
+                    />
+                    <select
+                      className="field-select"
+                      defaultValue={session.provider}
+                      disabled={!session.canEdit}
+                      onChange={(event) => {
+                        const nextProvider = event.target.value as "ZOOM" | "GOOGLE_MEET";
+                        if (nextProvider !== session.provider) {
+                          onUpdateInterview(session.id, { provider: nextProvider });
+                        }
+                      }}
+                    >
+                      <option value="ZOOM">Zoom</option>
+                      <option value="GOOGLE_MEET">Google Meet</option>
+                    </select>
+                    <input
+                      type="datetime-local"
+                      className="field-input"
+                      defaultValue={session.scheduledAt.slice(0, 16)}
+                      disabled={!session.canEdit}
+                      onBlur={(event) => {
+                        const nextValue = event.target.value;
+                        if (nextValue && nextValue !== session.scheduledAt.slice(0, 16)) {
+                          onUpdateInterview(session.id, { scheduledAt: nextValue });
+                        }
+                      }}
+                    />
+                    <input
+                      className="field-input"
+                      defaultValue={session.meetingUrl}
+                      disabled={!session.canEdit}
+                      onBlur={(event) => {
+                        const nextUrl = event.target.value.trim();
+                        if (nextUrl && nextUrl !== session.meetingUrl) {
+                          onUpdateInterview(session.id, { meetingUrl: nextUrl });
+                        }
+                      }}
+                    />
+                    <input
+                      type="number"
+                      min={1}
+                      className="field-input"
+                      defaultValue={String(session.durationMinutes ?? 60)}
+                      disabled={!session.canEdit}
+                      onBlur={(event) => {
+                        const nextDuration = Number(event.target.value);
+                        if (
+                          Number.isFinite(nextDuration) &&
+                          nextDuration > 0 &&
+                          nextDuration !== (session.durationMinutes ?? 60)
+                        ) {
+                          onUpdateInterview(session.id, { durationMinutes: nextDuration });
+                        }
+                      }}
+                    />
+                  </div>
+                  <textarea
+                    className="mt-3 field-textarea"
+                    defaultValue={session.description ?? ""}
+                    disabled={!session.canEdit}
+                    onBlur={(event) => {
+                      const nextDescription = event.target.value.trim();
+                      if (nextDescription !== (session.description ?? "")) {
+                        onUpdateInterview(session.id, { description: nextDescription || null });
+                      }
+                    }}
+                  />
+                  {!session.canEdit ? (
+                    <p className="mt-3 text-xs text-amber-700">
+                      Editing closes 30 minutes before the interview. You can still delete it if plans change.
+                    </p>
+                  ) : null}
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {session.status === "DRAFT" ? (
+                      <button
+                        type="button"
+                        onClick={() => onScheduleInterview(session.id)}
+                        disabled={isUpdatingInterview}
+                        className="rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white disabled:opacity-60"
+                      >
+                        Schedule
+                      </button>
+                    ) : null}
+                    {session.isJoinReady ? (
+                      <a
+                        href={session.meetingUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-sm shadow-emerald-200"
+                      >
+                        Join now
+                      </a>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => onCompleteInterview(session.id)}
+                      disabled={isUpdatingInterview}
+                      className="rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 disabled:opacity-60"
+                    >
+                      Mark ended
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onDeleteInterview(session.id)}
+                      disabled={isDeletingInterview}
+                      className="rounded-full border border-rose-300 px-4 py-2 text-xs font-semibold text-rose-700 disabled:opacity-60"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="rounded-[24px] border border-dashed border-slate-300 bg-slate-50/90 p-5 text-sm text-slate-600">
+                No active interviews right now. Draft or schedule one from the dashboard form.
+              </div>
+            )}
+          </div>
+        </ContentCard>
+      </section>
     </div>
   );
 }
+
+

@@ -160,6 +160,8 @@ export interface CourseInterviewSession {
   durationMinutes?: number | null;
   status: "DRAFT" | "SCHEDULED" | "COMPLETED";
   canManage: boolean;
+  canEdit?: boolean;
+  isJoinReady?: boolean;
   course: {
     id: string;
     title: string;
