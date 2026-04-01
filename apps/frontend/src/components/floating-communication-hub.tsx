@@ -479,7 +479,7 @@ export function FloatingCommunicationHub() {
   return (
     <div ref={containerRef} className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3">
       <div
-        className={`surface-card-strong w-[min(94vw,25rem)] rounded-[30px] p-5 transition duration-200 ${
+        className={`surface-card-strong w-[min(92vw,22rem)] rounded-[28px] p-4 transition duration-200 ${
           open
             ? "pointer-events-auto translate-y-0 scale-100 opacity-100"
             : "pointer-events-none translate-y-3 scale-95 opacity-0"
@@ -539,7 +539,7 @@ export function FloatingCommunicationHub() {
                 </span>
               </div>
 
-              <div className="ui-scrollbar max-h-[22rem] space-y-4 overflow-y-auto pr-1">
+              <div className="ui-scrollbar max-h-[16rem] space-y-3 overflow-y-auto pr-1">
               {activePane === "DIRECT" && directConversations.length > 1 ? (
                 <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
                   {directConversations.map((conversation) => (
@@ -647,9 +647,9 @@ export function FloatingCommunicationHub() {
 
               <div className="border-t border-slate-200 pt-4">
               <div className="flex flex-col gap-3">
-                <textarea
-                  value={composerText}
-                  onChange={(event) => setComposerText(event.target.value)}
+                  <textarea
+                    value={composerText}
+                    onChange={(event) => setComposerText(event.target.value)}
                   placeholder={
                     activePane === "DIRECT"
                       ? "Write your reply..."
@@ -658,7 +658,7 @@ export function FloatingCommunicationHub() {
                         : "This support conversation is closed."
                   }
                   disabled={activePane === "SUPPORT" && activeConversation.status !== "OPEN"}
-                  className="min-h-24 rounded-[24px] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-emerald-400 disabled:bg-slate-50"
+                    className="min-h-20 rounded-[22px] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-emerald-400 disabled:bg-slate-50"
                 />
                 <button
                   type="button"
@@ -722,7 +722,7 @@ export function FloatingCommunicationHub() {
               </div>
 
               {currentTabView === "HOME" ? (
-                <div className={`rounded-[22px] p-4 ${activeTabAccent.muted}`}>
+                <div className={`rounded-[20px] p-4 ${activeTabAccent.muted}`}>
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-sm">
@@ -757,13 +757,13 @@ export function FloatingCommunicationHub() {
               ) : null}
 
               {currentTabView === "LIST" ? (
-                <div className={`rounded-[22px] p-3 ${activeTabAccent.muted}`}>
+                <div className={`rounded-[20px] p-3 ${activeTabAccent.muted}`}>
                   {currentTabConversations.length === 0 ? (
                     <p className="rounded-[18px] border border-dashed border-slate-200 bg-white px-4 py-5 text-sm text-slate-500">
                       {activeTabVisible === "MESSAGES" ? "No existing direct chats yet." : "No existing support chats yet."}
                     </p>
                   ) : (
-                    <div className="ui-scrollbar max-h-[22rem] space-y-2 overflow-y-auto pr-1">
+                    <div className="ui-scrollbar max-h-[16rem] space-y-2 overflow-y-auto pr-1">
                       {currentTabConversations.map((conversation) => {
                         const participantName =
                           activeTabVisible === "MESSAGES"
@@ -811,7 +811,7 @@ export function FloatingCommunicationHub() {
               ) : null}
 
               {currentTabView === "NEW" && activeTabVisible === "MESSAGES" ? (
-                <div className="rounded-[22px] border border-sky-200 bg-sky-50/80 p-4">
+                <div className="rounded-[20px] border border-sky-200 bg-sky-50/80 p-4">
                   <div className="space-y-3">
                     <label className="block text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">
                       Choose a person
@@ -848,7 +848,7 @@ export function FloatingCommunicationHub() {
               ) : null}
 
               {currentTabView === "NEW" && activeTabVisible === "SUPPORT" ? (
-                <div className="rounded-[22px] border border-emerald-200 bg-emerald-50/80 p-4">
+                <div className="rounded-[20px] border border-emerald-200 bg-emerald-50/80 p-4">
                   <div className="space-y-3">
                     <input
                       value={supportSubject}
@@ -866,7 +866,7 @@ export function FloatingCommunicationHub() {
                         setSupportError(null);
                       }}
                       placeholder="Write your support message..."
-                      className="min-h-28 w-full rounded-[22px] border border-emerald-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-emerald-400"
+                      className="min-h-24 w-full rounded-[20px] border border-emerald-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-emerald-400"
                     />
                     {supportError ? <p className="text-xs font-semibold text-rose-600">{supportError}</p> : null}
                     <button
