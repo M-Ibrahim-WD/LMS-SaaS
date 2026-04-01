@@ -393,22 +393,45 @@ export function InstructorDashboardSection({
             Pick any of your courses here. Scheduled interviews appear in the course for both you and enrolled learners, then disappear automatically once they end.
           </div>
           <div className="mt-5 grid gap-3">
-            <select className="field-select" value={interviewCourseId} onChange={(event) => onInterviewCourseChange(event.target.value)}>
-              <option value="">Choose a course</option>
-              {(instructorCourses ?? []).map((course) => (
-                <option key={course.id} value={course.id}>{course.title}</option>
-              ))}
-            </select>
-            <input className="field-input" placeholder="Interview title" value={interviewTitle} onChange={(event) => onInterviewTitleChange(event.target.value)} />
-            <textarea className="field-textarea" placeholder="Agenda or note" value={interviewDescription} onChange={(event) => onInterviewDescriptionChange(event.target.value)} />
-            <select className="field-select" value={interviewProvider} onChange={(event) => onInterviewProviderChange(event.target.value as "ZOOM" | "GOOGLE_MEET")}>
-              <option value="ZOOM">Zoom</option>
-              <option value="GOOGLE_MEET">Google Meet</option>
-            </select>
-            <input className="field-input" placeholder="Meeting link" value={interviewMeetingUrl} onChange={(event) => onInterviewMeetingUrlChange(event.target.value)} />
+            <label className="block">
+              <span className="field-label">Course</span>
+              <select className="field-select" value={interviewCourseId} onChange={(event) => onInterviewCourseChange(event.target.value)}>
+                <option value="">Choose a course</option>
+                {(instructorCourses ?? []).map((course) => (
+                  <option key={course.id} value={course.id}>{course.title}</option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="field-label">Interview title</span>
+              <input className="field-input" placeholder="Interview title" value={interviewTitle} onChange={(event) => onInterviewTitleChange(event.target.value)} />
+            </label>
+            <label className="block">
+              <span className="field-label">Agenda or note</span>
+              <textarea className="field-textarea" placeholder="Agenda or note" value={interviewDescription} onChange={(event) => onInterviewDescriptionChange(event.target.value)} />
+            </label>
+            <label className="block">
+              <span className="field-label">Meeting provider</span>
+              <select className="field-select" value={interviewProvider} onChange={(event) => onInterviewProviderChange(event.target.value as "ZOOM" | "GOOGLE_MEET")}>
+                <option value="ZOOM">Zoom</option>
+                <option value="GOOGLE_MEET">Google Meet</option>
+              </select>
+            </label>
+            <label className="block">
+              <span className="field-label">Meeting link</span>
+              <input className="field-input" placeholder="https://..." value={interviewMeetingUrl} onChange={(event) => onInterviewMeetingUrlChange(event.target.value)} />
+              <p className="field-help">Paste the full Zoom or Google Meet link, including `https://`.</p>
+            </label>
             <div className="grid gap-3 md:grid-cols-2">
-              <input type="datetime-local" className="field-input" value={interviewScheduledAt} onChange={(event) => onInterviewScheduledAtChange(event.target.value)} />
-              <input type="number" min={1} className="field-input" value={interviewDurationMinutes} onChange={(event) => onInterviewDurationMinutesChange(event.target.value)} placeholder="Duration in minutes" />
+              <label className="block">
+                <span className="field-label">Date and time</span>
+                <input type="datetime-local" className="field-input" value={interviewScheduledAt} onChange={(event) => onInterviewScheduledAtChange(event.target.value)} />
+              </label>
+              <label className="block">
+                <span className="field-label">Duration in minutes</span>
+                <input type="number" min={1} className="field-input" value={interviewDurationMinutes} onChange={(event) => onInterviewDurationMinutesChange(event.target.value)} placeholder="Optional, default is 60" />
+                <p className="field-help">Leave this empty if you want the session to use the default 60-minute length.</p>
+              </label>
             </div>
             {interviewError ? <p className="text-sm text-rose-600">{interviewError}</p> : null}
             <button

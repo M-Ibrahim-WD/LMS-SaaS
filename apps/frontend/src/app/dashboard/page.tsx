@@ -295,7 +295,7 @@ export default function DashboardPage() {
               onInterviewMeetingUrlChange={dashboard.setInterviewMeetingUrl}
               onInterviewScheduledAtChange={dashboard.setInterviewScheduledAt}
               onInterviewDurationMinutesChange={dashboard.setInterviewDurationMinutes}
-              onCreateInterview={() => void dashboard.createInterviewMutation.mutateAsync()}
+              onCreateInterview={() => dashboard.createInterviewMutation.mutate()}
               onScheduleInterview={(interviewId) =>
                 dashboard.updateInterviewStatusMutation.mutate({ interviewId, status: "SCHEDULED" })
               }

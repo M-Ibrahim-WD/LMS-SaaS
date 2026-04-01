@@ -40,6 +40,15 @@ function toIsoDateTime(value: string) {
   return Number.isNaN(date.getTime()) ? "" : date.toISOString();
 }
 
+function isHttpUrl(value: string) {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export function useDashboardWorkspace() {
   const router = useRouter();
   const clearSession = useAuthStore((state) => state.clearSession);
@@ -62,7 +71,7 @@ export function useDashboardWorkspace() {
   const [interviewProvider, setInterviewProvider] = useState<"ZOOM" | "GOOGLE_MEET">("ZOOM");
   const [interviewMeetingUrl, setInterviewMeetingUrl] = useState("");
   const [interviewScheduledAt, setInterviewScheduledAt] = useState("");
-  const [interviewDurationMinutes, setInterviewDurationMinutes] = useState("60");
+  const [interviewDurationMinutes, setInterviewDurationMinutes] = useState("");
   const [interviewError, setInterviewError] = useState<string | null>(null);
 
   const profileQuery = useQuery({
@@ -310,6 +319,9 @@ export function useDashboardWorkspace() {
       if (!normalizedUrl) {
         throw new Error("Meeting link is required.");
       }
+      if (!isHttpUrl(normalizedUrl)) {
+        throw new Error("Meeting link must start with http:// or https://");
+      }
       if (!normalizedScheduledAt) {
         throw new Error("Choose a valid interview date and time.");
       }
@@ -337,7 +349,7 @@ export function useDashboardWorkspace() {
       setInterviewProvider("ZOOM");
       setInterviewMeetingUrl("");
       setInterviewScheduledAt("");
-      setInterviewDurationMinutes("60");
+      setInterviewDurationMinutes("");
       setInterviewError(null);
       await dashboardInterviewsQuery.refetch();
     },
