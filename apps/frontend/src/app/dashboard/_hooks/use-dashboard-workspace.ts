@@ -31,6 +31,15 @@ import type {
   StudentTab
 } from "../_components/dashboard-types";
 
+function toIsoDateTime(value: string) {
+  if (!value.trim()) {
+    return "";
+  }
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "" : date.toISOString();
+}
+
 export function useDashboardWorkspace() {
   const router = useRouter();
   const clearSession = useAuthStore((state) => state.clearSession);
@@ -286,19 +295,41 @@ export function useDashboardWorkspace() {
   });
 
   const createInterviewMutation = useMutation({
-    mutationFn: () =>
-      apiFetch(`/courses/${interviewCourseId}/interviews`, {
+    mutationFn: async () => {
+      const normalizedTitle = interviewTitle.trim();
+      const normalizedUrl = interviewMeetingUrl.trim();
+      const normalizedScheduledAt = toIsoDateTime(interviewScheduledAt);
+      const parsedDuration = interviewDurationMinutes ? Number(interviewDurationMinutes) : undefined;
+
+      if (!interviewCourseId) {
+        throw new Error("Choose a course for the interview.");
+      }
+      if (normalizedTitle.length < 2) {
+        throw new Error("Interview title must be at least 2 characters.");
+      }
+      if (!normalizedUrl) {
+        throw new Error("Meeting link is required.");
+      }
+      if (!normalizedScheduledAt) {
+        throw new Error("Choose a valid interview date and time.");
+      }
+      if (parsedDuration !== undefined && (!Number.isFinite(parsedDuration) || parsedDuration < 1)) {
+        throw new Error("Duration must be at least 1 minute.");
+      }
+
+      return apiFetch(`/courses/${interviewCourseId}/interviews`, {
         method: "POST",
         token: accessToken ?? undefined,
         body: JSON.stringify({
-          title: interviewTitle,
+          title: normalizedTitle,
           description: interviewDescription || undefined,
           provider: interviewProvider,
-          meetingUrl: interviewMeetingUrl,
-          scheduledAt: interviewScheduledAt,
-          durationMinutes: interviewDurationMinutes ? Number(interviewDurationMinutes) : undefined
+          meetingUrl: normalizedUrl,
+          scheduledAt: normalizedScheduledAt,
+          durationMinutes: parsedDuration
         })
-      }),
+      });
+    },
     onSuccess: async () => {
       setInterviewCourseId("");
       setInterviewTitle("");
@@ -322,12 +353,23 @@ export function useDashboardWorkspace() {
     }: {
       interviewId: string;
       payload: Record<string, unknown>;
-    }) =>
-      apiFetch(`/courses/interviews/${interviewId}`, {
+    }) => {
+      const normalizedPayload = { ...payload };
+
+      if (typeof normalizedPayload.scheduledAt === "string") {
+        const normalizedScheduledAt = toIsoDateTime(normalizedPayload.scheduledAt);
+        if (!normalizedScheduledAt) {
+          throw new Error("Choose a valid interview date and time.");
+        }
+        normalizedPayload.scheduledAt = normalizedScheduledAt;
+      }
+
+      return apiFetch(`/courses/interviews/${interviewId}`, {
         method: "PATCH",
         token: accessToken ?? undefined,
-        body: JSON.stringify(payload)
-      }),
+        body: JSON.stringify(normalizedPayload)
+      });
+    },
     onSuccess: async () => {
       setInterviewError(null);
       await dashboardInterviewsQuery.refetch();
