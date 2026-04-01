@@ -235,11 +235,49 @@ img {
   animation: message-launcher-ring 2.3s ease-out infinite;
 }
 
+@keyframes hub-launcher-pulse {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+
+  50% {
+    transform: translateY(-1px) scale(1.02);
+  }
+}
+
+@keyframes hub-launcher-ring {
+  0% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+
+  70% {
+    opacity: 0;
+    transform: scale(1.22);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.28);
+  }
+}
+
+.hub-launcher-pulse {
+  animation: hub-launcher-pulse 2.3s ease-in-out infinite;
+}
+
+.hub-launcher-ring {
+  animation: hub-launcher-ring 2.3s ease-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .support-launcher-pulse,
   .support-launcher-ring,
   .message-launcher-pulse,
-  .message-launcher-ring {
+  .message-launcher-ring,
+  .hub-launcher-pulse,
+  .hub-launcher-ring {
     animation: none;
   }
 }
