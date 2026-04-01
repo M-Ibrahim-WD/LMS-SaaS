@@ -1,7 +1,6 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { apiFetch } from "../lib/api/client";
@@ -11,12 +10,14 @@ import {
   formatRelativeConversationTime,
   groupConversationMessages,
   type ConversationDetail,
-  type ConversationSummary
+  type ConversationSummary,
+  type ConversationUser
 } from "../lib/communication/types";
 import { useAuthStore } from "../store/auth.store";
 
 type HubPane = "DIRECT" | "SUPPORT" | null;
 type HubTab = "SUPPORT" | "MESSAGES";
+type HubView = "HOME" | "LIST" | "NEW";
 
 function HubIcon() {
   return (
@@ -46,29 +47,11 @@ function SupportIcon() {
   );
 }
 
-function ArrowIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="m13 7 5 5-5 5" />
-    </svg>
-  );
-}
-
 function BackIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
       <path strokeLinecap="round" strokeLinejoin="round" d="m11 7-5 5 5 5" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M6 12h12" />
-    </svg>
-  );
-}
-
-function ReplyIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
-      <path strokeLinecap="round" strokeLinejoin="round" d="m10 8-4 4 4 4" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6 12h7.5a4.5 4.5 0 0 1 4.5 4.5V17" />
     </svg>
   );
 }
@@ -108,10 +91,19 @@ export function FloatingCommunicationHub() {
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<HubTab>("SUPPORT");
+  const [tabViews, setTabViews] = useState<Record<HubTab, HubView>>({
+    SUPPORT: "HOME",
+    MESSAGES: "HOME"
+  });
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [activePane, setActivePane] = useState<HubPane>(null);
   const [composerText, setComposerText] = useState("");
   const [deliveredAt, setDeliveredAt] = useState<string | null>(null);
+  const [directTargetId, setDirectTargetId] = useState("");
+  const [directStartError, setDirectStartError] = useState<string | null>(null);
+  const [supportSubject, setSupportSubject] = useState("");
+  const [supportMessage, setSupportMessage] = useState("");
+  const [supportError, setSupportError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const unreadMarkerCountRef = useRef<Record<string, number>>({});
@@ -156,6 +148,15 @@ export function FloatingCommunicationHub() {
     enabled: Boolean(shouldRender)
   });
 
+  const directTargetsQuery = useQuery({
+    queryKey: ["conversations", "hub-direct-targets"],
+    queryFn: () =>
+      apiFetch<ConversationUser[]>("/conversations/direct-targets", {
+        token: accessToken ?? undefined
+      }),
+    enabled: Boolean(shouldRender)
+  });
+
   const activeConversationQuery = useQuery({
     queryKey: ["conversation", "hub", activeConversationId],
     queryFn: () =>
@@ -182,6 +183,56 @@ export function FloatingCommunicationHub() {
         queryClient.invalidateQueries({ queryKey: ["conversation", "hub", activeConversationId] }),
         queryClient.invalidateQueries({ queryKey: ["notifications"] })
       ]);
+    }
+  });
+
+  const createDirectMutation = useMutation({
+    mutationFn: (targetUserId: string) =>
+      apiFetch<ConversationSummary>("/conversations/direct", {
+        method: "POST",
+        token: accessToken ?? undefined,
+        body: JSON.stringify({
+          targetUserId
+        })
+      }),
+    onSuccess: async (conversation) => {
+      setDirectStartError(null);
+      setDirectTargetId("");
+      setActiveConversationId(conversation.id);
+      setActivePane("DIRECT");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["conversations"] }),
+        queryClient.invalidateQueries({ queryKey: ["notifications"] })
+      ]);
+    },
+    onError: (error) => {
+      setDirectStartError(error instanceof Error ? error.message : "Could not open the selected chat.");
+    }
+  });
+
+  const createSupportMutation = useMutation({
+    mutationFn: () =>
+      apiFetch<ConversationSummary>("/conversations/support", {
+        method: "POST",
+        token: accessToken ?? undefined,
+        body: JSON.stringify({
+          subject: supportSubject.trim() || undefined,
+          message: supportMessage.trim()
+        })
+      }),
+    onSuccess: async (conversation) => {
+      setSupportError(null);
+      setSupportSubject("");
+      setSupportMessage("");
+      setActiveConversationId(conversation.id);
+      setActivePane("SUPPORT");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["conversations"] }),
+        queryClient.invalidateQueries({ queryKey: ["notifications"] })
+      ]);
+    },
+    onError: (error) => {
+      setSupportError(error instanceof Error ? error.message : "Could not start the support chat.");
     }
   });
 
@@ -275,6 +326,7 @@ export function FloatingCommunicationHub() {
   const unreadSupport = unreadSupportQuery.data ?? [];
   const directConversations = directConversationsQuery.data ?? [];
   const supportConversations = supportConversationsQuery.data ?? [];
+  const directTargets = directTargetsQuery.data ?? [];
   const totalUnread = unreadMessages.length + unreadSupport.length;
   const activeConversation = activeConversationQuery.data ?? null;
 
@@ -295,32 +347,6 @@ export function FloatingCommunicationHub() {
 
     void markReadMutation.mutateAsync(activeConversationId);
   }, [activeConversation, activeConversationId, markReadMutation, open]);
-
-  const summaryText = useMemo(() => {
-    if (
-      unreadMessagesQuery.isLoading ||
-      unreadSupportQuery.isLoading ||
-      directConversationsQuery.isLoading ||
-      supportConversationsQuery.isLoading
-    ) {
-      return "Checking your inboxes...";
-    }
-
-    if (totalUnread > 0) {
-      return `${totalUnread} unread update${totalUnread === 1 ? "" : "s"} waiting`;
-    }
-
-    return "Messages and support are all clear";
-  }, [
-    totalUnread,
-    unreadMessagesQuery.isLoading,
-    unreadSupportQuery.isLoading,
-    directConversationsQuery.isLoading,
-    supportConversationsQuery.isLoading
-  ]);
-
-  const latestDirectConversation = unreadMessages[0] ?? directConversations[0] ?? null;
-  const latestSupportConversation = unreadSupport[0] ?? supportConversations[0] ?? null;
 
   const groupedMessages = activeConversation ? groupConversationMessages(activeConversation.messages) : [];
 
@@ -371,6 +397,84 @@ export function FloatingCommunicationHub() {
       : showSupportSection
         ? "SUPPORT"
         : "MESSAGES";
+  const currentTabView = tabViews[activeTabVisible];
+  const currentTabConversations = activeTabVisible === "MESSAGES" ? directConversations : supportConversations;
+  const currentTabUnread = activeTabVisible === "MESSAGES" ? unreadMessages.length : unreadSupport.length;
+  const activeTabAccent =
+    activeTabVisible === "MESSAGES"
+      ? {
+          solid: "bg-sky-600 hover:bg-sky-700",
+          subtle: "border border-sky-200 bg-white text-sky-700 hover:border-sky-300 hover:bg-sky-100",
+          muted: "border border-sky-200 bg-sky-50/80",
+          badge: "bg-sky-100 text-sky-700"
+        }
+      : {
+          solid: "bg-emerald-600 hover:bg-emerald-700",
+          subtle: "border border-emerald-200 bg-white text-emerald-700 hover:border-emerald-300 hover:bg-emerald-100",
+          muted: "border border-emerald-200 bg-emerald-50/80",
+          badge: "bg-emerald-100 text-emerald-700"
+        };
+
+  const resetThreadState = () => {
+    setActiveConversationId(null);
+    setActivePane(null);
+    setComposerText("");
+    setDeliveredAt(null);
+  };
+
+  const openConversation = (conversationId: string, pane: Exclude<HubPane, null>) => {
+    setActiveConversationId(conversationId);
+    setActivePane(pane);
+    setComposerText("");
+    setDeliveredAt(null);
+  };
+
+  const switchTab = (tab: HubTab) => {
+    setActiveTab(tab);
+    resetThreadState();
+    setDirectStartError(null);
+    setSupportError(null);
+  };
+
+  const openExisting = () => {
+    resetThreadState();
+    setTabViews((current) => ({
+      ...current,
+      [activeTabVisible]: "LIST"
+    }));
+  };
+
+  const openNew = () => {
+    resetThreadState();
+    setTabViews((current) => ({
+      ...current,
+      [activeTabVisible]: "NEW"
+    }));
+  };
+
+  const backFromThread = () => {
+    resetThreadState();
+    setTabViews((current) => ({
+      ...current,
+      [activeTabVisible]: currentTabConversations.length > 0 ? "LIST" : "HOME"
+    }));
+  };
+
+  const handleNewDirectConversation = async () => {
+    if (!directTargetId) {
+      setDirectStartError("Select a person first.");
+      return;
+    }
+    await createDirectMutation.mutateAsync(directTargetId);
+  };
+
+  const handleNewSupportConversation = async () => {
+    if (!supportMessage.trim()) {
+      setSupportError("Write your support message first.");
+      return;
+    }
+    await createSupportMutation.mutateAsync();
+  };
 
   return (
     <div ref={containerRef} className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3">
@@ -381,96 +485,68 @@ export function FloatingCommunicationHub() {
             : "pointer-events-none translate-y-3 scale-95 opacity-0"
         }`}
       >
-        {activeConversation ? (
-          <div className="space-y-4">
-            <div className="flex rounded-full border border-slate-200 bg-slate-100/80 p-1">
-              {showSupportSection ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveTab("SUPPORT");
-                    setActiveConversationId(null);
-                    setActivePane(null);
-                    setComposerText("");
-                  }}
-                  className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold transition ${
-                    activeTabVisible === "SUPPORT"
-                      ? "bg-emerald-600 text-white"
-                      : "text-slate-600 hover:text-emerald-700"
-                  }`}
-                >
-                  Support
-                </button>
-              ) : null}
-              {showMessagesSection ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveTab("MESSAGES");
-                    setActiveConversationId(null);
-                    setActivePane(null);
-                    setComposerText("");
-                  }}
-                  className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold transition ${
-                    activeTabVisible === "MESSAGES"
-                      ? "bg-sky-600 text-white"
-                      : "text-slate-600 hover:text-sky-700"
-                  }`}
-                >
-                  Messages
-                </button>
-              ) : null}
-            </div>
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveConversationId(null);
-                    setActivePane(null);
-                    setComposerText("");
-                  }}
-                  aria-label="Back to communication tabs"
-                  title="Back to communication tabs"
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-                >
-                  <BackIcon />
-                </button>
-                <p className="section-kicker mt-3">
-                  {activePane === "DIRECT" ? "Live Messages" : "Live Support"}
-                </p>
-                <h3 className="mt-2 text-lg font-semibold text-slate-950">
-                  {activePane === "DIRECT"
-                    ? activeConversation.otherParticipant?.fullName ?? "Conversation"
-                    : activeConversation.requester?.fullName ?? "Support conversation"}
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  {activePane === "DIRECT"
-                    ? "Reply here without leaving the page."
-                    : "Continue the support conversation directly from the hub."}
-                </p>
-              </div>
-              <Link
-                href={activePane === "DIRECT" ? `/messages?conversationId=${activeConversation.id}` : `/support?conversationId=${activeConversation.id}`}
-                onClick={() => setOpen(false)}
-                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+        <div className="space-y-4">
+          <div className="flex rounded-full border border-slate-200 bg-slate-100/80 p-1">
+            {showSupportSection ? (
+              <button
+                type="button"
+                onClick={() => switchTab("SUPPORT")}
+                className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  activeTabVisible === "SUPPORT"
+                    ? "bg-emerald-600 text-white"
+                    : "text-slate-600 hover:text-emerald-700"
+                }`}
               >
-                Full page
-                <ArrowIcon />
-              </Link>
-            </div>
+                Support
+              </button>
+            ) : null}
+            {showMessagesSection ? (
+              <button
+                type="button"
+                onClick={() => switchTab("MESSAGES")}
+                className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  activeTabVisible === "MESSAGES"
+                    ? "bg-sky-600 text-white"
+                    : "text-slate-600 hover:text-sky-700"
+                }`}
+              >
+                Messages
+              </button>
+            ) : null}
+          </div>
 
-            <div className="ui-scrollbar max-h-[22rem] space-y-4 overflow-y-auto pr-1">
+          {activeConversation ? (
+            <>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <button
+                    type="button"
+                    onClick={backFromThread}
+                    aria-label="Back to communication actions"
+                    title="Back to communication actions"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                  >
+                    <BackIcon />
+                  </button>
+                  <h3 className="mt-3 text-lg font-semibold text-slate-950">
+                    {activePane === "DIRECT"
+                      ? activeConversation.otherParticipant?.fullName ?? "Conversation"
+                      : activeConversation.requester?.fullName ?? "Support conversation"}
+                  </h3>
+                </div>
+                <span className={`rounded-full px-3 py-1.5 text-xs font-semibold ${activeTabAccent.badge}`}>
+                  {activePane === "DIRECT" ? "Messages" : "Support"}
+                </span>
+              </div>
+
+              <div className="ui-scrollbar max-h-[22rem] space-y-4 overflow-y-auto pr-1">
               {activePane === "DIRECT" && directConversations.length > 1 ? (
                 <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
                   {directConversations.map((conversation) => (
                     <button
                       key={conversation.id}
                       type="button"
-                      onClick={() => {
-                        setActiveConversationId(conversation.id);
-                        setComposerText("");
-                      }}
+                      onClick={() => openConversation(conversation.id, "DIRECT")}
                       className={`shrink-0 inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold transition ${
                         activeConversationId === conversation.id
                           ? "bg-sky-600 text-white"
@@ -493,10 +569,7 @@ export function FloatingCommunicationHub() {
                     <button
                       key={conversation.id}
                       type="button"
-                      onClick={() => {
-                        setActiveConversationId(conversation.id);
-                        setComposerText("");
-                      }}
+                      onClick={() => openConversation(conversation.id, "SUPPORT")}
                       className={`shrink-0 inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold transition ${
                         activeConversationId === conversation.id
                           ? "bg-emerald-600 text-white"
@@ -572,7 +645,7 @@ export function FloatingCommunicationHub() {
               <div ref={messagesEndRef} />
             </div>
 
-            <div className="border-t border-slate-200 pt-4">
+              <div className="border-t border-slate-200 pt-4">
               <div className="flex flex-col gap-3">
                 <textarea
                   value={composerText}
@@ -617,162 +690,200 @@ export function FloatingCommunicationHub() {
                   </p>
                 ) : null}
               </div>
-            </div>
-          </div>
-        ) : (
-          <>
-            <div className="flex rounded-full border border-slate-200 bg-slate-100/80 p-1">
-              {showSupportSection ? (
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("SUPPORT")}
-                  className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold transition ${
-                    activeTabVisible === "SUPPORT"
-                      ? "bg-emerald-600 text-white"
-                      : "text-slate-600 hover:text-emerald-700"
-                  }`}
-                >
-                  Support
-                </button>
-              ) : null}
-              {showMessagesSection ? (
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("MESSAGES")}
-                  className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold transition ${
-                    activeTabVisible === "MESSAGES"
-                      ? "bg-sky-600 text-white"
-                      : "text-slate-600 hover:text-sky-700"
-                  }`}
-                >
-                  Messages
-                </button>
-              ) : null}
-            </div>
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="section-kicker">Communication Hub</p>
-                <h3 className="mt-2 text-lg font-semibold text-slate-950">Messages and support</h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600">{summaryText}</p>
               </div>
-              <span
-                className={`inline-flex min-w-7 items-center justify-center rounded-full px-2.5 py-1 text-xs font-semibold ${
-                  totalUnread > 0
-                    ? "bg-slate-950 text-white"
-                    : "border border-slate-200 bg-white text-slate-600"
-                }`}
-              >
-                {totalUnread > 0 ? `${totalUnread} unread` : "All clear"}
-              </span>
-            </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={openExisting}
+                  className={`inline-flex flex-1 items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-semibold transition ${activeTabAccent.subtle}`}
+                >
+                  Open existing
+                  {currentTabConversations.length > 0 ? (
+                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${activeTabAccent.badge}`}>
+                      {currentTabConversations.length}
+                    </span>
+                  ) : null}
+                </button>
+                <button
+                  type="button"
+                  onClick={openNew}
+                  className={`inline-flex flex-1 items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-semibold text-white transition ${activeTabAccent.solid}`}
+                >
+                  New chat
+                  {currentTabUnread > 0 ? (
+                    <span className="rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-semibold text-white">
+                      {currentTabUnread}
+                    </span>
+                  ) : null}
+                </button>
+              </div>
 
-            <div className="mt-5 space-y-3">
-              {activeTabVisible === "MESSAGES" && showMessagesSection ? (
+              {currentTabView === "HOME" ? (
+                <div className={`rounded-[22px] p-4 ${activeTabAccent.muted}`}>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-sm">
+                        {activeTabVisible === "MESSAGES" ? (
+                          <span className="text-sky-700">
+                            <MessageIcon />
+                          </span>
+                        ) : (
+                          <span className="text-emerald-700">
+                            <SupportIcon />
+                          </span>
+                        )}
+                      </span>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">
+                          {activeTabVisible === "MESSAGES" ? "Direct chats" : "Support chats"}
+                        </p>
+                        <p className="text-xs text-slate-600">
+                          {currentTabUnread > 0
+                            ? `${currentTabUnread} unread`
+                            : currentTabConversations.length > 0
+                              ? `${currentTabConversations.length} active`
+                              : "Ready"}
+                        </p>
+                      </div>
+                    </div>
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${activeTabAccent.badge}`}>
+                      {currentTabUnread > 0 ? `${currentTabUnread} unread` : "All clear"}
+                    </span>
+                  </div>
+                </div>
+              ) : null}
+
+              {currentTabView === "LIST" ? (
+                <div className={`rounded-[22px] p-3 ${activeTabAccent.muted}`}>
+                  {currentTabConversations.length === 0 ? (
+                    <p className="rounded-[18px] border border-dashed border-slate-200 bg-white px-4 py-5 text-sm text-slate-500">
+                      {activeTabVisible === "MESSAGES" ? "No existing direct chats yet." : "No existing support chats yet."}
+                    </p>
+                  ) : (
+                    <div className="ui-scrollbar max-h-[22rem] space-y-2 overflow-y-auto pr-1">
+                      {currentTabConversations.map((conversation) => {
+                        const participantName =
+                          activeTabVisible === "MESSAGES"
+                            ? conversation.otherParticipant?.fullName ?? "Conversation"
+                            : conversation.requester?.fullName ?? "Support";
+
+                        return (
+                          <button
+                            key={conversation.id}
+                            type="button"
+                            onClick={() =>
+                              openConversation(conversation.id, activeTabVisible === "MESSAGES" ? "DIRECT" : "SUPPORT")
+                            }
+                            className="flex w-full items-start gap-3 rounded-[20px] border border-white/80 bg-white px-4 py-3 text-left shadow-sm transition hover:border-slate-200 hover:bg-slate-50"
+                          >
+                            <span
+                              className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                                activeTabVisible === "MESSAGES" ? "bg-sky-100 text-sky-700" : "bg-emerald-100 text-emerald-700"
+                              }`}
+                            >
+                              {getInitials(participantName)}
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="flex items-center justify-between gap-2">
+                                <span className="truncate text-sm font-semibold text-slate-900">{participantName}</span>
+                                <span className="shrink-0 text-[11px] font-semibold text-slate-500">
+                                  {formatRelativeConversationTime(conversation.lastMessageAt)}
+                                </span>
+                              </span>
+                              <span className="mt-1 line-clamp-2 block text-sm leading-6 text-slate-600">
+                                {conversation.latestMessage?.body ?? "Open this conversation."}
+                              </span>
+                            </span>
+                            {conversation.unreadCount > 0 ? (
+                              <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${activeTabAccent.badge}`}>
+                                {conversation.unreadCount}
+                              </span>
+                            ) : null}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              ) : null}
+
+              {currentTabView === "NEW" && activeTabVisible === "MESSAGES" ? (
                 <div className="rounded-[22px] border border-sky-200 bg-sky-50/80 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">
-                        Messages
-                      </p>
-                      <p className="mt-2 text-sm font-semibold text-slate-900">
-                        {unreadMessages.length > 0
-                          ? `${unreadMessages.length} unread direct ${unreadMessages.length === 1 ? "message" : "messages"}`
-                          : "No unread direct messages"}
-                      </p>
-                      <p className="mt-1 line-clamp-2 text-sm leading-6 text-slate-600">
-                        {latestDirectConversation?.latestMessage?.body ?? "Jump into your direct chat inbox."}
-                      </p>
-                      {latestDirectConversation?.lastMessageAt ? (
-                        <p className="mt-2 text-xs font-semibold uppercase tracking-[0.14em] text-sky-700/70">
-                          {formatRelativeConversationTime(latestDirectConversation.lastMessageAt)}
-                        </p>
-                      ) : null}
-                    </div>
-                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-sky-700 shadow-sm">
-                      <MessageIcon />
-                    </span>
-                  </div>
-                  <div className="mt-4 flex flex-wrap gap-2">
+                  <div className="space-y-3">
+                    <label className="block text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">
+                      Choose a person
+                    </label>
+                    <select
+                      value={directTargetId}
+                      onChange={(event) => {
+                        setDirectTargetId(event.target.value);
+                        setDirectStartError(null);
+                      }}
+                      className="w-full rounded-[18px] border border-sky-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-sky-400"
+                    >
+                      <option value="">
+                        {directTargetsQuery.isLoading ? "Loading people..." : "Select a teacher or student"}
+                      </option>
+                      {directTargets.map((target) => (
+                        <option key={target.id} value={target.id}>
+                          {target.fullName} ({target.role === "INSTRUCTOR" ? "Teacher" : "Student"})
+                        </option>
+                      ))}
+                    </select>
+                    {directStartError ? <p className="text-xs font-semibold text-rose-600">{directStartError}</p> : null}
                     <button
                       type="button"
-                      onClick={() => {
-                        if (!latestDirectConversation) {
-                          return;
-                        }
-                        setActiveConversationId(latestDirectConversation.id);
-                        setActivePane("DIRECT");
-                      }}
-                      disabled={!latestDirectConversation}
-                      className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-white px-3 py-2 text-xs font-semibold text-sky-700 transition hover:border-sky-300 hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={() => void handleNewDirectConversation()}
+                      disabled={createDirectMutation.isPending || !directTargetId}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-sky-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-300"
                     >
-                      Live chat
-                      <ReplyIcon />
+                      {createDirectMutation.isPending ? <SpinnerIcon /> : null}
+                      {createDirectMutation.isPending ? "Opening..." : "Open or start chat"}
                     </button>
-                    <Link
-                      href="/messages"
-                      onClick={() => setOpen(false)}
-                      className="inline-flex items-center gap-2 rounded-full bg-sky-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-sky-700"
-                    >
-                      Open inbox
-                    </Link>
                   </div>
                 </div>
               ) : null}
 
-              {activeTabVisible === "SUPPORT" && showSupportSection ? (
+              {currentTabView === "NEW" && activeTabVisible === "SUPPORT" ? (
                 <div className="rounded-[22px] border border-emerald-200 bg-emerald-50/80 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
-                        Support
-                      </p>
-                      <p className="mt-2 text-sm font-semibold text-slate-900">
-                        {unreadSupport.length > 0
-                          ? `${unreadSupport.length} unread support ${unreadSupport.length === 1 ? "reply" : "replies"}`
-                          : "No unread support replies"}
-                      </p>
-                      <p className="mt-1 line-clamp-2 text-sm leading-6 text-slate-600">
-                        {latestSupportConversation?.latestMessage?.body ?? "Open a request or continue with support."}
-                      </p>
-                      {latestSupportConversation?.lastMessageAt ? (
-                        <p className="mt-2 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700/70">
-                          {formatRelativeConversationTime(latestSupportConversation.lastMessageAt)}
-                        </p>
-                      ) : null}
-                    </div>
-                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-emerald-700 shadow-sm">
-                      <SupportIcon />
-                    </span>
-                  </div>
-                  <div className="mt-4 flex flex-wrap gap-2">
+                  <div className="space-y-3">
+                    <input
+                      value={supportSubject}
+                      onChange={(event) => {
+                        setSupportSubject(event.target.value);
+                        setSupportError(null);
+                      }}
+                      placeholder="Subject (optional)"
+                      className="w-full rounded-[18px] border border-emerald-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-emerald-400"
+                    />
+                    <textarea
+                      value={supportMessage}
+                      onChange={(event) => {
+                        setSupportMessage(event.target.value);
+                        setSupportError(null);
+                      }}
+                      placeholder="Write your support message..."
+                      className="min-h-28 w-full rounded-[22px] border border-emerald-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-emerald-400"
+                    />
+                    {supportError ? <p className="text-xs font-semibold text-rose-600">{supportError}</p> : null}
                     <button
                       type="button"
-                      onClick={() => {
-                        if (!latestSupportConversation) {
-                          return;
-                        }
-                        setActiveConversationId(latestSupportConversation.id);
-                        setActivePane("SUPPORT");
-                      }}
-                      disabled={!latestSupportConversation}
-                      className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={() => void handleNewSupportConversation()}
+                      disabled={createSupportMutation.isPending || !supportMessage.trim()}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
                     >
-                      Live chat
-                      <ReplyIcon />
+                      {createSupportMutation.isPending ? <SpinnerIcon /> : null}
+                      {createSupportMutation.isPending ? "Opening..." : "Start support chat"}
                     </button>
-                    <Link
-                      href={latestSupportConversation ? "/support" : "/support?compose=1"}
-                      onClick={() => setOpen(false)}
-                      className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700"
-                    >
-                      {latestSupportConversation ? "Open inbox" : "New request"}
-                    </Link>
                   </div>
                 </div>
               ) : null}
-            </div>
-          </>
-        )}
+            </>
+          )}
+        </div>
       </div>
 
       <button
@@ -783,9 +894,15 @@ export function FloatingCommunicationHub() {
           setOpen((current) => {
             if (!current) {
               setActiveTab("SUPPORT");
+              setTabViews({ SUPPORT: "HOME", MESSAGES: "HOME" });
               setActiveConversationId(null);
               setActivePane(null);
               setComposerText("");
+              setDirectTargetId("");
+              setDirectStartError(null);
+              setSupportSubject("");
+              setSupportMessage("");
+              setSupportError(null);
             }
             return !current;
           });
