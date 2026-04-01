@@ -83,6 +83,7 @@ export function FloatingCommunicationHub() {
   const [activePane, setActivePane] = useState<HubPane>(null);
   const [composerText, setComposerText] = useState("");
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   const shouldRender =
     Boolean(hasHydrated && accessToken && user) &&
@@ -272,6 +273,14 @@ export function FloatingCommunicationHub() {
 
   const groupedMessages = activeConversation ? groupConversationMessages(activeConversation.messages) : [];
 
+  useEffect(() => {
+    if (!activeConversation || !open) {
+      return;
+    }
+
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [activeConversation?.messages, activeConversation, open]);
+
   if (!shouldRender) {
     return null;
   }
@@ -329,6 +338,48 @@ export function FloatingCommunicationHub() {
             </div>
 
             <div className="ui-scrollbar max-h-[22rem] space-y-4 overflow-y-auto pr-1">
+              {activePane === "DIRECT" && directConversations.length > 1 ? (
+                <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
+                  {directConversations.map((conversation) => (
+                    <button
+                      key={conversation.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveConversationId(conversation.id);
+                        setComposerText("");
+                      }}
+                      className={`shrink-0 rounded-full px-3 py-2 text-xs font-semibold transition ${
+                        activeConversationId === conversation.id
+                          ? "bg-sky-600 text-white"
+                          : "border border-slate-200 bg-white text-slate-700 hover:border-sky-300 hover:text-sky-700"
+                      }`}
+                    >
+                      {conversation.otherParticipant?.fullName ?? "Conversation"}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              {activePane === "SUPPORT" && supportConversations.length > 1 ? (
+                <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
+                  {supportConversations.map((conversation) => (
+                    <button
+                      key={conversation.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveConversationId(conversation.id);
+                        setComposerText("");
+                      }}
+                      className={`shrink-0 rounded-full px-3 py-2 text-xs font-semibold transition ${
+                        activeConversationId === conversation.id
+                          ? "bg-emerald-600 text-white"
+                          : "border border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:text-emerald-700"
+                      }`}
+                    >
+                      {conversation.requester?.fullName ?? "Support"}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
               {activeConversationQuery.isLoading ? (
                 <p className="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-sm text-slate-500">
                   Loading conversation...
@@ -373,6 +424,7 @@ export function FloatingCommunicationHub() {
                   </div>
                 ))
               )}
+              <div ref={messagesEndRef} />
             </div>
 
             <div className="border-t border-slate-200 pt-4">
