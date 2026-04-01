@@ -83,6 +83,24 @@ function getInitials(name?: string | null) {
   return parts.map((part) => part[0]?.toUpperCase() ?? "").join("") || "?";
 }
 
+function resizeComposer(textarea: HTMLTextAreaElement | null) {
+  if (!textarea) {
+    return;
+  }
+
+  textarea.style.height = "auto";
+  const computed = window.getComputedStyle(textarea);
+  const lineHeight = Number.parseFloat(computed.lineHeight || "20") || 20;
+  const borderHeight =
+    (Number.parseFloat(computed.borderTopWidth || "0") || 0) +
+    (Number.parseFloat(computed.borderBottomWidth || "0") || 0);
+  const paddingHeight =
+    (Number.parseFloat(computed.paddingTop || "0") || 0) +
+    (Number.parseFloat(computed.paddingBottom || "0") || 0);
+  const maxHeight = lineHeight * 3 + borderHeight + paddingHeight;
+  textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`;
+}
+
 export function FloatingCommunicationHub() {
   const pathname = usePathname();
   const queryClient = useQueryClient();
@@ -106,6 +124,7 @@ export function FloatingCommunicationHub() {
   const [supportError, setSupportError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const unreadMarkerCountRef = useRef<Record<string, number>>({});
 
   const shouldRender =
@@ -289,6 +308,10 @@ export function FloatingCommunicationHub() {
     const timeout = window.setTimeout(() => setDeliveredAt(null), 2800);
     return () => window.clearTimeout(timeout);
   }, [deliveredAt]);
+
+  useEffect(() => {
+    resizeComposer(composerTextareaRef.current);
+  }, [composerText, activeConversationId]);
 
   useEffect(() => {
     if (!accessToken || !activeConversationId) {
@@ -479,21 +502,30 @@ export function FloatingCommunicationHub() {
   return (
     <div ref={containerRef} className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3">
       <div
-        className={`surface-card-strong w-[min(92vw,22rem)] rounded-[28px] p-4 transition duration-200 ${
+        className={`surface-card-strong w-[min(90vw,21rem)] rounded-[26px] p-3.5 transition duration-200 ${
           open
             ? "pointer-events-auto translate-y-0 scale-100 opacity-100"
             : "pointer-events-none translate-y-3 scale-95 opacity-0"
         }`}
       >
         <div className="space-y-4">
-          <div className="flex rounded-full border border-slate-200 bg-slate-100/80 p-1">
+          <div className="relative flex rounded-full border border-slate-200 bg-slate-100/80 p-1">
+            {showSupportSection && showMessagesSection ? (
+              <span
+                className={`absolute inset-y-1 w-[calc(50%-0.25rem)] rounded-full shadow-sm transition-transform duration-300 ease-out ${
+                  activeTabVisible === "SUPPORT"
+                    ? "translate-x-0 bg-emerald-600"
+                    : "translate-x-[calc(100%+0.5rem)] bg-sky-600"
+                }`}
+              />
+            ) : null}
             {showSupportSection ? (
               <button
                 type="button"
                 onClick={() => switchTab("SUPPORT")}
-                className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                className={`relative z-10 flex-1 rounded-full px-3 py-1.5 text-sm font-semibold transition ${
                   activeTabVisible === "SUPPORT"
-                    ? "bg-emerald-600 text-white"
+                    ? "text-white"
                     : "text-slate-600 hover:text-emerald-700"
                 }`}
               >
@@ -504,9 +536,9 @@ export function FloatingCommunicationHub() {
               <button
                 type="button"
                 onClick={() => switchTab("MESSAGES")}
-                className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                className={`relative z-10 flex-1 rounded-full px-3 py-1.5 text-sm font-semibold transition ${
                   activeTabVisible === "MESSAGES"
-                    ? "bg-sky-600 text-white"
+                    ? "text-white"
                     : "text-slate-600 hover:text-sky-700"
                 }`}
               >
@@ -516,7 +548,7 @@ export function FloatingCommunicationHub() {
           </div>
 
           {activeConversation ? (
-            <>
+            <div className="flex h-[24rem] flex-col">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <button
@@ -539,7 +571,7 @@ export function FloatingCommunicationHub() {
                 </span>
               </div>
 
-              <div className="ui-scrollbar max-h-[16rem] space-y-3 overflow-y-auto pr-1">
+              <div className="ui-scrollbar mt-3 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
               {activePane === "DIRECT" && directConversations.length > 1 ? (
                 <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
                   {directConversations.map((conversation) => (
@@ -645,11 +677,16 @@ export function FloatingCommunicationHub() {
               <div ref={messagesEndRef} />
             </div>
 
-              <div className="border-t border-slate-200 pt-4">
-              <div className="flex flex-col gap-3">
+              <div className="mt-3 shrink-0 border-t border-slate-200 bg-white/80 pt-3 backdrop-blur-sm">
+              <div className="flex flex-col gap-2.5">
                   <textarea
+                    ref={composerTextareaRef}
                     value={composerText}
-                    onChange={(event) => setComposerText(event.target.value)}
+                    rows={1}
+                    onChange={(event) => {
+                      setComposerText(event.target.value);
+                      resizeComposer(event.target);
+                    }}
                   placeholder={
                     activePane === "DIRECT"
                       ? "Write your reply..."
@@ -658,7 +695,7 @@ export function FloatingCommunicationHub() {
                         : "This support conversation is closed."
                   }
                   disabled={activePane === "SUPPORT" && activeConversation.status !== "OPEN"}
-                    className="min-h-20 rounded-[22px] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-emerald-400 disabled:bg-slate-50"
+                    className="max-h-[4.9rem] min-h-0 resize-none overflow-y-auto rounded-[20px] border border-slate-200 bg-white px-4 py-3 text-sm leading-5 text-slate-700 outline-none transition focus:border-emerald-400 disabled:bg-slate-50"
                 />
                 <button
                   type="button"
@@ -691,7 +728,7 @@ export function FloatingCommunicationHub() {
                 ) : null}
               </div>
               </div>
-            </>
+            </div>
           ) : (
             <>
               <div className="flex items-center gap-2">
