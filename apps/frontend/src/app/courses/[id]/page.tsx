@@ -39,6 +39,10 @@ function formatInterviewCountdown(value: string) {
   return `In ${diffDays}d`;
 }
 
+function providerLaunchLabel(provider: "ZOOM" | "GOOGLE_MEET") {
+  return provider === "ZOOM" ? "Open in Zoom" : "Open in Google Meet";
+}
+
 export default function CourseDetailsPage() {
   const {
     activeLesson,
@@ -335,7 +339,7 @@ export default function CourseDetailsPage() {
                   <div className="mb-5">
                     <WorkspacePanel
                       title="Interview sessions"
-                      description="Join scheduled Zoom or Google Meet sessions inside a large platform modal, with a fallback open action if embedding is restricted."
+                      description="Open scheduled Zoom or Google Meet sessions from a large platform launch screen."
                     >
                       <div className="space-y-3">
                         {(interviewSessionsQuery.data ?? []).length ? (
@@ -629,6 +633,12 @@ export default function CourseDetailsPage() {
                     </p>
                   ) : null}
                 </div>
+                <div className="rounded-3xl border border-amber-200 bg-amber-50 p-4">
+                  <p className="text-sm font-semibold text-amber-900">How joining works</p>
+                  <p className="mt-2 text-sm leading-6 text-amber-800">
+                    Zoom and Google Meet open outside the LMS in a new tab or app. This launch screen keeps the interview details here, then sends you safely to the provider.
+                  </p>
+                </div>
                 <a
                   href={activeInterviewQuery.data.meetingUrl}
                   target="_blank"
@@ -637,16 +647,72 @@ export default function CourseDetailsPage() {
                     activeInterviewQuery.data.isJoinReady ? "bg-emerald-600 shadow-lg shadow-emerald-200" : "bg-slate-950"
                   }`}
                 >
-                  {activeInterviewQuery.data.isJoinReady ? "Join now" : "Open join fallback"}
+                  {activeInterviewQuery.data.isJoinReady
+                    ? `Join now in ${activeInterviewQuery.data.provider === "ZOOM" ? "Zoom" : "Google Meet"}`
+                    : providerLaunchLabel(activeInterviewQuery.data.provider)}
                 </a>
               </div>
-              <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-950">
-                <iframe
-                  src={activeInterviewQuery.data.meetingUrl}
-                  title={activeInterviewQuery.data.title}
-                  className="h-[70vh] w-full bg-white"
-                  allow="camera; microphone; fullscreen; display-capture"
-                />
+              <div className="rounded-[28px] border border-slate-200 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.18),transparent_34%),linear-gradient(160deg,#0f172a_0%,#111827_45%,#1f2937_100%)] p-8 text-white">
+                <div className="flex h-full min-h-[70vh] flex-col justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/60">
+                      Platform interview launch
+                    </p>
+                    <h3 className="mt-4 text-3xl font-semibold tracking-tight">
+                      {activeInterviewQuery.data.provider === "ZOOM" ? "Zoom" : "Google Meet"} will open outside the LMS
+                    </h3>
+                    <p className="mt-4 max-w-2xl text-sm leading-7 text-white/75">
+                      The LMS keeps the interview organized here, but the actual video room opens in the provider's own secure window. That avoids browser blocking and gives you the most reliable join flow.
+                    </p>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="rounded-[24px] border border-white/10 bg-white/8 p-5">
+                      <p className="text-xs uppercase tracking-[0.18em] text-white/55">Provider</p>
+                      <p className="mt-2 text-lg font-semibold">
+                        {activeInterviewQuery.data.provider === "ZOOM" ? "Zoom" : "Google Meet"}
+                      </p>
+                    </div>
+                    <div className="rounded-[24px] border border-white/10 bg-white/8 p-5">
+                      <p className="text-xs uppercase tracking-[0.18em] text-white/55">Schedule</p>
+                      <p className="mt-2 text-lg font-semibold">{formatCourseDate(activeInterviewQuery.data.scheduledAt)}</p>
+                    </div>
+                    <div className="rounded-[24px] border border-white/10 bg-white/8 p-5">
+                      <p className="text-xs uppercase tracking-[0.18em] text-white/55">Course</p>
+                      <p className="mt-2 text-lg font-semibold">{activeInterviewQuery.data.course.title}</p>
+                    </div>
+                    <div className="rounded-[24px] border border-white/10 bg-white/8 p-5">
+                      <p className="text-xs uppercase tracking-[0.18em] text-white/55">Next step</p>
+                      <p className="mt-2 text-lg font-semibold">
+                        {activeInterviewQuery.data.isJoinReady ? "Open the room now" : "Keep this window open until you're ready"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 flex flex-wrap gap-3">
+                    <a
+                      href={activeInterviewQuery.data.meetingUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={`inline-flex rounded-full px-6 py-3 text-sm font-semibold ${
+                        activeInterviewQuery.data.isJoinReady
+                          ? "bg-emerald-500 text-slate-950"
+                          : "bg-white text-slate-950"
+                      }`}
+                    >
+                      {activeInterviewQuery.data.isJoinReady
+                        ? `Join now in ${activeInterviewQuery.data.provider === "ZOOM" ? "Zoom" : "Google Meet"}`
+                        : providerLaunchLabel(activeInterviewQuery.data.provider)}
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => navigator.clipboard.writeText(activeInterviewQuery.data.meetingUrl)}
+                      className="inline-flex rounded-full border border-white/20 px-6 py-3 text-sm font-semibold text-white"
+                    >
+                      Copy meeting link
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
