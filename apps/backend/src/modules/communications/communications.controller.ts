@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { CurrentUser } from "../../shared/decorators/current-user.decorator";
 import { Roles } from "../../shared/decorators/roles.decorator";
 import { RolesGuard } from "../../shared/guards/roles.guard";
@@ -7,6 +7,7 @@ import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { AssignSupportConversationDto } from "./dto/assign-support-conversation.dto";
 import { ConversationQueryDto } from "./dto/conversation-query.dto";
 import { CreateDirectConversationDto } from "./dto/create-direct-conversation.dto";
+import { CreateGroupConversationDto } from "./dto/create-group-conversation.dto";
 import { CreateMessageDto } from "./dto/create-message.dto";
 import { CreateSupportConversationDto } from "./dto/create-support-conversation.dto";
 import { UpdateConversationStatusDto } from "./dto/update-conversation-status.dto";
@@ -28,9 +29,20 @@ export class CommunicationsController {
     return this.communicationsService.listDirectTargets(user);
   }
 
+  @Get("conversations/group-targets")
+  listGroupTargets(@CurrentUser() user: JwtPayload) {
+    return this.communicationsService.listGroupTargets(user);
+  }
+
   @Post("conversations/direct")
   createDirectConversation(@CurrentUser() user: JwtPayload, @Body() dto: CreateDirectConversationDto) {
     return this.communicationsService.createDirectConversation(user, dto);
+  }
+
+  @Roles("INSTRUCTOR")
+  @Post("conversations/group")
+  createGroupConversation(@CurrentUser() user: JwtPayload, @Body() dto: CreateGroupConversationDto) {
+    return this.communicationsService.createGroupConversation(user, dto);
   }
 
   @Post("conversations/support")
@@ -73,5 +85,11 @@ export class CommunicationsController {
     @Body() dto: AssignSupportConversationDto
   ) {
     return this.communicationsService.assignSupportConversation(user, id, dto);
+  }
+
+  @Roles("INSTRUCTOR")
+  @Delete("conversations/:id/group")
+  deleteGroupConversation(@CurrentUser() user: JwtPayload, @Param("id") id: string) {
+    return this.communicationsService.deleteGroupConversation(user, id);
   }
 }

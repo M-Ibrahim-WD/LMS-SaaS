@@ -22,9 +22,18 @@ export interface ConversationMessage {
 export interface ConversationSummary {
   id: string;
   tenantId: string | null;
-  kind: "DIRECT" | "SUPPORT";
+  kind: "DIRECT" | "SUPPORT" | "GROUP";
   status: "OPEN" | "CLOSED";
   courseId: string | null;
+  groupTitle: string | null;
+  groupScope: "COURSE" | "FOLLOWERS" | "SELECTED" | null;
+  groupInstructor: ConversationUser | null;
+  participantPreview: ConversationUser[];
+  participantCount: number;
+  course: {
+    id: string;
+    title: string;
+  } | null;
   createdAt: string;
   updatedAt: string;
   lastMessageAt: string;

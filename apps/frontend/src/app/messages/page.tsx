@@ -1,3 +1,4 @@
+﻿
 "use client";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +12,7 @@ import {
 } from "../../lib/communication/types";
 
 export default function MessagesPage() {
-  const workspace = useConversationsWorkspace({ kind: "DIRECT" });
+  const workspace = useConversationsWorkspace({ kind: "MESSAGES" });
 
   if (!workspace.hasHydrated) {
     return <p className="p-6 text-sm text-slate-500">Loading your messages...</p>;
@@ -24,11 +25,12 @@ export default function MessagesPage() {
   const conversations = workspace.filteredConversations ?? [];
   const active = workspace.activeConversation;
   const groupedMessages = active ? groupConversationMessages(active.messages) : [];
+  const isInstructor = workspace.user?.role === "INSTRUCTOR";
 
   return (
     <PageShell
       title="Messages"
-      description="Keep a direct real-time channel open between instructors and students."
+      description="Keep direct and group conversations moving in one real-time workspace."
       backHref="/dashboard"
       maxWidthClassName="max-w-7xl"
       actions={
@@ -40,10 +42,10 @@ export default function MessagesPage() {
         </Link>
       }
     >
-      <div className="grid gap-6 xl:grid-cols-[320px,minmax(0,1fr)]">
+      <div className="grid gap-6 xl:grid-cols-[360px,minmax(0,1fr)]">
         <aside className="space-y-4">
           <section className="rounded-[28px] border border-slate-200 bg-white/90 p-5 shadow-sm">
-            <h2 className="text-lg font-semibold text-slate-950">Start a chat</h2>
+            <h2 className="text-lg font-semibold text-slate-950">Start a direct chat</h2>
             <p className="mt-2 text-sm text-slate-600">
               Pick a teacher or student you already belong with in the workspace.
             </p>
@@ -60,9 +62,7 @@ export default function MessagesPage() {
                   </option>
                 ))}
               </select>
-              {workspace.directStartError ? (
-                <p className="text-sm text-rose-600">{workspace.directStartError}</p>
-              ) : null}
+              {workspace.directStartError ? <p className="text-sm text-rose-600">{workspace.directStartError}</p> : null}
               <button
                 type="button"
                 onClick={() => void workspace.onStartDirectConversation()}
@@ -74,17 +74,81 @@ export default function MessagesPage() {
             </div>
           </section>
 
+          {isInstructor ? (
+            <section className="rounded-[28px] border border-slate-200 bg-white/90 p-5 shadow-sm">
+              <h2 className="text-lg font-semibold text-slate-950">Create a group chat</h2>
+              <p className="mt-2 text-sm text-slate-600">
+                Open one room for a course, all followers, or a selected student list.
+              </p>
+              <div className="mt-4 space-y-3">
+                <input
+                  value={workspace.groupTitle}
+                  onChange={(event) => workspace.setGroupTitle(event.target.value)}
+                  placeholder="Group title"
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700"
+                />
+                <select
+                  value={workspace.groupScope}
+                  onChange={(event) => workspace.setGroupScope(event.target.value as "COURSE" | "FOLLOWERS" | "SELECTED")}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700"
+                >
+                  <option value="FOLLOWERS">All followers</option>
+                  <option value="COURSE">Course learners</option>
+                  <option value="SELECTED">Selected students</option>
+                </select>
+                {workspace.groupScope === "COURSE" ? (
+                  <select
+                    value={workspace.groupCourseId}
+                    onChange={(event) => workspace.setGroupCourseId(event.target.value)}
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700"
+                  >
+                    <option value="">Choose a course</option>
+                    {(workspace.groupTargetsQuery.data?.courses ?? []).map((course) => (
+                      <option key={course.id} value={course.id}>{course.title}</option>
+                    ))}
+                  </select>
+                ) : null}
+                {workspace.groupScope === "SELECTED" ? (
+                  <div className="max-h-48 space-y-2 overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                    {(workspace.groupTargetsQuery.data?.students ?? []).map((student) => {
+                      const selected = workspace.groupStudentIds.includes(student.id);
+                      return (
+                        <label key={student.id} className="flex items-center gap-3 rounded-2xl bg-white px-3 py-2 text-sm text-slate-700">
+                          <input
+                            type="checkbox"
+                            checked={selected}
+                            onChange={(event) => {
+                              workspace.setGroupStudentIds(
+                                event.target.checked
+                                  ? [...workspace.groupStudentIds, student.id]
+                                  : workspace.groupStudentIds.filter((id) => id !== student.id)
+                              );
+                            }}
+                          />
+                          <span>{student.fullName}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                ) : null}
+                {workspace.groupError ? <p className="text-sm text-rose-600">{workspace.groupError}</p> : null}
+                <button
+                  type="button"
+                  onClick={() => void workspace.onStartGroupConversation()}
+                  disabled={workspace.createGroupMutation.isPending}
+                  className="w-full rounded-full bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                >
+                  {workspace.createGroupMutation.isPending ? "Creating..." : "Create group"}
+                </button>
+              </div>
+            </section>
+          ) : null}
+
           <section className="rounded-[28px] border border-slate-200 bg-white/90 p-4 shadow-sm">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Conversations
-              </h2>
+              <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Conversations</h2>
               <label className="flex items-center gap-2 text-xs text-slate-500">
-                <input
-                  type="checkbox"
-                  checked={workspace.unreadOnly}
-                  onChange={(event) => workspace.setUnreadOnly(event.target.checked)}
-                />
+                <input type="checkbox" checked={workspace.unreadOnly} onChange={(event) => workspace.setUnreadOnly(event.target.checked)} />
                 Unread only
               </label>
             </div>
@@ -96,43 +160,33 @@ export default function MessagesPage() {
             />
             <div className="mt-4 space-y-3">
               {workspace.conversationsQuery.isLoading ? (
-                <p className="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-sm text-slate-500">
-                  Loading conversations...
-                </p>
+                <p className="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-sm text-slate-500">Loading conversations...</p>
               ) : conversations.length === 0 ? (
-                <p className="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-sm text-slate-500">
-                  No direct conversations yet.
-                </p>
+                <p className="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-sm text-slate-500">No conversations yet.</p>
               ) : (
                 conversations.map((conversation) => (
                   <button
                     key={conversation.id}
                     type="button"
                     onClick={() => workspace.setActiveConversationId(conversation.id)}
-                    className={`w-full rounded-3xl border px-4 py-4 text-left transition ${
-                      workspace.activeConversationId === conversation.id
-                        ? "border-emerald-300 bg-emerald-50"
-                        : "border-slate-200 bg-white hover:border-slate-300"
-                    }`}
+                    className={`w-full rounded-3xl border px-4 py-4 text-left transition ${workspace.activeConversationId === conversation.id ? "border-emerald-300 bg-emerald-50" : "border-slate-200 bg-white hover:border-slate-300"}`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-sm font-semibold text-slate-900">
-                          {conversation.otherParticipant?.fullName ?? "Conversation"}
+                          {conversation.kind === "GROUP"
+                            ? conversation.groupTitle ?? "Group conversation"
+                            : conversation.otherParticipant?.fullName ?? "Conversation"}
                         </p>
                         <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-600">
-                          {conversation.latestMessage?.body ?? "No messages yet."}
+                          {conversation.kind === "GROUP"
+                            ? `${conversation.participantCount} participants${conversation.course ? ` • ${conversation.course.title}` : ""}`
+                            : conversation.latestMessage?.body ?? "No messages yet."}
                         </p>
                       </div>
-                      {conversation.unreadCount > 0 ? (
-                        <span className="rounded-full bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white">
-                          {conversation.unreadCount}
-                        </span>
-                      ) : null}
+                      {conversation.unreadCount > 0 ? <span className="rounded-full bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white">{conversation.unreadCount}</span> : null}
                     </div>
-                    <p className="mt-3 text-xs text-slate-400">
-                      {formatConversationDate(conversation.lastMessageAt)}
-                    </p>
+                    <p className="mt-3 text-xs text-slate-400">{formatConversationDate(conversation.lastMessageAt)}</p>
                   </button>
                 ))
               )}
@@ -144,56 +198,53 @@ export default function MessagesPage() {
           {workspace.activeConversationQuery.isLoading ? (
             <div className="p-8 text-sm text-slate-500">Loading conversation...</div>
           ) : !active ? (
-            <div className="p-8 text-sm text-slate-500">
-              Select a conversation to start chatting.
-            </div>
+            <div className="p-8 text-sm text-slate-500">Select a conversation to start chatting.</div>
           ) : (
             <div className="flex min-h-[640px] flex-col">
               <div className="border-b border-slate-200 px-6 py-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Live chat
-                </p>
-                <h2 className="mt-2 text-xl font-semibold text-slate-950">
-                  {active.otherParticipant?.fullName ?? "Conversation"}
-                </h2>
-                <p className="mt-2 text-sm text-slate-600">
-                  Messages update live while the conversation is open.
-                </p>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      {active.kind === "GROUP" ? "Group chat" : "Live chat"}
+                    </p>
+                    <h2 className="mt-2 text-xl font-semibold text-slate-950">
+                      {active.kind === "GROUP" ? active.groupTitle ?? "Group conversation" : active.otherParticipant?.fullName ?? "Conversation"}
+                    </h2>
+                    <p className="mt-2 text-sm text-slate-600">
+                      {active.kind === "GROUP"
+                        ? `${active.participantCount} participants${active.course ? ` • ${active.course.title}` : ""}`
+                        : "Messages update live while the conversation is open."}
+                    </p>
+                  </div>
+                  {active.kind === "GROUP" && isInstructor && active.groupInstructor?.id === workspace.user?.id ? (
+                    <button
+                      type="button"
+                      onClick={() => void workspace.onDeleteActiveGroup()}
+                      disabled={workspace.deleteGroupMutation.isPending}
+                      className="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700"
+                    >
+                      {workspace.deleteGroupMutation.isPending ? "Deleting..." : "Delete group"}
+                    </button>
+                  ) : null}
+                </div>
               </div>
 
               <div className="flex-1 space-y-4 overflow-y-auto px-6 py-6">
                 {active.messages.length === 0 ? (
-                  <p className="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-sm text-slate-500">
-                    No messages yet. Send the first one.
-                  </p>
+                  <p className="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-sm text-slate-500">No messages yet. Send the first one.</p>
                 ) : (
                   groupedMessages.map((group) => (
                     <div key={group.label} className="space-y-4">
                       <div className="sticky top-0 z-10 flex justify-center">
-                        <span className="rounded-full border border-slate-200 bg-white/95 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 shadow-sm">
-                          {group.label}
-                        </span>
+                        <span className="rounded-full border border-slate-200 bg-white/95 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 shadow-sm">{group.label}</span>
                       </div>
                       {group.items.map((message) => {
                         const isMine = message.sender.id === workspace.user?.id;
                         return (
-                          <div
-                            key={message.id}
-                            className={`max-w-[85%] rounded-[24px] px-4 py-3 shadow-sm ${
-                              isMine
-                                ? "ml-auto bg-emerald-600 text-white"
-                                : "bg-slate-100 text-slate-900"
-                            }`}
-                          >
-                            <p className="text-xs font-semibold opacity-80">
-                              {isMine ? "You" : message.sender.fullName}
-                            </p>
-                            <p className="mt-2 whitespace-pre-wrap text-sm leading-6">
-                              {message.body}
-                            </p>
-                            <p className={`mt-3 text-xs ${isMine ? "text-emerald-100" : "text-slate-500"}`}>
-                              {formatConversationDate(message.createdAt)}
-                            </p>
+                          <div key={message.id} className={`max-w-[85%] rounded-[24px] px-4 py-3 shadow-sm ${isMine ? "ml-auto bg-emerald-600 text-white" : "bg-slate-100 text-slate-900"}`}>
+                            <p className="text-xs font-semibold opacity-80">{isMine ? "You" : message.sender.fullName}</p>
+                            <p className="mt-2 whitespace-pre-wrap text-sm leading-6">{message.body}</p>
+                            <p className={`mt-3 text-xs ${isMine ? "text-emerald-100" : "text-slate-500"}`}>{formatConversationDate(message.createdAt)}</p>
                           </div>
                         );
                       })}
@@ -213,11 +264,7 @@ export default function MessagesPage() {
                   <button
                     type="button"
                     onClick={() => void workspace.onSendMessage()}
-                    disabled={
-                      workspace.sendMessageMutation.isPending ||
-                      !workspace.activeConversation?.canReply ||
-                      !workspace.composerText.trim()
-                    }
+                    disabled={workspace.sendMessageMutation.isPending || !workspace.activeConversation?.canReply || !workspace.composerText.trim()}
                     className="rounded-full bg-emerald-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
                   >
                     {workspace.sendMessageMutation.isPending ? "Sending..." : "Send"}
@@ -231,3 +278,4 @@ export default function MessagesPage() {
     </PageShell>
   );
 }
+

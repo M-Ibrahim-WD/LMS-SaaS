@@ -11,7 +11,16 @@ type NotificationType =
   | "PAYMENT_APPROVED"
   | "PAYMENT_REJECTED"
   | "ENROLLMENT_CREATED"
-  | "CERTIFICATE_ISSUED";
+  | "CERTIFICATE_ISSUED"
+  | "DIRECT_MESSAGE_RECEIVED"
+  | "SUPPORT_REPLY_RECEIVED"
+  | "SUPPORT_ASSIGNED"
+  | "SUPPORT_STATUS_CHANGED"
+  | "GROUP_MESSAGE_RECEIVED"
+  | "GROUP_ADDED"
+  | "INTERVIEW_SCHEDULED"
+  | "INTERVIEW_UPDATED"
+  | "INTERVIEW_COMPLETED";
 
 interface NotificationItem {
   id: string;
@@ -104,6 +113,41 @@ function NotificationTypeIcon({ type }: { type: NotificationType }) {
           <path strokeLinecap="round" strokeLinejoin="round" d="M10 13.5 8 20l4-2 4 2-2-6.5" />
         </svg>
       );
+    case "DIRECT_MESSAGE_RECEIVED":
+    case "GROUP_MESSAGE_RECEIVED":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={iconClass}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 6.5h16v11H8l-4 3V6.5Z" />
+        </svg>
+      );
+    case "SUPPORT_REPLY_RECEIVED":
+    case "SUPPORT_ASSIGNED":
+    case "SUPPORT_STATUS_CHANGED":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={iconClass}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 13v-2a8 8 0 1 1 16 0v2" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 13v3a2 2 0 0 0 2 2h1v-5H6a2 2 0 0 0-2 2Zm16 0a2 2 0 0 0-2-2h-1v5h1a2 2 0 0 0 2-2v-3Z" />
+        </svg>
+      );
+    case "GROUP_ADDED":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={iconClass}>
+          <circle cx="9" cy="8" r="3" />
+          <circle cx="17" cy="10" r="2.5" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 19a5 5 0 0 1 10 0" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M16 18h5M18.5 15.5v5" />
+        </svg>
+      );
+    case "INTERVIEW_SCHEDULED":
+    case "INTERVIEW_UPDATED":
+    case "INTERVIEW_COMPLETED":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={iconClass}>
+          <rect x="4" y="5" width="16" height="15" rx="2" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8 3v4M16 3v4M4 10h16" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="m10 14 2 2 4-4" />
+        </svg>
+      );
     default:
       return <BellSilentIcon />;
   }
@@ -116,7 +160,16 @@ const typeTone: Record<NotificationType, "default" | "info" | "success" | "warni
   PAYMENT_APPROVED: "success",
   PAYMENT_REJECTED: "danger",
   ENROLLMENT_CREATED: "info",
-  CERTIFICATE_ISSUED: "success"
+  CERTIFICATE_ISSUED: "success",
+  DIRECT_MESSAGE_RECEIVED: "info",
+  SUPPORT_REPLY_RECEIVED: "warning",
+  SUPPORT_ASSIGNED: "trial",
+  SUPPORT_STATUS_CHANGED: "default",
+  GROUP_MESSAGE_RECEIVED: "info",
+  GROUP_ADDED: "trial",
+  INTERVIEW_SCHEDULED: "info",
+  INTERVIEW_UPDATED: "warning",
+  INTERVIEW_COMPLETED: "success"
 };
 
 export function NotificationCenter({

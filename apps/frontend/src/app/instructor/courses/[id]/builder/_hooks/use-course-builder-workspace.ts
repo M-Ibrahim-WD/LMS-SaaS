@@ -13,6 +13,7 @@ import type {
   Course,
   CourseAssessments,
   EditorMode,
+  InterviewSession,
   LearnerSummary,
   LessonDraft,
   Quiz,
@@ -68,6 +69,14 @@ export function useCourseBuilderWorkspace() {
     sectionId: string;
     lessonId: string;
   } | null>(null);
+  const [interviewDraft, setInterviewDraft] = useState({
+    title: "",
+    description: "",
+    provider: "ZOOM" as "ZOOM" | "GOOGLE_MEET",
+    meetingUrl: "",
+    scheduledAt: "",
+    durationMinutes: "60"
+  });
 
   const courseQuery = useQuery({
     queryKey: ["course-builder", params.id],
@@ -105,6 +114,15 @@ export function useCourseBuilderWorkspace() {
           token: accessToken ?? undefined
         }
       ),
+    enabled: Boolean(hasHydrated && accessToken && params.id && isAuthorized)
+  });
+
+  const interviewSessionsQuery = useQuery({
+    queryKey: ["course-interviews", params.id],
+    queryFn: () =>
+      apiFetch<InterviewSession[]>(`/courses/${params.id}/interviews`, {
+        token: accessToken ?? undefined
+      }),
     enabled: Boolean(hasHydrated && accessToken && params.id && isAuthorized)
   });
 
@@ -321,8 +339,91 @@ export function useCourseBuilderWorkspace() {
       courseQuery.refetch(),
       assessmentsQuery.refetch(),
       learnersQuery.refetch(),
-      assignmentSubmissionsQuery.refetch()
+      assignmentSubmissionsQuery.refetch(),
+      interviewSessionsQuery.refetch()
     ]);
+  }
+
+  async function createInterview() {
+    setBuilderError(null);
+    setBuilderSuccess(null);
+
+    try {
+      await apiFetch(`/courses/${params.id}/interviews`, {
+        method: "POST",
+        token: accessToken ?? undefined,
+        body: JSON.stringify({
+          title: interviewDraft.title,
+          description: interviewDraft.description || undefined,
+          provider: interviewDraft.provider,
+          meetingUrl: interviewDraft.meetingUrl,
+          scheduledAt: interviewDraft.scheduledAt,
+          durationMinutes: interviewDraft.durationMinutes
+            ? Number(interviewDraft.durationMinutes)
+            : undefined
+        })
+      });
+      setInterviewDraft({
+        title: "",
+        description: "",
+        provider: "ZOOM",
+        meetingUrl: "",
+        scheduledAt: "",
+        durationMinutes: "60"
+      });
+      setBuilderSuccess("Interview session draft created.");
+      await interviewSessionsQuery.refetch();
+    } catch (error) {
+      setBuilderError(
+        error instanceof Error ? error.message : "Could not create the interview session."
+      );
+    }
+  }
+
+  async function updateInterviewStatus(
+    interviewId: string,
+    status: "DRAFT" | "SCHEDULED" | "COMPLETED"
+  ) {
+    setBuilderError(null);
+    setBuilderSuccess(null);
+
+    try {
+      await apiFetch(`/courses/interviews/${interviewId}/status`, {
+        method: "PATCH",
+        token: accessToken ?? undefined,
+        body: JSON.stringify({ status })
+      });
+      setBuilderSuccess(
+        status === "SCHEDULED"
+          ? "Interview session scheduled."
+          : status === "COMPLETED"
+            ? "Interview session marked as completed."
+            : "Interview session moved back to draft."
+      );
+      await interviewSessionsQuery.refetch();
+    } catch (error) {
+      setBuilderError(
+        error instanceof Error ? error.message : "Could not update the interview session."
+      );
+    }
+  }
+
+  async function deleteInterview(interviewId: string) {
+    setBuilderError(null);
+    setBuilderSuccess(null);
+
+    try {
+      await apiFetch(`/courses/interviews/${interviewId}/delete`, {
+        method: "PATCH",
+        token: accessToken ?? undefined
+      });
+      setBuilderSuccess("Interview session deleted.");
+      await interviewSessionsQuery.refetch();
+    } catch (error) {
+      setBuilderError(
+        error instanceof Error ? error.message : "Could not delete the interview session."
+      );
+    }
   }
 
   async function handleCreateSection(event: FormEvent<HTMLFormElement>) {
@@ -839,6 +940,8 @@ export function useCourseBuilderWorkspace() {
     setQuizDraft,
     assignmentDraft,
     setAssignmentDraft,
+    interviewDraft,
+    setInterviewDraft,
     reviewState,
     setReviewState,
     thumbnailFile,
@@ -858,6 +961,7 @@ export function useCourseBuilderWorkspace() {
     assessmentsQuery,
     learnersQuery,
     assignmentSubmissionsQuery,
+    interviewSessionsQuery,
     reviewMutation,
     uploadThumbnailMutation,
     selectedSection,
@@ -873,6 +977,9 @@ export function useCourseBuilderWorkspace() {
     duplicateLesson,
     saveQuiz,
     saveAssignment,
+    createInterview,
+    updateInterviewStatus,
+    deleteInterview,
     reorderSections,
     reorderLessons,
     submitReview,

@@ -11,6 +11,7 @@ import type {
   CourseAssessments,
   CourseCompletionStatus,
   CourseDetails,
+  CourseInterviewSession,
   CourseListItem,
   CourseReview,
   EnrollmentItem,
@@ -49,6 +50,7 @@ export function useCourseDetailsWorkspace() {
     Record<string, string>
   >({});
   const [activeLessonId, setActiveLessonId] = useState<string | null>(null);
+  const [activeInterviewId, setActiveInterviewId] = useState<string | null>(null);
 
   const isInstructor = user?.role === "INSTRUCTOR";
   const isStudent = user?.role === "STUDENT";
@@ -108,6 +110,26 @@ export function useCourseDetailsWorkspace() {
         token: accessToken ?? undefined
       }),
     enabled: Boolean(accessToken && params.id && canAccessLessons)
+  });
+
+  const interviewSessionsQuery = useQuery({
+    queryKey: ["course-interviews", params.id],
+    queryFn: () =>
+      apiFetch<CourseInterviewSession[]>(`/courses/${params.id}/interviews`, {
+        token: accessToken ?? undefined
+      }),
+    enabled: Boolean(accessToken && params.id && canAccessLessons)
+  });
+
+  const activeInterviewQuery = useQuery({
+    queryKey: ["course-interview", activeInterviewId],
+    queryFn: () =>
+      apiFetch<CourseInterviewSession & {
+        course: { id: string; title: string; instructor: { id: string; fullName: string } };
+      }>(`/courses/interviews/${activeInterviewId}`, {
+        token: accessToken ?? undefined
+      }),
+    enabled: Boolean(accessToken && activeInterviewId)
   });
 
   const completionStatusQuery = useQuery({
@@ -571,6 +593,8 @@ export function useCourseDetailsWorkspace() {
     assignmentFormErrors,
     activeLessonId,
     setActiveLessonId,
+    activeInterviewId,
+    setActiveInterviewId,
     isInstructor,
     isStudent,
     coursesQuery,
@@ -581,6 +605,8 @@ export function useCourseDetailsWorkspace() {
     canAccessLessons,
     courseQuery,
     assessmentsQuery,
+    interviewSessionsQuery,
+    activeInterviewQuery,
     completionStatusQuery,
     myReviewQuery,
     enrollMutation,

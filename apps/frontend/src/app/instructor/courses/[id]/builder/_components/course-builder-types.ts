@@ -55,6 +55,18 @@ export interface CourseAssessments {
   assignments: Assignment[];
 }
 
+export interface InterviewSession {
+  id: string;
+  title: string;
+  description?: string | null;
+  provider: "ZOOM" | "GOOGLE_MEET";
+  meetingUrl: string;
+  scheduledAt: string;
+  durationMinutes?: number | null;
+  status: "DRAFT" | "SCHEDULED" | "COMPLETED";
+  canManage: boolean;
+}
+
 export interface LearnerSummary {
   id: string;
   enrolledAt: string;

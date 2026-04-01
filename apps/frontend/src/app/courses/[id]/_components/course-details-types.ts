@@ -150,6 +150,22 @@ export interface CourseAssessments {
   assignments: CourseAssignment[];
 }
 
+export interface CourseInterviewSession {
+  id: string;
+  title: string;
+  description?: string | null;
+  provider: "ZOOM" | "GOOGLE_MEET";
+  meetingUrl: string;
+  scheduledAt: string;
+  durationMinutes?: number | null;
+  status: "DRAFT" | "SCHEDULED" | "COMPLETED";
+  canManage: boolean;
+  course: {
+    id: string;
+    title: string;
+  };
+}
+
 export interface CourseCompletionStatus {
   lessons: {
     completed: number;

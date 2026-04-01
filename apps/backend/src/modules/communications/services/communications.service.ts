@@ -1,3 +1,4 @@
+﻿
 import {
   BadRequestException,
   ForbiddenException,
@@ -6,6 +7,7 @@ import {
 } from "@nestjs/common";
 import {
   AdminPermission,
+  ConversationGroupScope,
   ConversationKind,
   ConversationStatus,
   NotificationType,
@@ -18,64 +20,13 @@ import { NotificationsService } from "../../notifications/services/notifications
 import { AssignSupportConversationDto } from "../dto/assign-support-conversation.dto";
 import { ConversationQueryDto } from "../dto/conversation-query.dto";
 import { CreateDirectConversationDto } from "../dto/create-direct-conversation.dto";
+import { CreateGroupConversationDto } from "../dto/create-group-conversation.dto";
 import { CreateMessageDto } from "../dto/create-message.dto";
 import { CreateSupportConversationDto } from "../dto/create-support-conversation.dto";
 import { UpdateConversationStatusDto } from "../dto/update-conversation-status.dto";
 import { CommunicationEventsService } from "./communication-events.service";
 
-type ConversationRecord = {
-  id: string;
-  tenantId: string | null;
-  kind: ConversationKind;
-  courseId: string | null;
-  status: ConversationStatus;
-  requesterUserId?: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  lastMessageAt: Date;
-  participants: Array<{
-    userId: string;
-    roleSnapshot: UserRole;
-    lastReadAt: Date | null;
-    user: {
-      id: string;
-      fullName: string;
-      email: string;
-      role: UserRole;
-      profileImage: string | null;
-    };
-  }>;
-  requester: {
-    id: string;
-    fullName: string;
-    email: string;
-    role: UserRole;
-    profileImage: string | null;
-  } | null;
-  supportAssignment: {
-    admin: {
-      id: string;
-      fullName: string;
-      email: string;
-      role: UserRole;
-      profileImage: string | null;
-    };
-  } | null;
-  messages: Array<{
-    id: string;
-    body: string;
-    createdAt: Date;
-    sender: {
-      id: string;
-      fullName: string;
-      email: string;
-      role: UserRole;
-      profileImage: string | null;
-    };
-  }>;
-};
-
-const DIRECT_CONVERSATION_INCLUDE = {
+const CONVERSATION_INCLUDE = {
   participants: {
     select: {
       id: true,
@@ -88,36 +39,34 @@ const DIRECT_CONVERSATION_INCLUDE = {
           fullName: true,
           email: true,
           role: true,
-          profileImage: true
+          profileImage: true,
+          tenantId: true,
+          tenant: { select: { id: true, name: true } }
         }
       }
     }
   },
-  directStudent: {
-    select: {
-      id: true,
-      fullName: true,
-      email: true,
-      role: true,
-      profileImage: true
-    }
-  },
-  directInstructor: {
-    select: {
-      id: true,
-      fullName: true,
-      email: true,
-      role: true,
-      profileImage: true
-    }
-  },
+  course: { select: { id: true, title: true } },
   requester: {
     select: {
       id: true,
       fullName: true,
       email: true,
       role: true,
-      profileImage: true
+      profileImage: true,
+      tenantId: true,
+      tenant: { select: { id: true, name: true } }
+    }
+  },
+  groupInstructor: {
+    select: {
+      id: true,
+      fullName: true,
+      email: true,
+      role: true,
+      profileImage: true,
+      tenantId: true,
+      tenant: { select: { id: true, name: true } }
     }
   },
   supportAssignment: {
@@ -127,16 +76,16 @@ const DIRECT_CONVERSATION_INCLUDE = {
           id: true,
           fullName: true,
           email: true,
+          role: true,
           profileImage: true,
-          role: true
+          tenantId: true,
+          tenant: { select: { id: true, name: true } }
         }
       }
     }
   },
   messages: {
-    orderBy: {
-      createdAt: "desc" as const
-    },
+    orderBy: { createdAt: "desc" as const },
     take: 1,
     include: {
       sender: {
@@ -145,12 +94,14 @@ const DIRECT_CONVERSATION_INCLUDE = {
           fullName: true,
           email: true,
           role: true,
-          profileImage: true
+          profileImage: true,
+          tenantId: true,
+          tenant: { select: { id: true, name: true } }
         }
       }
     }
   }
-};
+} as const;
 
 @Injectable()
 export class CommunicationsService {
@@ -163,37 +114,24 @@ export class CommunicationsService {
 
   async listConversations(currentUser: JwtPayload, query: ConversationQueryDto) {
     const isSupportAdmin = await this.isSupportAdmin(currentUser);
-
     const conversations = await this.prisma.conversation.findMany({
       where: await this.buildConversationListWhere(currentUser, query, isSupportAdmin),
-      orderBy: {
-        lastMessageAt: "desc"
-      },
-      include: DIRECT_CONVERSATION_INCLUDE
+      orderBy: { lastMessageAt: "desc" },
+      include: CONVERSATION_INCLUDE
     });
 
     const items = await Promise.all(
-      conversations.map((conversation) =>
-        this.toConversationSummary(conversation, currentUser, isSupportAdmin)
-      )
+      conversations.map((conversation) => this.toConversationSummary(conversation, currentUser, isSupportAdmin))
     );
 
-    if (!query.unreadOnly) {
-      return items;
-    }
-
-    return items.filter((conversation) => conversation.unreadCount > 0);
+    return query.unreadOnly ? items.filter((conversation) => conversation.unreadCount > 0) : items;
   }
 
   async listDirectTargets(currentUser: JwtPayload) {
     if (currentUser.role === "STUDENT") {
       const relations = await this.prisma.studentInstructor.findMany({
-        where: {
-          studentId: currentUser.sub
-        },
-        orderBy: {
-          createdAt: "desc"
-        },
+        where: { studentId: currentUser.sub },
+        orderBy: { createdAt: "desc" },
         include: {
           instructor: {
             select: {
@@ -203,12 +141,7 @@ export class CommunicationsService {
               role: true,
               profileImage: true,
               tenantId: true,
-              tenant: {
-                select: {
-                  id: true,
-                  name: true
-                }
-              }
+              tenant: { select: { id: true, name: true } }
             }
           }
         }
@@ -219,12 +152,8 @@ export class CommunicationsService {
 
     if (currentUser.role === "INSTRUCTOR") {
       const relations = await this.prisma.studentInstructor.findMany({
-        where: {
-          instructorId: currentUser.sub
-        },
-        orderBy: {
-          createdAt: "desc"
-        },
+        where: { instructorId: currentUser.sub },
+        orderBy: { createdAt: "desc" },
         include: {
           student: {
             select: {
@@ -233,7 +162,8 @@ export class CommunicationsService {
               email: true,
               role: true,
               profileImage: true,
-              tenantId: true
+              tenantId: true,
+              tenant: { select: { id: true, name: true } }
             }
           }
         }
@@ -245,13 +175,42 @@ export class CommunicationsService {
     throw new ForbiddenException("Direct chat targets are only available to students and instructors.");
   }
 
-  async createDirectConversation(currentUser: JwtPayload, dto: CreateDirectConversationDto) {
-    const { tenantId, studentId, instructorId } = await this.assertDirectConversationAllowed(
-      currentUser,
-      dto.targetUserId,
-      dto.courseId
-    );
+  async listGroupTargets(currentUser: JwtPayload) {
+    if (currentUser.role !== "INSTRUCTOR" || !currentUser.tenantId) {
+      throw new ForbiddenException("Only instructors can create group chats.");
+    }
 
+    const [courses, relations] = await Promise.all([
+      this.prisma.course.findMany({
+        where: { instructorId: currentUser.sub, tenantId: currentUser.tenantId },
+        orderBy: { title: "asc" },
+        select: { id: true, title: true }
+      }),
+      this.prisma.studentInstructor.findMany({
+        where: { instructorId: currentUser.sub },
+        orderBy: { createdAt: "desc" },
+        include: {
+          student: {
+            select: {
+              id: true,
+              fullName: true,
+              email: true,
+              role: true,
+              profileImage: true,
+              tenantId: true,
+              tenant: { select: { id: true, name: true } }
+            }
+          }
+        }
+      })
+    ]);
+
+    const students = relations.map((relation) => relation.student);
+    return { courses, followers: students, students };
+  }
+
+  async createDirectConversation(currentUser: JwtPayload, dto: CreateDirectConversationDto) {
+    const { tenantId, studentId, instructorId } = await this.assertDirectConversationAllowed(currentUser, dto.targetUserId, dto.courseId);
     const existing = await this.prisma.conversation.findFirst({
       where: {
         kind: ConversationKind.DIRECT,
@@ -260,7 +219,7 @@ export class CommunicationsService {
         directStudentId: studentId,
         directInstructorId: instructorId
       },
-      include: DIRECT_CONVERSATION_INCLUDE
+      include: CONVERSATION_INCLUDE
     });
 
     if (existing) {
@@ -277,21 +236,57 @@ export class CommunicationsService {
         directInstructorId: instructorId,
         participants: {
           create: [
-            {
-              userId: studentId,
-              roleSnapshot: UserRole.STUDENT,
-              lastReadAt: currentUser.role === "STUDENT" ? new Date() : null
-            },
-            {
-              userId: instructorId,
-              roleSnapshot: UserRole.INSTRUCTOR,
-              lastReadAt: currentUser.role === "INSTRUCTOR" ? new Date() : null
-            }
+            { userId: studentId, roleSnapshot: UserRole.STUDENT, lastReadAt: currentUser.role === "STUDENT" ? new Date() : null },
+            { userId: instructorId, roleSnapshot: UserRole.INSTRUCTOR, lastReadAt: currentUser.role === "INSTRUCTOR" ? new Date() : null }
           ]
         }
       },
-      include: DIRECT_CONVERSATION_INCLUDE
+      include: CONVERSATION_INCLUDE
     });
+
+    return this.toConversationSummary(created, currentUser, false);
+  }
+
+  async createGroupConversation(currentUser: JwtPayload, dto: CreateGroupConversationDto) {
+    if (currentUser.role !== "INSTRUCTOR" || !currentUser.tenantId) {
+      throw new ForbiddenException("Only instructors can create group chats.");
+    }
+
+    const { participantIds, courseId } = await this.resolveGroupParticipants(currentUser, dto);
+    const created = await this.prisma.conversation.create({
+      data: {
+        tenantId: currentUser.tenantId,
+        kind: ConversationKind.GROUP,
+        courseId,
+        createdByUserId: currentUser.sub,
+        groupInstructorId: currentUser.sub,
+        groupScope: dto.scopeType,
+        groupTitle: dto.title.trim(),
+        participants: {
+          create: participantIds.map((userId) => ({
+            userId,
+            roleSnapshot: userId === currentUser.sub ? UserRole.INSTRUCTOR : UserRole.STUDENT,
+            lastReadAt: userId === currentUser.sub ? new Date() : null
+          }))
+        }
+      },
+      include: CONVERSATION_INCLUDE
+    });
+
+    await Promise.all(
+      participantIds
+        .filter((userId) => userId !== currentUser.sub)
+        .map((userId) =>
+          this.notificationsService.create({
+            userId,
+            tenantId: created.tenantId,
+            type: NotificationType.GROUP_ADDED,
+            title: "You were added to a group chat",
+            message: `You were added to ${created.groupTitle ?? "a group conversation"}.`,
+            payload: { conversationId: created.id, kind: created.kind }
+          })
+        )
+    );
 
     return this.toConversationSummary(created, currentUser, false);
   }
@@ -312,23 +307,10 @@ export class CommunicationsService {
         kind: ConversationKind.SUPPORT,
         createdByUserId: currentUser.sub,
         requesterUserId: currentUser.sub,
-        participants: {
-          create: {
-            userId: currentUser.sub,
-            roleSnapshot: currentUser.role,
-            lastReadAt: new Date()
-          }
-        },
-        messages: {
-          create: {
-            senderUserId: currentUser.sub,
-            body: dto.subject?.trim()
-              ? `[${dto.subject.trim()}]\n${body}`
-              : body
-          }
-        }
+        participants: { create: { userId: currentUser.sub, roleSnapshot: currentUser.role, lastReadAt: new Date() } },
+        messages: { create: { senderUserId: currentUser.sub, body: dto.subject?.trim() ? `[${dto.subject.trim()}]\n${body}` : body } }
       },
-      include: DIRECT_CONVERSATION_INCLUDE
+      include: CONVERSATION_INCLUDE
     });
 
     this.communicationEventsService.publish({
@@ -348,13 +330,9 @@ export class CommunicationsService {
       await this.ensureAdminParticipant(conversation.id, currentUser);
     }
 
-    return {
-      ...(await this.toConversationSummary(
-        conversation,
-        currentUser,
-        await this.isSupportAdmin(currentUser)
-      )),
-      messages: await this.prisma.message.findMany({
+    const [summary, messages] = await Promise.all([
+      this.toConversationSummary(conversation, currentUser, await this.isSupportAdmin(currentUser)),
+      this.prisma.message.findMany({
         where: { conversationId: conversation.id },
         orderBy: { createdAt: "asc" },
         include: {
@@ -364,11 +342,23 @@ export class CommunicationsService {
               fullName: true,
               email: true,
               role: true,
-              profileImage: true
+              profileImage: true,
+              tenantId: true,
+              tenant: { select: { id: true, name: true } }
             }
           }
         }
       })
+    ]);
+
+    return {
+      ...summary,
+      messages: messages.map((message) => ({
+        id: message.id,
+        body: message.body,
+        createdAt: message.createdAt.toISOString(),
+        sender: message.sender
+      }))
     };
   }
 
@@ -388,11 +378,7 @@ export class CommunicationsService {
 
     const message = await this.prisma.$transaction(async (tx) => {
       const created = await tx.message.create({
-        data: {
-          conversationId,
-          senderUserId: currentUser.sub,
-          body
-        },
+        data: { conversationId, senderUserId: currentUser.sub, body },
         include: {
           sender: {
             select: {
@@ -400,27 +386,18 @@ export class CommunicationsService {
               fullName: true,
               email: true,
               role: true,
-              profileImage: true
+              profileImage: true,
+              tenantId: true,
+              tenant: { select: { id: true, name: true } }
             }
           }
         }
       });
 
-      await tx.conversation.update({
-        where: { id: conversationId },
-        data: {
-          lastMessageAt: created.createdAt
-        }
-      });
-
+      await tx.conversation.update({ where: { id: conversationId }, data: { lastMessageAt: created.createdAt } });
       await tx.conversationParticipant.updateMany({
-        where: {
-          conversationId,
-          userId: currentUser.sub
-        },
-        data: {
-          lastReadAt: created.createdAt
-        }
+        where: { conversationId, userId: currentUser.sub },
+        data: { lastReadAt: created.createdAt }
       });
 
       return created;
@@ -428,7 +405,7 @@ export class CommunicationsService {
 
     const refreshedConversation = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
-      include: DIRECT_CONVERSATION_INCLUDE
+      include: CONVERSATION_INCLUDE
     });
 
     if (!refreshedConversation) {
@@ -439,24 +416,22 @@ export class CommunicationsService {
       .map((participant) => participant.userId)
       .filter((userId) => userId !== currentUser.sub);
 
-    await this.createNotificationsForMessage(
-      refreshedConversation.kind,
-      refreshedConversation,
-      currentUser,
-      recipientUserIds
-    );
+    await this.createNotificationsForMessage(refreshedConversation.kind, refreshedConversation, recipientUserIds);
 
     this.communicationEventsService.publish({
       type: "conversation.message.created",
       conversationId,
       kind: refreshedConversation.kind,
       participantUserIds: refreshedConversation.participants.map((participant) => participant.userId),
-      supportAdminIds: refreshedConversation.supportAssignment?.admin
-        ? [refreshedConversation.supportAssignment.admin.id]
-        : undefined
+      supportAdminIds: refreshedConversation.supportAssignment?.admin ? [refreshedConversation.supportAssignment.admin.id] : undefined
     });
 
-    return message;
+    return {
+      id: message.id,
+      body: message.body,
+      createdAt: message.createdAt.toISOString(),
+      sender: message.sender
+    };
   }
 
   async markConversationAsRead(currentUser: JwtPayload, conversationId: string) {
@@ -468,45 +443,21 @@ export class CommunicationsService {
 
     const now = new Date();
     await this.prisma.conversationParticipant.upsert({
-      where: {
-        conversationId_userId: {
-          conversationId,
-          userId: currentUser.sub
-        }
-      },
-      update: {
-        lastReadAt: now
-      },
-      create: {
-        conversationId,
-        userId: currentUser.sub,
-        roleSnapshot: currentUser.role,
-        lastReadAt: now
-      }
+      where: { conversationId_userId: { conversationId, userId: currentUser.sub } },
+      update: { lastReadAt: now },
+      create: { conversationId, userId: currentUser.sub, roleSnapshot: currentUser.role, lastReadAt: now }
     });
 
-    this.communicationEventsService.publish({
-      type: "conversation.read.updated",
-      conversationId,
-      userId: currentUser.sub
-    });
-
+    this.communicationEventsService.publish({ type: "conversation.read.updated", conversationId, userId: currentUser.sub });
     return { updatedAt: now.toISOString() };
   }
 
-  async updateConversationStatus(
-    currentUser: JwtPayload,
-    conversationId: string,
-    dto: UpdateConversationStatusDto
-  ) {
+  async updateConversationStatus(currentUser: JwtPayload, conversationId: string, dto: UpdateConversationStatusDto) {
     const conversation = await this.getAccessibleConversation(currentUser, conversationId);
-
     const updated = await this.prisma.conversation.update({
       where: { id: conversation.id },
-      data: {
-        status: dto.status
-      },
-      include: DIRECT_CONVERSATION_INCLUDE
+      data: { status: dto.status },
+      include: CONVERSATION_INCLUDE
     });
 
     if (updated.kind === ConversationKind.SUPPORT && updated.requesterUserId && updated.requesterUserId !== currentUser.sub) {
@@ -515,10 +466,7 @@ export class CommunicationsService {
         tenantId: updated.tenantId,
         type: NotificationType.SUPPORT_STATUS_CHANGED,
         title: dto.status === ConversationStatus.CLOSED ? "Support conversation closed" : "Support conversation reopened",
-        message:
-          dto.status === ConversationStatus.CLOSED
-            ? "Your support conversation was marked as closed."
-            : "Your support conversation was reopened."
+        message: dto.status === ConversationStatus.CLOSED ? "Your support conversation was marked as closed." : "Your support conversation was reopened."
       });
     }
 
@@ -528,24 +476,18 @@ export class CommunicationsService {
       kind: updated.kind,
       status: updated.status,
       participantUserIds: updated.participants.map((participant) => participant.userId),
-      supportAdminIds: updated.supportAssignment?.admin
-        ? [updated.supportAssignment.admin.id]
-        : undefined
+      supportAdminIds: updated.supportAssignment?.admin ? [updated.supportAssignment.admin.id] : undefined
     });
 
     return this.toConversationSummary(updated, currentUser, await this.isSupportAdmin(currentUser));
   }
 
-  async assignSupportConversation(
-    currentUser: JwtPayload,
-    conversationId: string,
-    dto: AssignSupportConversationDto
-  ) {
+  async assignSupportConversation(currentUser: JwtPayload, conversationId: string, dto: AssignSupportConversationDto) {
     await this.assertSupportPermission(currentUser);
 
     const conversation = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
-      include: DIRECT_CONVERSATION_INCLUDE
+      include: CONVERSATION_INCLUDE
     });
 
     if (!conversation || conversation.kind !== ConversationKind.SUPPORT) {
@@ -554,13 +496,7 @@ export class CommunicationsService {
 
     const adminUser = await this.prisma.user.findUnique({
       where: { id: dto.adminUserId },
-      select: {
-        id: true,
-        role: true,
-        isActive: true,
-        isSuperAdmin: true,
-        adminPermissions: true
-      }
+      select: { id: true, role: true, isActive: true, isSuperAdmin: true, adminPermissions: true }
     });
 
     if (!adminUser || adminUser.role !== UserRole.ADMIN || !adminUser.isActive) {
@@ -574,29 +510,14 @@ export class CommunicationsService {
     await this.prisma.$transaction(async (tx) => {
       await tx.supportAssignment.upsert({
         where: { conversationId },
-        update: {
-          adminUserId: dto.adminUserId,
-          assignedAt: new Date()
-        },
-        create: {
-          conversationId,
-          adminUserId: dto.adminUserId
-        }
+        update: { adminUserId: dto.adminUserId, assignedAt: new Date() },
+        create: { conversationId, adminUserId: dto.adminUserId }
       });
 
       await tx.conversationParticipant.upsert({
-        where: {
-          conversationId_userId: {
-            conversationId,
-            userId: dto.adminUserId
-          }
-        },
+        where: { conversationId_userId: { conversationId, userId: dto.adminUserId } },
         update: {},
-        create: {
-          conversationId,
-          userId: dto.adminUserId,
-          roleSnapshot: UserRole.ADMIN
-        }
+        create: { conversationId, userId: dto.adminUserId, roleSnapshot: UserRole.ADMIN }
       });
     });
 
@@ -617,7 +538,7 @@ export class CommunicationsService {
 
     const refreshed = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
-      include: DIRECT_CONVERSATION_INCLUDE
+      include: CONVERSATION_INCLUDE
     });
 
     if (!refreshed) {
@@ -627,29 +548,41 @@ export class CommunicationsService {
     return this.toConversationSummary(refreshed, currentUser, true);
   }
 
+  async deleteGroupConversation(currentUser: JwtPayload, conversationId: string) {
+    if (currentUser.role !== "INSTRUCTOR") {
+      throw new ForbiddenException("Only instructors can delete group chats.");
+    }
+
+    const conversation = await this.prisma.conversation.findUnique({
+      where: { id: conversationId },
+      select: { id: true, kind: true, groupInstructorId: true }
+    });
+
+    if (!conversation || conversation.kind !== ConversationKind.GROUP) {
+      throw new NotFoundException("Group conversation not found.");
+    }
+
+    if (conversation.groupInstructorId !== currentUser.sub) {
+      throw new ForbiddenException("Only the instructor who created this group can delete it.");
+    }
+
+    await this.prisma.conversation.delete({ where: { id: conversationId } });
+    return { deleted: true };
+  }
+
   async assertConversationAccess(currentUser: JwtPayload, conversationId: string) {
     await this.getAccessibleConversation(currentUser, conversationId);
   }
 
-  private async buildConversationListWhere(
-    currentUser: JwtPayload,
-    query: ConversationQueryDto,
-    isSupportAdmin: boolean
-  ) {
+  private async buildConversationListWhere(currentUser: JwtPayload, query: ConversationQueryDto, isSupportAdmin: boolean) {
     if (currentUser.role === "ADMIN" && isSupportAdmin) {
       return {
         kind: query.kind ?? ConversationKind.SUPPORT,
         status: query.status,
         ...(query.assignedToMe
-          ? {
-              supportAssignment: {
-                adminUserId: currentUser.sub
-              }
-            }
+          ? { supportAssignment: { adminUserId: currentUser.sub } }
           : query.unassignedOnly
-            ? {
-                supportAssignment: null
-              }
+            ? { supportAssignment: null }
             : {})
       };
     }
@@ -657,31 +590,18 @@ export class CommunicationsService {
     return {
       kind: query.kind,
       status: query.status,
-      participants: {
-        some: {
-          userId: currentUser.sub
-        }
-      }
+      participants: { some: { userId: currentUser.sub } }
     };
   }
 
-  private async assertDirectConversationAllowed(
-    currentUser: JwtPayload,
-    targetUserId: string,
-    courseId?: string
-  ) {
+  private async assertDirectConversationAllowed(currentUser: JwtPayload, targetUserId: string, courseId?: string) {
     if (!["STUDENT", "INSTRUCTOR"].includes(currentUser.role)) {
       throw new ForbiddenException("Only students and instructors can start direct conversations.");
     }
 
     const target = await this.prisma.user.findUnique({
       where: { id: targetUserId },
-      select: {
-        id: true,
-        role: true,
-        tenantId: true,
-        isActive: true
-      }
+      select: { id: true, role: true, tenantId: true, isActive: true }
     });
 
     if (!target || !target.isActive) {
@@ -694,10 +614,7 @@ export class CommunicationsService {
       }
 
       const relation = await this.prisma.studentInstructor.findFirst({
-        where: {
-          studentId: currentUser.sub,
-          instructorId: target.id
-        },
+        where: { studentId: currentUser.sub, instructorId: target.id },
         select: { id: true }
       });
 
@@ -707,11 +624,7 @@ export class CommunicationsService {
 
       if (courseId) {
         const course = await this.prisma.course.findFirst({
-          where: {
-            id: courseId,
-            tenantId: target.tenantId,
-            instructorId: target.id
-          },
+          where: { id: courseId, tenantId: target.tenantId, instructorId: target.id },
           select: { id: true }
         });
 
@@ -720,11 +633,7 @@ export class CommunicationsService {
         }
       }
 
-      return {
-        tenantId: target.tenantId,
-        studentId: currentUser.sub,
-        instructorId: target.id
-      };
+      return { tenantId: target.tenantId, studentId: currentUser.sub, instructorId: target.id };
     }
 
     if (!currentUser.tenantId || target.role !== UserRole.STUDENT || target.tenantId !== currentUser.tenantId) {
@@ -732,10 +641,7 @@ export class CommunicationsService {
     }
 
     const relation = await this.prisma.studentInstructor.findFirst({
-      where: {
-        studentId: target.id,
-        instructorId: currentUser.sub
-      },
+      where: { studentId: target.id, instructorId: currentUser.sub },
       select: { id: true }
     });
 
@@ -745,11 +651,7 @@ export class CommunicationsService {
 
     if (courseId) {
       const course = await this.prisma.course.findFirst({
-        where: {
-          id: courseId,
-          tenantId: currentUser.tenantId,
-          instructorId: currentUser.sub
-        },
+        where: { id: courseId, tenantId: currentUser.tenantId, instructorId: currentUser.sub },
         select: { id: true }
       });
 
@@ -758,78 +660,123 @@ export class CommunicationsService {
       }
     }
 
-    return {
-      tenantId: currentUser.tenantId,
-      studentId: target.id,
-      instructorId: currentUser.sub
-    };
+    return { tenantId: currentUser.tenantId, studentId: target.id, instructorId: currentUser.sub };
+  }
+
+  private async resolveGroupParticipants(currentUser: JwtPayload, dto: CreateGroupConversationDto) {
+    const title = dto.title.trim();
+    if (!title) {
+      throw new BadRequestException("Group title is required.");
+    }
+
+    if (!currentUser.tenantId) {
+      throw new ForbiddenException("Instructor workspace is required.");
+    }
+
+    let courseId: string | null = null;
+    let studentIds: string[] = [];
+
+    if (dto.scopeType === ConversationGroupScope.COURSE) {
+      if (!dto.courseId) {
+        throw new BadRequestException("Course group chats need a course.");
+      }
+
+      const course = await this.prisma.course.findFirst({
+        where: { id: dto.courseId, instructorId: currentUser.sub, tenantId: currentUser.tenantId },
+        select: { id: true, enrollments: { select: { userId: true } } }
+      });
+
+      if (!course) {
+        throw new ForbiddenException("Course group target is not available.");
+      }
+
+      courseId = course.id;
+      studentIds = course.enrollments.map((enrollment) => enrollment.userId);
+    } else if (dto.scopeType === ConversationGroupScope.FOLLOWERS) {
+      const relations = await this.prisma.studentInstructor.findMany({
+        where: { instructorId: currentUser.sub },
+        select: { studentId: true }
+      });
+
+      studentIds = relations.map((relation) => relation.studentId);
+    } else {
+      const requestedIds = Array.from(new Set(dto.studentIds ?? []));
+      if (!requestedIds.length) {
+        throw new BadRequestException("Select at least one student.");
+      }
+
+      const relations = await this.prisma.studentInstructor.findMany({
+        where: { instructorId: currentUser.sub, studentId: { in: requestedIds } },
+        select: { studentId: true }
+      });
+
+      studentIds = relations.map((relation) => relation.studentId);
+      if (studentIds.length !== requestedIds.length) {
+        throw new ForbiddenException("One or more selected students are not part of your workspace.");
+      }
+    }
+
+    const participantIds = Array.from(new Set([currentUser.sub, ...studentIds]));
+    if (participantIds.length < 2) {
+      throw new BadRequestException("This group does not include any students yet.");
+    }
+
+    return { title, courseId, participantIds };
   }
 
   private async getAccessibleConversation(currentUser: JwtPayload, conversationId: string) {
     const conversation = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
-      include: DIRECT_CONVERSATION_INCLUDE
+      include: CONVERSATION_INCLUDE
     });
 
     if (!conversation) {
       throw new NotFoundException("Conversation not found.");
     }
 
-    const isParticipant = conversation.participants.some(
-      (participant: { userId: string }) => participant.userId === currentUser.sub
-    );
+    const isParticipant = conversation.participants.some((participant) => participant.userId === currentUser.sub);
 
-    if (conversation.kind === ConversationKind.DIRECT) {
-      if (!isParticipant) {
-        throw new ForbiddenException("You do not have access to this conversation.");
+    if (conversation.kind === ConversationKind.SUPPORT) {
+      if (isParticipant) {
+        return conversation;
       }
 
-      return conversation;
+      if (currentUser.role === "ADMIN" && (await this.isSupportAdmin(currentUser))) {
+        return conversation;
+      }
+
+      throw new ForbiddenException("You do not have access to this support conversation.");
     }
 
-    if (isParticipant) {
-      return conversation;
+    if (!isParticipant) {
+      throw new ForbiddenException("You do not have access to this conversation.");
     }
 
-    if (currentUser.role === "ADMIN" && (await this.isSupportAdmin(currentUser))) {
-      return conversation;
-    }
-
-    throw new ForbiddenException("You do not have access to this support conversation.");
+    return conversation;
   }
 
-  private async toConversationSummary(
-    conversation: ConversationRecord,
-    currentUser: JwtPayload,
-    isSupportAdmin: boolean
-  ) {
+  private async toConversationSummary(conversation: any, currentUser: JwtPayload, isSupportAdmin: boolean) {
     const participantRecord = conversation.participants.find(
-      (participant: ConversationRecord["participants"][number]) => participant.userId === currentUser.sub
+      (participant: { userId: string; lastReadAt: Date | null }) => participant.userId === currentUser.sub
     );
     const unreadCount = await this.prisma.message.count({
       where: {
         conversationId: conversation.id,
-        senderUserId: {
-          not: currentUser.sub
-        },
-        ...(participantRecord?.lastReadAt
-          ? {
-              createdAt: {
-                gt: participantRecord.lastReadAt
-              }
-            }
-          : {})
+        senderUserId: { not: currentUser.sub },
+        ...(participantRecord?.lastReadAt ? { createdAt: { gt: participantRecord.lastReadAt } } : {})
       }
     });
 
     const latestMessage = conversation.messages[0] ?? null;
+    const participantPreview = conversation.participants
+      .filter((participant: { userId: string }) => participant.userId !== currentUser.sub)
+      .slice(0, 4)
+      .map((participant: { user: unknown }) => participant.user);
+
     const otherParticipant =
       conversation.kind === ConversationKind.DIRECT
-        ? conversation.participants.find(
-            (participant: ConversationRecord["participants"][number]) =>
-              participant.userId !== currentUser.sub
-          )?.user ?? null
-        : conversation.requester;
+        ? conversation.participants.find((participant: { userId: string }) => participant.userId !== currentUser.sub)?.user ?? null
+        : null;
 
     return {
       id: conversation.id,
@@ -837,6 +784,12 @@ export class CommunicationsService {
       kind: conversation.kind,
       status: conversation.status,
       courseId: conversation.courseId,
+      groupTitle: conversation.groupTitle ?? null,
+      groupScope: conversation.groupScope ?? null,
+      groupInstructor: conversation.groupInstructor ?? null,
+      participantPreview,
+      participantCount: conversation.participants.length,
+      course: conversation.course ?? null,
       createdAt: conversation.createdAt.toISOString(),
       updatedAt: conversation.updatedAt.toISOString(),
       lastMessageAt: conversation.lastMessageAt.toISOString(),
@@ -852,32 +805,31 @@ export class CommunicationsService {
             sender: latestMessage.sender
           }
         : null,
-      canReply:
-        conversation.kind === ConversationKind.DIRECT
-          ? true
-          : isSupportAdmin || Boolean(participantRecord),
+      canReply: conversation.kind === ConversationKind.SUPPORT ? isSupportAdmin || Boolean(participantRecord) : Boolean(participantRecord),
       isAssignedToCurrentAdmin:
-        currentUser.role === "ADMIN" &&
-        conversation.supportAssignment?.admin.id === currentUser.sub
+        currentUser.role === "ADMIN" && conversation.supportAssignment?.admin.id === currentUser.sub
     };
   }
 
-  private async createNotificationsForMessage(
-    kind: ConversationKind,
-    conversation: any,
-    currentUser: JwtPayload,
-    recipientUserIds: string[]
-  ) {
+  private async createNotificationsForMessage(kind: ConversationKind, conversation: any, recipientUserIds: string[]) {
     const type =
       kind === ConversationKind.DIRECT
         ? NotificationType.DIRECT_MESSAGE_RECEIVED
-        : NotificationType.SUPPORT_REPLY_RECEIVED;
+        : kind === ConversationKind.GROUP
+          ? NotificationType.GROUP_MESSAGE_RECEIVED
+          : NotificationType.SUPPORT_REPLY_RECEIVED;
     const title =
-      kind === ConversationKind.DIRECT ? "New chat message" : "New support reply";
+      kind === ConversationKind.DIRECT
+        ? "New chat message"
+        : kind === ConversationKind.GROUP
+          ? "New group message"
+          : "New support reply";
     const message =
       kind === ConversationKind.DIRECT
         ? "You have a new unread message."
-        : "There is an update in a support conversation.";
+        : kind === ConversationKind.GROUP
+          ? `There is a new message in ${conversation.groupTitle ?? "your group chat"}.`
+          : "There is an update in a support conversation.";
 
     await Promise.all(
       recipientUserIds.map((userId) =>
@@ -887,10 +839,7 @@ export class CommunicationsService {
           type,
           title,
           message,
-          payload: {
-            conversationId: conversation.id,
-            kind: conversation.kind
-          }
+          payload: { conversationId: conversation.id, kind: conversation.kind }
         })
       )
     );
@@ -910,7 +859,12 @@ export class CommunicationsService {
       throw new ForbiddenException("Support admin access is required.");
     }
 
-    return this.adminAccessService.assertAdminPermission(currentUser, AdminPermission.HANDLE_SUPPORT);
+    const actor = await this.adminAccessService.loadAdminActor(currentUser);
+    if (!actor.isSuperAdmin && !actor.adminPermissions.includes(AdminPermission.HANDLE_SUPPORT)) {
+      throw new ForbiddenException("Support admin access is required.");
+    }
+
+    return actor;
   }
 
   private async ensureAdminParticipant(conversationId: string, currentUser: JwtPayload) {
@@ -919,18 +873,9 @@ export class CommunicationsService {
     }
 
     await this.prisma.conversationParticipant.upsert({
-      where: {
-        conversationId_userId: {
-          conversationId,
-          userId: currentUser.sub
-        }
-      },
+      where: { conversationId_userId: { conversationId, userId: currentUser.sub } },
       update: {},
-      create: {
-        conversationId,
-        userId: currentUser.sub,
-        roleSnapshot: UserRole.ADMIN
-      }
+      create: { conversationId, userId: currentUser.sub, roleSnapshot: UserRole.ADMIN }
     });
   }
 
@@ -947,3 +892,4 @@ export class CommunicationsService {
     throw new ForbiddenException("You cannot send messages in this conversation.");
   }
 }
+

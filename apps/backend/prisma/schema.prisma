@@ -93,16 +93,39 @@ enum NotificationType {
   SUPPORT_REPLY_RECEIVED
   SUPPORT_ASSIGNED
   SUPPORT_STATUS_CHANGED
+  GROUP_MESSAGE_RECEIVED
+  GROUP_ADDED
+  INTERVIEW_SCHEDULED
+  INTERVIEW_UPDATED
+  INTERVIEW_COMPLETED
 }
 
 enum ConversationKind {
   DIRECT
   SUPPORT
+  GROUP
 }
 
 enum ConversationStatus {
   OPEN
   CLOSED
+}
+
+enum ConversationGroupScope {
+  COURSE
+  FOLLOWERS
+  SELECTED
+}
+
+enum InterviewProvider {
+  ZOOM
+  GOOGLE_MEET
+}
+
+enum InterviewSessionStatus {
+  DRAFT
+  SCHEDULED
+  COMPLETED
 }
 
 enum NotificationJobStatus {
@@ -249,6 +272,8 @@ model User {
   directStudentConversations Conversation[] @relation("DirectStudentConversation")
   directInstructorConversations Conversation[] @relation("DirectInstructorConversation")
   requestedSupportConversations Conversation[] @relation("SupportRequesterConversation")
+  managedGroupConversations Conversation[] @relation("GroupConversationInstructor")
+  createdInterviewSessions CourseInterviewSession[] @relation("CourseInterviewCreator")
   conversationParticipants ConversationParticipant[]
   sentMessages Message[] @relation("ConversationMessageSender")
   supportAssignments SupportAssignment[] @relation("SupportAssignedAdmin")
@@ -336,6 +361,7 @@ model Course {
   learnerStates CourseLearnerState[]
   reviews CourseReview[]
   conversations Conversation[]
+  interviewSessions CourseInterviewSession[]
 
   @@index([tenantId])
   @@index([tenantId, status])
@@ -561,6 +587,9 @@ model Conversation {
   directStudentId   String?            @map("direct_student_id")
   directInstructorId String?           @map("direct_instructor_id")
   requesterUserId   String?            @map("requester_user_id")
+  groupScope        ConversationGroupScope? @map("group_scope")
+  groupTitle        String?            @map("group_title")
+  groupInstructorId String?            @map("group_instructor_id")
   lastMessageAt     DateTime           @default(now()) @map("last_message_at")
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
@@ -571,6 +600,7 @@ model Conversation {
   directStudent    User?                      @relation("DirectStudentConversation", fields: [directStudentId], references: [id], onDelete: SetNull)
   directInstructor User?                      @relation("DirectInstructorConversation", fields: [directInstructorId], references: [id], onDelete: SetNull)
   requester        User?                      @relation("SupportRequesterConversation", fields: [requesterUserId], references: [id], onDelete: SetNull)
+  groupInstructor  User?                      @relation("GroupConversationInstructor", fields: [groupInstructorId], references: [id], onDelete: SetNull)
   participants     ConversationParticipant[]
   messages         Message[]
   supportAssignment SupportAssignment?
@@ -580,6 +610,29 @@ model Conversation {
   @@index([lastMessageAt])
   @@index([directStudentId, directInstructorId, status])
   @@index([requesterUserId, status])
+  @@index([groupInstructorId, status])
+}
+
+model CourseInterviewSession {
+  id                  String                 @id @default(uuid())
+  courseId            String                 @map("course_id")
+  provider            InterviewProvider
+  title               String
+  description         String?
+  meetingUrl          String                 @map("meeting_url")
+  scheduledAt         DateTime               @map("scheduled_at")
+  durationMinutes     Int?                   @map("duration_minutes")
+  status              InterviewSessionStatus @default(DRAFT)
+  createdByInstructorId String               @map("created_by_instructor_id")
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+
+  course             Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  createdByInstructor User   @relation("CourseInterviewCreator", fields: [createdByInstructorId], references: [id], onDelete: Cascade)
+
+  @@index([courseId, status])
+  @@index([createdByInstructorId])
+  @@index([scheduledAt])
 }
 
 model ConversationParticipant {

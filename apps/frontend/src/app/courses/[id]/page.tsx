@@ -19,6 +19,8 @@ import { useCourseDetailsWorkspace } from "./_hooks/use-course-details-workspace
 export default function CourseDetailsPage() {
   const {
     activeLesson,
+    activeInterviewId,
+    activeInterviewQuery,
     assignmentDrafts,
     assignmentFormErrors,
     assessmentsQuery,
@@ -31,6 +33,7 @@ export default function CourseDetailsPage() {
     isEnrolled,
     isStudent,
     issueCertificateMutation,
+    interviewSessionsQuery,
     latestPayment,
     learningState,
     manualMethods,
@@ -57,6 +60,7 @@ export default function CourseDetailsPage() {
     reviewRating,
     selectedCourse,
     selectedMethodId,
+    setActiveInterviewId,
     setAssignmentDrafts,
     setAssignmentFormErrors,
     setQuizAnswer,
@@ -305,6 +309,45 @@ export default function CourseDetailsPage() {
                 )}
 
                 <WorkspacePanel title="Quizzes" description="Assess understanding with structured submissions and visible result states.">
+                  <div className="mb-5">
+                    <WorkspacePanel
+                      title="Interview sessions"
+                      description="Join scheduled Zoom or Google Meet sessions inside a large platform modal, with a fallback open action if embedding is restricted."
+                    >
+                      <div className="space-y-3">
+                        {(interviewSessionsQuery.data ?? []).length ? (
+                          (interviewSessionsQuery.data ?? []).map((session) => (
+                            <button
+                              key={session.id}
+                              type="button"
+                              onClick={() => setActiveInterviewId(session.id)}
+                              className="w-full rounded-3xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-slate-300"
+                            >
+                              <div className="flex flex-wrap items-start justify-between gap-3">
+                                <div>
+                                  <p className="text-base font-semibold text-slate-950">{session.title}</p>
+                                  <p className="mt-1 text-sm text-slate-600">
+                                    {session.provider === "ZOOM" ? "Zoom" : "Google Meet"} • {formatCourseDate(session.scheduledAt)}
+                                  </p>
+                                  {session.description ? (
+                                    <p className="mt-2 text-sm leading-6 text-slate-600">{session.description}</p>
+                                  ) : null}
+                                </div>
+                                <span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${session.status === "COMPLETED" ? "bg-emerald-100 text-emerald-800" : "bg-sky-100 text-sky-800"}`}>
+                                  {session.status}
+                                </span>
+                              </div>
+                            </button>
+                          ))
+                        ) : (
+                          <EmptyState
+                            title="No sessions yet"
+                            description="Scheduled course interviews will appear here as soon as the instructor publishes one."
+                          />
+                        )}
+                      </div>
+                    </WorkspacePanel>
+                  </div>
                   <div className="space-y-4">
                     {assessmentsQuery.data?.quizzes.length ? (
                       assessmentsQuery.data.quizzes.map((quiz) => (
@@ -488,6 +531,63 @@ export default function CourseDetailsPage() {
               </>
             }
           />
+        </div>
+      ) : null}
+
+      {activeInterviewId && activeInterviewQuery.data ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
+          <div className="max-h-[92vh] w-full max-w-6xl overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Interview session</p>
+                <h2 className="mt-2 text-2xl font-semibold text-slate-950">{activeInterviewQuery.data.title}</h2>
+                <p className="mt-2 text-sm text-slate-600">
+                  {activeInterviewQuery.data.provider === "ZOOM" ? "Zoom" : "Google Meet"} • {formatCourseDate(activeInterviewQuery.data.scheduledAt)}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveInterviewId(null)}
+                className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
+              >
+                Close
+              </button>
+            </div>
+            <div className="grid gap-6 p-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+              <div className="space-y-4">
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-sm font-semibold text-slate-900">Session details</p>
+                  <p className="mt-3 text-sm text-slate-600">
+                    Instructor: {activeInterviewQuery.data.course.instructor.fullName}
+                  </p>
+                  <p className="mt-2 text-sm text-slate-600">
+                    Status: {activeInterviewQuery.data.status}
+                  </p>
+                  {activeInterviewQuery.data.description ? (
+                    <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-600">
+                      {activeInterviewQuery.data.description}
+                    </p>
+                  ) : null}
+                </div>
+                <a
+                  href={activeInterviewQuery.data.meetingUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white"
+                >
+                  Open join fallback
+                </a>
+              </div>
+              <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-950">
+                <iframe
+                  src={activeInterviewQuery.data.meetingUrl}
+                  title={activeInterviewQuery.data.title}
+                  className="h-[70vh] w-full bg-white"
+                  allow="camera; microphone; fullscreen; display-capture"
+                />
+              </div>
+            </div>
+          </div>
         </div>
       ) : null}
     </main>

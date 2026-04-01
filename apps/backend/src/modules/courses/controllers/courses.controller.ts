@@ -23,9 +23,13 @@ import { RolesGuard } from "../../../shared/guards/roles.guard";
 import type { JwtPayload } from "../../../shared/types/auth.types";
 import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
 import { CreateCourseDto } from "../dto/create-course.dto";
+import { CreateCourseInterviewDto } from "../dto/create-course-interview.dto";
 import { CourseQueryDto } from "../dto/course-query.dto";
+import { UpdateCourseInterviewDto } from "../dto/update-course-interview.dto";
+import { UpdateCourseInterviewStatusDto } from "../dto/update-course-interview-status.dto";
 import { UpdateCourseStatusDto } from "../dto/update-course-status.dto";
 import { UpdateCourseDto } from "../dto/update-course.dto";
+import { CourseInterviewsService } from "../services/course-interviews.service";
 import { CoursesService } from "../services/courses.service";
 
 type UploadedImageFile = {
@@ -39,7 +43,10 @@ type UploadedImageFile = {
 @UseGuards(JwtAuthGuard, TenantContextGuard, RolesGuard)
 @RequireTenant()
 export class CoursesController {
-  constructor(private readonly coursesService: CoursesService) {}
+  constructor(
+    private readonly coursesService: CoursesService,
+    private readonly courseInterviewsService: CourseInterviewsService
+  ) {}
 
   @Roles("INSTRUCTOR")
   @Post()
@@ -98,6 +105,55 @@ export class CoursesController {
   @Get(":id")
   getOne(@CurrentUser() user: JwtPayload, @Param("id") id: string) {
     return this.coursesService.getOne(user, id);
+  }
+
+  @Get(":id/interviews")
+  listInterviews(@CurrentUser() user: JwtPayload, @Param("id") id: string) {
+    return this.courseInterviewsService.listForCourse(user, id);
+  }
+
+  @Get("interviews/:interviewId")
+  getInterview(@CurrentUser() user: JwtPayload, @Param("interviewId") interviewId: string) {
+    return this.courseInterviewsService.getOne(user, interviewId);
+  }
+
+  @Roles("INSTRUCTOR")
+  @Post(":id/interviews")
+  createInterview(
+    @CurrentUser() user: JwtPayload,
+    @Param("id") id: string,
+    @Body() dto: CreateCourseInterviewDto
+  ) {
+    return this.courseInterviewsService.create(user, id, dto);
+  }
+
+  @Roles("INSTRUCTOR")
+  @Patch("interviews/:interviewId")
+  updateInterview(
+    @CurrentUser() user: JwtPayload,
+    @Param("interviewId") interviewId: string,
+    @Body() dto: UpdateCourseInterviewDto
+  ) {
+    return this.courseInterviewsService.update(user, interviewId, dto);
+  }
+
+  @Roles("INSTRUCTOR")
+  @Patch("interviews/:interviewId/status")
+  updateInterviewStatus(
+    @CurrentUser() user: JwtPayload,
+    @Param("interviewId") interviewId: string,
+    @Body() dto: UpdateCourseInterviewStatusDto
+  ) {
+    return this.courseInterviewsService.updateStatus(user, interviewId, dto);
+  }
+
+  @Roles("INSTRUCTOR")
+  @Patch("interviews/:interviewId/delete")
+  deleteInterview(
+    @CurrentUser() user: JwtPayload,
+    @Param("interviewId") interviewId: string
+  ) {
+    return this.courseInterviewsService.remove(user, interviewId);
   }
 
   @Roles("STUDENT")
