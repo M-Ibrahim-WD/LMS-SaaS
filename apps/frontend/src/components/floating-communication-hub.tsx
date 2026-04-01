@@ -16,6 +16,7 @@ import {
 import { useAuthStore } from "../store/auth.store";
 
 type HubPane = "DIRECT" | "SUPPORT" | null;
+type HubTab = "SUPPORT" | "MESSAGES";
 
 function HubIcon() {
   return (
@@ -72,6 +73,33 @@ function ReplyIcon() {
   );
 }
 
+function SpinnerIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4 animate-spin">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity="0.24" strokeWidth="2.5" />
+      <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function DeliveredIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
+      <path strokeLinecap="round" strokeLinejoin="round" d="m7.5 12.5 2.3 2.3 4.7-5.3" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="m12 12.5 2.3 2.3 4.7-5.3" />
+    </svg>
+  );
+}
+
+function getInitials(name?: string | null) {
+  if (!name) {
+    return "?";
+  }
+
+  const parts = name.trim().split(/\s+/).slice(0, 2);
+  return parts.map((part) => part[0]?.toUpperCase() ?? "").join("") || "?";
+}
+
 export function FloatingCommunicationHub() {
   const pathname = usePathname();
   const queryClient = useQueryClient();
@@ -79,11 +107,14 @@ export function FloatingCommunicationHub() {
   const accessToken = useAuthStore((state) => state.accessToken);
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const [open, setOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<HubTab>("SUPPORT");
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [activePane, setActivePane] = useState<HubPane>(null);
   const [composerText, setComposerText] = useState("");
+  const [deliveredAt, setDeliveredAt] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const unreadMarkerCountRef = useRef<Record<string, number>>({});
 
   const shouldRender =
     Boolean(hasHydrated && accessToken && user) &&
@@ -145,6 +176,7 @@ export function FloatingCommunicationHub() {
       }),
     onSuccess: async () => {
       setComposerText("");
+      setDeliveredAt(new Date().toISOString());
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["conversations"] }),
         queryClient.invalidateQueries({ queryKey: ["conversation", "hub", activeConversationId] }),
@@ -199,6 +231,15 @@ export function FloatingCommunicationHub() {
   }, [activeConversationId, open]);
 
   useEffect(() => {
+    if (!deliveredAt) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => setDeliveredAt(null), 2800);
+    return () => window.clearTimeout(timeout);
+  }, [deliveredAt]);
+
+  useEffect(() => {
     if (!accessToken || !activeConversationId) {
       return;
     }
@@ -238,6 +279,16 @@ export function FloatingCommunicationHub() {
   const activeConversation = activeConversationQuery.data ?? null;
 
   useEffect(() => {
+    if (!activeConversationId || !activeConversation || activeConversation.unreadCount <= 0) {
+      return;
+    }
+
+    if (unreadMarkerCountRef.current[activeConversationId] == null) {
+      unreadMarkerCountRef.current[activeConversationId] = activeConversation.unreadCount;
+    }
+  }, [activeConversation, activeConversationId]);
+
+  useEffect(() => {
     if (!open || !activeConversation || activeConversation.unreadCount === 0 || !activeConversationId) {
       return;
     }
@@ -273,6 +324,31 @@ export function FloatingCommunicationHub() {
 
   const groupedMessages = activeConversation ? groupConversationMessages(activeConversation.messages) : [];
 
+  const unreadMarkerMessageId = useMemo(() => {
+    if (!activeConversation || !activeConversationId) {
+      return null;
+    }
+
+    const unreadCount = unreadMarkerCountRef.current[activeConversationId] ?? 0;
+    if (unreadCount <= 0) {
+      return null;
+    }
+
+    let remaining = unreadCount;
+    for (let index = activeConversation.messages.length - 1; index >= 0; index -= 1) {
+      const message = activeConversation.messages[index];
+      if (message.sender.id === user?.id) {
+        continue;
+      }
+      remaining -= 1;
+      if (remaining === 0) {
+        return message.id;
+      }
+    }
+
+    return null;
+  }, [activeConversation, activeConversationId, user?.id]);
+
   useEffect(() => {
     if (!activeConversation || !open) {
       return;
@@ -287,6 +363,14 @@ export function FloatingCommunicationHub() {
 
   const showMessagesSection = pathname !== "/messages";
   const showSupportSection = pathname !== "/support";
+  const activeTabVisible =
+    activeTab === "MESSAGES"
+      ? showMessagesSection
+        ? "MESSAGES"
+        : "SUPPORT"
+      : showSupportSection
+        ? "SUPPORT"
+        : "MESSAGES";
 
   return (
     <div ref={containerRef} className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3">
@@ -299,6 +383,44 @@ export function FloatingCommunicationHub() {
       >
         {activeConversation ? (
           <div className="space-y-4">
+            <div className="flex rounded-full border border-slate-200 bg-slate-100/80 p-1">
+              {showSupportSection ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab("SUPPORT");
+                    setActiveConversationId(null);
+                    setActivePane(null);
+                    setComposerText("");
+                  }}
+                  className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                    activeTabVisible === "SUPPORT"
+                      ? "bg-emerald-600 text-white"
+                      : "text-slate-600 hover:text-emerald-700"
+                  }`}
+                >
+                  Support
+                </button>
+              ) : null}
+              {showMessagesSection ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab("MESSAGES");
+                    setActiveConversationId(null);
+                    setActivePane(null);
+                    setComposerText("");
+                  }}
+                  className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                    activeTabVisible === "MESSAGES"
+                      ? "bg-sky-600 text-white"
+                      : "text-slate-600 hover:text-sky-700"
+                  }`}
+                >
+                  Messages
+                </button>
+              ) : null}
+            </div>
             <div className="flex items-start justify-between gap-3">
               <div>
                 <button
@@ -308,10 +430,11 @@ export function FloatingCommunicationHub() {
                     setActivePane(null);
                     setComposerText("");
                   }}
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                  aria-label="Back to communication tabs"
+                  title="Back to communication tabs"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
                 >
                   <BackIcon />
-                  Back
                 </button>
                 <p className="section-kicker mt-3">
                   {activePane === "DIRECT" ? "Live Messages" : "Live Support"}
@@ -348,12 +471,17 @@ export function FloatingCommunicationHub() {
                         setActiveConversationId(conversation.id);
                         setComposerText("");
                       }}
-                      className={`shrink-0 rounded-full px-3 py-2 text-xs font-semibold transition ${
+                      className={`shrink-0 inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold transition ${
                         activeConversationId === conversation.id
                           ? "bg-sky-600 text-white"
                           : "border border-slate-200 bg-white text-slate-700 hover:border-sky-300 hover:text-sky-700"
                       }`}
                     >
+                      <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold ${
+                        activeConversationId === conversation.id ? "bg-white/20 text-white" : "bg-sky-100 text-sky-700"
+                      }`}>
+                        {getInitials(conversation.otherParticipant?.fullName)}
+                      </span>
                       {conversation.otherParticipant?.fullName ?? "Conversation"}
                     </button>
                   ))}
@@ -369,12 +497,17 @@ export function FloatingCommunicationHub() {
                         setActiveConversationId(conversation.id);
                         setComposerText("");
                       }}
-                      className={`shrink-0 rounded-full px-3 py-2 text-xs font-semibold transition ${
+                      className={`shrink-0 inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold transition ${
                         activeConversationId === conversation.id
                           ? "bg-emerald-600 text-white"
                           : "border border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:text-emerald-700"
                       }`}
                     >
+                      <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold ${
+                        activeConversationId === conversation.id ? "bg-white/20 text-white" : "bg-emerald-100 text-emerald-700"
+                      }`}>
+                        {getInitials(conversation.requester?.fullName)}
+                      </span>
                       {conversation.requester?.fullName ?? "Support"}
                     </button>
                   ))}
@@ -399,25 +532,37 @@ export function FloatingCommunicationHub() {
                     {group.items.map((message) => {
                       const isMine = message.sender.id === user?.id;
                       return (
-                        <div
-                          key={message.id}
-                          className={`max-w-[88%] rounded-[22px] px-4 py-3 shadow-sm ${
-                            isMine
-                              ? activePane === "DIRECT"
-                                ? "ml-auto bg-sky-600 text-white"
-                                : "ml-auto bg-emerald-600 text-white"
-                              : "bg-slate-100 text-slate-900"
-                          }`}
-                        >
-                          <p className="text-xs font-semibold opacity-80">
-                            {isMine ? "You" : message.sender.fullName}
-                          </p>
-                          <p className="mt-2 whitespace-pre-wrap text-sm leading-6">
-                            {message.body}
-                          </p>
-                          <p className={`mt-3 text-xs ${isMine ? "text-white/80" : "text-slate-500"}`}>
-                            {formatConversationDate(message.createdAt)}
-                          </p>
+                        <div key={message.id}>
+                          {!isMine && unreadMarkerMessageId === message.id ? (
+                            <div className="mb-3 flex justify-center">
+                              <span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] shadow-sm ${
+                                activePane === "DIRECT"
+                                  ? "bg-sky-100 text-sky-700"
+                                  : "bg-emerald-100 text-emerald-700"
+                              }`}>
+                                Unread replies
+                              </span>
+                            </div>
+                          ) : null}
+                          <div
+                            className={`max-w-[88%] rounded-[22px] px-4 py-3 shadow-sm ${
+                              isMine
+                                ? activePane === "DIRECT"
+                                  ? "ml-auto bg-sky-600 text-white"
+                                  : "ml-auto bg-emerald-600 text-white"
+                                : "bg-slate-100 text-slate-900"
+                            }`}
+                          >
+                            <p className="text-xs font-semibold opacity-80">
+                              {isMine ? "You" : message.sender.fullName}
+                            </p>
+                            <p className="mt-2 whitespace-pre-wrap text-sm leading-6">
+                              {message.body}
+                            </p>
+                            <p className={`mt-3 text-xs ${isMine ? "text-white/80" : "text-slate-500"}`}>
+                              {formatConversationDate(message.createdAt)}
+                            </p>
+                          </div>
                         </div>
                       );
                     })}
@@ -456,13 +601,54 @@ export function FloatingCommunicationHub() {
                       : "bg-emerald-600 hover:bg-emerald-700"
                   }`}
                 >
-                  {sendMessageMutation.isPending ? "Sending..." : "Send reply"}
+                  <span className="inline-flex items-center justify-center gap-2">
+                    {sendMessageMutation.isPending ? <SpinnerIcon /> : null}
+                    {sendMessageMutation.isPending ? "Sending..." : "Send reply"}
+                  </span>
                 </button>
+                {deliveredAt ? (
+                  <p className={`text-xs font-semibold ${
+                    activePane === "DIRECT" ? "text-sky-700" : "text-emerald-700"
+                  }`}>
+                    <span className="inline-flex items-center gap-2">
+                      <DeliveredIcon />
+                      Delivered {formatRelativeConversationTime(deliveredAt)}
+                    </span>
+                  </p>
+                ) : null}
               </div>
             </div>
           </div>
         ) : (
           <>
+            <div className="flex rounded-full border border-slate-200 bg-slate-100/80 p-1">
+              {showSupportSection ? (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("SUPPORT")}
+                  className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                    activeTabVisible === "SUPPORT"
+                      ? "bg-emerald-600 text-white"
+                      : "text-slate-600 hover:text-emerald-700"
+                  }`}
+                >
+                  Support
+                </button>
+              ) : null}
+              {showMessagesSection ? (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("MESSAGES")}
+                  className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                    activeTabVisible === "MESSAGES"
+                      ? "bg-sky-600 text-white"
+                      : "text-slate-600 hover:text-sky-700"
+                  }`}
+                >
+                  Messages
+                </button>
+              ) : null}
+            </div>
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="section-kicker">Communication Hub</p>
@@ -481,7 +667,7 @@ export function FloatingCommunicationHub() {
             </div>
 
             <div className="mt-5 space-y-3">
-              {showMessagesSection ? (
+              {activeTabVisible === "MESSAGES" && showMessagesSection ? (
                 <div className="rounded-[22px] border border-sky-200 bg-sky-50/80 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -533,7 +719,7 @@ export function FloatingCommunicationHub() {
                 </div>
               ) : null}
 
-              {showSupportSection ? (
+              {activeTabVisible === "SUPPORT" && showSupportSection ? (
                 <div className="rounded-[22px] border border-emerald-200 bg-emerald-50/80 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -593,7 +779,17 @@ export function FloatingCommunicationHub() {
         type="button"
         aria-label={open ? "Close communication hub" : "Open communication hub"}
         title="Communication"
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => {
+          setOpen((current) => {
+            if (!current) {
+              setActiveTab("SUPPORT");
+              setActiveConversationId(null);
+              setActivePane(null);
+              setComposerText("");
+            }
+            return !current;
+          });
+        }}
         className={`group relative inline-flex h-14 w-14 items-center justify-center rounded-full bg-slate-950 text-white shadow-[0_20px_45px_-18px_rgba(15,23,42,0.7)] transition duration-200 hover:-translate-y-1 hover:bg-slate-900 hover:shadow-[0_24px_55px_-18px_rgba(15,23,42,0.82)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-300 ${
           totalUnread > 0 ? "hub-launcher-pulse" : ""
         }`}
