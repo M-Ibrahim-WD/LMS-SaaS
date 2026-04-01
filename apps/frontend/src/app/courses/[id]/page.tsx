@@ -580,7 +580,7 @@ export default function CourseDetailsPage() {
 
       {activeInterviewId && activeInterviewQuery.data ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
-          <div className="max-h-[92vh] w-full max-w-6xl overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-2xl">
+          <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-2xl">
             <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Interview session</p>
@@ -617,8 +617,9 @@ export default function CourseDetailsPage() {
                 Close
               </button>
             </div>
-            <div className="grid gap-6 p-6 lg:grid-cols-[320px_minmax(0,1fr)]">
-              <div className="space-y-4">
+            <div className="min-h-0 overflow-y-auto p-6">
+              <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+                <div className="space-y-4">
                 <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
                   <p className="text-sm font-semibold text-slate-900">Session details</p>
                   <p className="mt-3 text-sm text-slate-600">
@@ -651,14 +652,14 @@ export default function CourseDetailsPage() {
                     ? `Join now in ${activeInterviewQuery.data.provider === "ZOOM" ? "Zoom" : "Google Meet"}`
                     : providerLaunchLabel(activeInterviewQuery.data.provider)}
                 </a>
-              </div>
-              <div className="rounded-[28px] border border-slate-200 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.18),transparent_34%),linear-gradient(160deg,#0f172a_0%,#111827_45%,#1f2937_100%)] p-8 text-white">
-                <div className="flex h-full min-h-[70vh] flex-col justify-between">
+                </div>
+                <div className="rounded-[28px] border border-slate-200 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.18),transparent_34%),linear-gradient(160deg,#0f172a_0%,#111827_45%,#1f2937_100%)] p-6 text-white lg:p-8">
+                <div className="flex h-full min-h-[420px] flex-col justify-between gap-6">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/60">
                       Platform interview launch
                     </p>
-                    <h3 className="mt-4 text-3xl font-semibold tracking-tight">
+                    <h3 className="mt-4 text-2xl font-semibold tracking-tight lg:text-3xl">
                       {activeInterviewQuery.data.provider === "ZOOM" ? "Zoom" : "Google Meet"} will open outside the LMS
                     </h3>
                     <p className="mt-4 max-w-2xl text-sm leading-7 text-white/75">
@@ -666,7 +667,7 @@ export default function CourseDetailsPage() {
                     </p>
                   </div>
 
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className="grid gap-4 sm:grid-cols-2">
                     <div className="rounded-[24px] border border-white/10 bg-white/8 p-5">
                       <p className="text-xs uppercase tracking-[0.18em] text-white/55">Provider</p>
                       <p className="mt-2 text-lg font-semibold">
@@ -716,6 +717,7 @@ export default function CourseDetailsPage() {
               </div>
             </div>
           </div>
+        </div>
         </div>
       ) : null}
     </main>
