@@ -10,6 +10,7 @@ import { CreateDirectConversationDto } from "./dto/create-direct-conversation.dt
 import { CreateGroupConversationDto } from "./dto/create-group-conversation.dto";
 import { CreateMessageDto } from "./dto/create-message.dto";
 import { CreateSupportConversationDto } from "./dto/create-support-conversation.dto";
+import { UpdateGroupConversationDto } from "./dto/update-group-conversation.dto";
 import { UpdateConversationStatusDto } from "./dto/update-conversation-status.dto";
 import { CommunicationsService } from "./services/communications.service";
 
@@ -43,6 +44,16 @@ export class CommunicationsController {
   @Post("conversations/group")
   createGroupConversation(@CurrentUser() user: JwtPayload, @Body() dto: CreateGroupConversationDto) {
     return this.communicationsService.createGroupConversation(user, dto);
+  }
+
+  @Roles("INSTRUCTOR")
+  @Patch("conversations/:id/group")
+  updateGroupConversation(
+    @CurrentUser() user: JwtPayload,
+    @Param("id") id: string,
+    @Body() dto: UpdateGroupConversationDto
+  ) {
+    return this.communicationsService.updateGroupConversation(user, id, dto);
   }
 
   @Post("conversations/support")

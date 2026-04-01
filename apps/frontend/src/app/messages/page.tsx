@@ -215,6 +215,58 @@ export default function MessagesPage() {
                         ? `${active.participantCount} participants${active.course ? ` • ${active.course.title}` : ""}`
                         : "Messages update live while the conversation is open."}
                     </p>
+                    {active.kind === "GROUP" ? (
+                      <div className="mt-4 grid gap-3 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                        <input
+                          value={workspace.groupEditTitle}
+                          onChange={(event) => workspace.setGroupEditTitle(event.target.value)}
+                          disabled={!isInstructor || active.groupInstructor?.id !== workspace.user?.id}
+                          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700"
+                        />
+                        {active.groupScope === "SELECTED" && isInstructor && active.groupInstructor?.id === workspace.user?.id ? (
+                          <div className="max-h-36 space-y-2 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-3">
+                            {(workspace.groupTargetsQuery.data?.students ?? []).map((student) => {
+                              const selected = workspace.groupEditStudentIds.includes(student.id);
+                              return (
+                                <label key={student.id} className="flex items-center gap-3 rounded-2xl bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                                  <input
+                                    type="checkbox"
+                                    checked={selected}
+                                    onChange={(event) => {
+                                      workspace.setGroupEditStudentIds(
+                                        event.target.checked
+                                          ? [...workspace.groupEditStudentIds, student.id]
+                                          : workspace.groupEditStudentIds.filter((id) => id !== student.id)
+                                      );
+                                    }}
+                                  />
+                                  <span>{student.fullName}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        ) : null}
+                        {isInstructor && active.groupInstructor?.id === workspace.user?.id ? (
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={() => void workspace.onUpdateActiveGroup()}
+                              disabled={workspace.updateGroupMutation.isPending}
+                              className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
+                            >
+                              {workspace.updateGroupMutation.isPending
+                                ? "Saving..."
+                                : active.groupScope === "SELECTED"
+                                  ? "Save title and members"
+                                  : "Save / sync audience"}
+                            </button>
+                            {workspace.groupError ? (
+                              <p className="self-center text-sm text-rose-600">{workspace.groupError}</p>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
                   {active.kind === "GROUP" && isInstructor && active.groupInstructor?.id === workspace.user?.id ? (
                     <button

@@ -46,6 +46,8 @@ export function useConversationsWorkspace({ kind }: UseConversationsWorkspaceOpt
   const [groupCourseId, setGroupCourseId] = useState("");
   const [groupStudentIds, setGroupStudentIds] = useState<string[]>([]);
   const [groupError, setGroupError] = useState<string | null>(null);
+  const [groupEditTitle, setGroupEditTitle] = useState("");
+  const [groupEditStudentIds, setGroupEditStudentIds] = useState<string[]>([]);
   const lastMarkedConversationRef = useRef<string | null>(null);
   const initialDirectTargetRef = useRef<string | null>(null);
 
@@ -243,6 +245,31 @@ export function useConversationsWorkspace({ kind }: UseConversationsWorkspaceOpt
     }
   });
 
+  const updateGroupMutation = useMutation({
+    mutationFn: () =>
+      apiFetch<ConversationSummary>(`/conversations/${activeConversationId}/group`, {
+        method: "PATCH",
+        token: accessToken ?? undefined,
+        body: JSON.stringify({
+          title: groupEditTitle,
+          studentIds:
+            activeConversation?.groupScope === "SELECTED" ? groupEditStudentIds : undefined
+        })
+      }),
+    onSuccess: async (conversation) => {
+      setGroupError(null);
+      setActiveConversationId(conversation.id);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["conversations"] }),
+        queryClient.invalidateQueries({ queryKey: ["conversation", activeConversationId] }),
+        queryClient.invalidateQueries({ queryKey: ["notifications"] })
+      ]);
+    },
+    onError: (error) => {
+      setGroupError(error instanceof Error ? error.message : "Could not update the group.");
+    }
+  });
+
   useEffect(() => {
     if (kind === "SUPPORT") {
       return;
@@ -398,6 +425,21 @@ export function useConversationsWorkspace({ kind }: UseConversationsWorkspaceOpt
     return "Open";
   }, [activeConversation]);
 
+  useEffect(() => {
+    if (activeConversation?.kind !== "GROUP") {
+      setGroupEditTitle("");
+      setGroupEditStudentIds([]);
+      return;
+    }
+
+    setGroupEditTitle(activeConversation.groupTitle ?? "");
+    setGroupEditStudentIds(
+      activeConversation.participantPreview
+        .filter((participant) => participant.role === "STUDENT")
+        .map((participant) => participant.id)
+    );
+  }, [activeConversation]);
+
   return {
     accessToken,
     user,
@@ -440,10 +482,15 @@ export function useConversationsWorkspace({ kind }: UseConversationsWorkspaceOpt
     groupStudentIds,
     setGroupStudentIds,
     groupError,
+    groupEditTitle,
+    setGroupEditTitle,
+    groupEditStudentIds,
+    setGroupEditStudentIds,
     sendMessageMutation,
     createDirectMutation,
     createGroupMutation,
     deleteGroupMutation,
+    updateGroupMutation,
     createSupportMutation,
     updateStatusMutation,
     assignToSelfMutation,
@@ -487,6 +534,20 @@ export function useConversationsWorkspace({ kind }: UseConversationsWorkspaceOpt
         return;
       }
       await deleteGroupMutation.mutateAsync(activeConversationId);
+    },
+    onUpdateActiveGroup: async () => {
+      if (!activeConversationId || activeConversation?.kind !== "GROUP") {
+        return;
+      }
+      if (!groupEditTitle.trim()) {
+        setGroupError("Add a group title first.");
+        return;
+      }
+      if (activeConversation.groupScope === "SELECTED" && groupEditStudentIds.length === 0) {
+        setGroupError("Choose at least one student.");
+        return;
+      }
+      await updateGroupMutation.mutateAsync();
     },
     onCreateSupportConversation: async () => {
       if (!supportMessage.trim()) {

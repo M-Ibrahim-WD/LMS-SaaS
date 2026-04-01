@@ -23,6 +23,7 @@ import { CreateDirectConversationDto } from "../dto/create-direct-conversation.d
 import { CreateGroupConversationDto } from "../dto/create-group-conversation.dto";
 import { CreateMessageDto } from "../dto/create-message.dto";
 import { CreateSupportConversationDto } from "../dto/create-support-conversation.dto";
+import { UpdateGroupConversationDto } from "../dto/update-group-conversation.dto";
 import { UpdateConversationStatusDto } from "../dto/update-conversation-status.dto";
 import { CommunicationEventsService } from "./communication-events.service";
 
@@ -289,6 +290,104 @@ export class CommunicationsService {
     );
 
     return this.toConversationSummary(created, currentUser, false);
+  }
+
+  async updateGroupConversation(
+    currentUser: JwtPayload,
+    conversationId: string,
+    dto: UpdateGroupConversationDto
+  ) {
+    if (currentUser.role !== "INSTRUCTOR" || !currentUser.tenantId) {
+      throw new ForbiddenException("Only instructors can update group chats.");
+    }
+
+    const conversation = await this.prisma.conversation.findUnique({
+      where: { id: conversationId },
+      include: CONVERSATION_INCLUDE
+    });
+
+    if (!conversation || conversation.kind !== ConversationKind.GROUP) {
+      throw new NotFoundException("Group conversation not found.");
+    }
+
+    if (conversation.groupInstructorId !== currentUser.sub) {
+      throw new ForbiddenException("Only the instructor who created this group can update it.");
+    }
+
+    const nextStudentIds = await this.resolveUpdatedGroupParticipants(
+      currentUser,
+      conversation,
+      dto.studentIds
+    );
+
+    const participantIds = Array.from(new Set([currentUser.sub, ...nextStudentIds]));
+    const existingParticipantIds = conversation.participants.map((participant) => participant.userId);
+    const addedUserIds = participantIds.filter((userId) => !existingParticipantIds.includes(userId));
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.conversation.update({
+        where: { id: conversationId },
+        data: {
+          ...(dto.title ? { groupTitle: dto.title.trim() } : {})
+        }
+      });
+
+      await tx.conversationParticipant.deleteMany({
+        where: {
+          conversationId,
+          userId: {
+            notIn: participantIds
+          }
+        }
+      });
+
+      for (const userId of participantIds) {
+        await tx.conversationParticipant.upsert({
+          where: {
+            conversationId_userId: {
+              conversationId,
+              userId
+            }
+          },
+          update: {},
+          create: {
+            conversationId,
+            userId,
+            roleSnapshot: userId === currentUser.sub ? UserRole.INSTRUCTOR : UserRole.STUDENT,
+            lastReadAt: userId === currentUser.sub ? new Date() : null
+          }
+        });
+      }
+    });
+
+    if (addedUserIds.length > 0) {
+      const title = dto.title?.trim() || conversation.groupTitle || "a group conversation";
+      await Promise.all(
+        addedUserIds
+          .filter((userId) => userId !== currentUser.sub)
+          .map((userId) =>
+            this.notificationsService.create({
+              userId,
+              tenantId: conversation.tenantId,
+              type: NotificationType.GROUP_ADDED,
+              title: "You were added to a group chat",
+              message: `You were added to ${title}.`,
+              payload: { conversationId, kind: ConversationKind.GROUP }
+            })
+          )
+      );
+    }
+
+    const refreshed = await this.prisma.conversation.findUnique({
+      where: { id: conversationId },
+      include: CONVERSATION_INCLUDE
+    });
+
+    if (!refreshed) {
+      throw new NotFoundException("Group conversation not found.");
+    }
+
+    return this.toConversationSummary(refreshed, currentUser, false);
   }
 
   async createSupportConversation(currentUser: JwtPayload, dto: CreateSupportConversationDto) {
@@ -724,6 +823,72 @@ export class CommunicationsService {
     return { title, courseId, participantIds };
   }
 
+  private async resolveUpdatedGroupParticipants(
+    currentUser: JwtPayload,
+    conversation: any,
+    requestedStudentIds?: string[]
+  ) {
+    if (!currentUser.tenantId) {
+      throw new ForbiddenException("Instructor workspace is required.");
+    }
+
+    if (conversation.groupScope === ConversationGroupScope.COURSE) {
+      if (!conversation.courseId) {
+        throw new BadRequestException("Course-linked group is missing its course reference.");
+      }
+
+      const course = await this.prisma.course.findFirst({
+        where: {
+          id: conversation.courseId,
+          instructorId: currentUser.sub,
+          tenantId: currentUser.tenantId
+        },
+        select: { id: true }
+      });
+
+      if (!course) {
+        throw new ForbiddenException("Course group target is no longer available.");
+      }
+
+      const enrollments = await this.prisma.enrollment.findMany({
+        where: { courseId: course.id },
+        select: { userId: true }
+      });
+
+      return enrollments.map((enrollment) => enrollment.userId);
+    }
+
+    if (conversation.groupScope === ConversationGroupScope.FOLLOWERS) {
+      const relations = await this.prisma.studentInstructor.findMany({
+        where: { instructorId: currentUser.sub },
+        select: { studentId: true }
+      });
+      return relations.map((relation) => relation.studentId);
+    }
+
+    const selectedIds = Array.from(new Set(requestedStudentIds ?? []));
+    if (!selectedIds.length) {
+      throw new BadRequestException("Select at least one student for this group.");
+    }
+
+    const relations = await this.prisma.studentInstructor.findMany({
+      where: {
+        instructorId: currentUser.sub,
+        studentId: {
+          in: selectedIds
+        }
+      },
+      select: { studentId: true }
+    });
+
+    const studentIds = relations.map((relation) => relation.studentId);
+    if (studentIds.length !== selectedIds.length) {
+      throw new ForbiddenException("One or more selected students are not part of your workspace.");
+    }
+
+    return studentIds;
+  }
+
   private async getAccessibleConversation(currentUser: JwtPayload, conversationId: string) {
     const conversation = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
@@ -770,7 +935,6 @@ export class CommunicationsService {
     const latestMessage = conversation.messages[0] ?? null;
     const participantPreview = conversation.participants
       .filter((participant: { userId: string }) => participant.userId !== currentUser.sub)
-      .slice(0, 4)
       .map((participant: { user: unknown }) => participant.user);
 
     const otherParticipant =
