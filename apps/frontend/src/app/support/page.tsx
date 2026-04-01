@@ -191,8 +191,8 @@ export default function SupportPage() {
                       {conversation.assignedAdmin
                         ? `Assigned to ${conversation.assignedAdmin.fullName}`
                         : conversation.status === "OPEN"
-                          ? "Open · Unassigned"
-                          : "Closed · Unassigned"}
+                          ? "Open - Unassigned"
+                          : "Closed - Unassigned"}
                     </p>
                   </button>
                 ))
@@ -324,3 +324,4 @@ export default function SupportPage() {
     </PageShell>
   );
 }
+

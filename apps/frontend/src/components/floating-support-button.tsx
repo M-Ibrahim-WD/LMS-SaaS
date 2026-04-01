@@ -38,6 +38,15 @@ function PlusMessageIcon() {
   );
 }
 
+function ReplyArrowIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4.5 w-4.5">
+      <path strokeLinecap="round" strokeLinejoin="round" d="m10 8-4 4 4 4" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 12h7.5a4.5 4.5 0 0 1 4.5 4.5V17" />
+    </svg>
+  );
+}
+
 export function FloatingSupportButton() {
   const pathname = usePathname();
   const user = useAuthStore((state) => state.user);
@@ -108,19 +117,28 @@ export function FloatingSupportButton() {
 
   return (
     <div ref={containerRef} className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3">
-      {open ? (
-        <div className="surface-card-strong w-[min(92vw,22rem)] rounded-[28px] p-5">
+      <div
+        className={`surface-card-strong w-[min(92vw,22rem)] rounded-[28px] p-5 transition duration-200 ${
+          open
+            ? "pointer-events-auto translate-y-0 scale-100 opacity-100"
+            : "pointer-events-none translate-y-3 scale-95 opacity-0"
+        }`}
+      >
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="section-kicker">Support</p>
               <h3 className="mt-2 text-lg font-semibold text-slate-950">Need help quickly?</h3>
               <p className="mt-2 text-sm leading-6 text-slate-600">{statusText}</p>
             </div>
-            {unreadCount > 0 ? (
-              <span className="inline-flex min-w-7 items-center justify-center rounded-full bg-slate-950 px-2.5 py-1 text-xs font-semibold text-white">
-                {unreadCount}
-              </span>
-            ) : null}
+            <span
+              className={`inline-flex min-w-7 items-center justify-center rounded-full px-2.5 py-1 text-xs font-semibold ${
+                unreadCount > 0
+                  ? "bg-slate-950 text-white"
+                  : "border border-slate-200 bg-white text-slate-600"
+              }`}
+            >
+              {unreadCount > 0 ? `${unreadCount} unread` : "All clear"}
+            </span>
           </div>
 
           {latestUnread ? (
@@ -134,10 +152,18 @@ export function FloatingSupportButton() {
               <p className="mt-1 line-clamp-2 text-sm leading-6 text-slate-600">
                 {latestUnread.latestMessage?.body ?? "A support update is waiting for you."}
               </p>
+              <Link
+                href={`/support?conversationId=${latestUnread.id}`}
+                onClick={() => setOpen(false)}
+                className="mt-3 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100"
+              >
+                <ReplyArrowIcon />
+                Open latest reply
+              </Link>
             </div>
           ) : null}
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <div className={`mt-5 grid gap-3 ${latestUnread ? "" : "sm:grid-cols-2"}`}>
             <Link
               href="/support"
               onClick={() => setOpen(false)}
@@ -155,8 +181,7 @@ export function FloatingSupportButton() {
               New request
             </Link>
           </div>
-        </div>
-      ) : null}
+      </div>
 
       <button
         type="button"
