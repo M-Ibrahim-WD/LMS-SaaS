@@ -246,6 +246,63 @@ export default function CourseDetailsPage() {
 
       {canAccessLessons ? (
         <div className="mt-6">
+          <div className="mb-6">
+            <WorkspacePanel
+              title="Interview sessions"
+              description="Open scheduled Zoom or Google Meet sessions from a large platform launch screen."
+            >
+              <div className="space-y-3">
+                {(interviewSessionsQuery.data ?? []).length ? (
+                  (interviewSessionsQuery.data ?? []).map((session) => (
+                    <button
+                      key={session.id}
+                      type="button"
+                      onClick={() => setActiveInterviewId(session.id)}
+                      className="w-full rounded-3xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-slate-300"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="text-base font-semibold text-slate-950">{session.title}</p>
+                          <p className="mt-1 text-sm text-slate-600">
+                            {session.provider === "ZOOM" ? "Zoom" : "Google Meet"} • {formatCourseDate(session.scheduledAt)}
+                          </p>
+                          {session.description ? (
+                            <p className="mt-2 text-sm leading-6 text-slate-600">{session.description}</p>
+                          ) : null}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <span
+                            className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${
+                              session.isJoinReady
+                                ? "bg-emerald-100 text-emerald-800"
+                                : "bg-sky-100 text-sky-800"
+                            }`}
+                          >
+                            {session.isJoinReady ? "Join now" : session.status}
+                          </span>
+                          <span
+                            className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${
+                              session.isJoinReady
+                                ? "bg-emerald-100 text-emerald-800"
+                                : "bg-amber-100 text-amber-800"
+                            }`}
+                          >
+                            {formatInterviewCountdown(session.scheduledAt)}
+                          </span>
+                        </div>
+                      </div>
+                    </button>
+                  ))
+                ) : (
+                  <EmptyState
+                    title="No sessions yet"
+                    description="Scheduled course interviews will appear here as soon as the instructor publishes one."
+                  />
+                )}
+              </div>
+            </WorkspacePanel>
+          </div>
+
           <WorkspaceShell
             sidebar={
               <WorkspacePanel title="Course navigation" description="Move through the course like a real learning workspace.">
@@ -336,62 +393,6 @@ export default function CourseDetailsPage() {
                 )}
 
                 <WorkspacePanel title="Quizzes" description="Assess understanding with structured submissions and visible result states.">
-                  <div className="mb-5">
-                    <WorkspacePanel
-                      title="Interview sessions"
-                      description="Open scheduled Zoom or Google Meet sessions from a large platform launch screen."
-                    >
-                      <div className="space-y-3">
-                        {(interviewSessionsQuery.data ?? []).length ? (
-                          (interviewSessionsQuery.data ?? []).map((session) => (
-                            <button
-                              key={session.id}
-                              type="button"
-                              onClick={() => setActiveInterviewId(session.id)}
-                              className="w-full rounded-3xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-slate-300"
-                            >
-                              <div className="flex flex-wrap items-start justify-between gap-3">
-                                <div>
-                                  <p className="text-base font-semibold text-slate-950">{session.title}</p>
-                                  <p className="mt-1 text-sm text-slate-600">
-                                    {session.provider === "ZOOM" ? "Zoom" : "Google Meet"} • {formatCourseDate(session.scheduledAt)}
-                                  </p>
-                                  {session.description ? (
-                                    <p className="mt-2 text-sm leading-6 text-slate-600">{session.description}</p>
-                                  ) : null}
-                                </div>
-                                <div className="flex flex-wrap gap-2">
-                                  <span
-                                    className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${
-                                      session.isJoinReady
-                                        ? "bg-emerald-100 text-emerald-800"
-                                        : "bg-sky-100 text-sky-800"
-                                    }`}
-                                  >
-                                    {session.isJoinReady ? "Join now" : session.status}
-                                  </span>
-                                  <span
-                                    className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${
-                                      session.isJoinReady
-                                        ? "bg-emerald-100 text-emerald-800"
-                                        : "bg-amber-100 text-amber-800"
-                                    }`}
-                                  >
-                                    {formatInterviewCountdown(session.scheduledAt)}
-                                  </span>
-                                </div>
-                              </div>
-                            </button>
-                          ))
-                        ) : (
-                          <EmptyState
-                            title="No sessions yet"
-                            description="Scheduled course interviews will appear here as soon as the instructor publishes one."
-                          />
-                        )}
-                      </div>
-                    </WorkspacePanel>
-                  </div>
                   <div className="space-y-4">
                     {assessmentsQuery.data?.quizzes.length ? (
                       assessmentsQuery.data.quizzes.map((quiz) => (
