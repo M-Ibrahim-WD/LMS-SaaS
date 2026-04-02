@@ -711,53 +711,55 @@ export default function CourseDetailsPage() {
 
       {activeInterviewId && activeInterview ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-slate-950/60 p-3 sm:p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-slate-950/60 p-2 sm:p-4"
           onClick={(event) => {
             if (event.target === event.currentTarget) {
               setActiveInterviewId(null);
             }
           }}
         >
-          <div className="flex w-full max-w-3xl flex-col overflow-hidden rounded-[26px] border border-emerald-200 bg-white shadow-2xl">
-            <div className="flex items-start justify-between gap-4 border-b border-emerald-100 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.16),transparent_28%),linear-gradient(145deg,#f8fffc_0%,#ecfdf5_52%,#f0fdfa_100%)] px-5 py-4">
-              <div>
+          <div className="flex w-full max-w-2xl flex-col overflow-hidden rounded-[24px] border border-emerald-200 bg-white shadow-2xl">
+            <div className="flex flex-col gap-4 border-b border-emerald-100 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.16),transparent_28%),linear-gradient(145deg,#f8fffc_0%,#ecfdf5_52%,#f0fdfa_100%)] px-4 py-4 sm:px-5">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Live session launch</p>
-                <h2 className="mt-2 text-xl font-semibold text-slate-950">{activeInterview.title}</h2>
-                <p className="mt-2 text-sm text-slate-600">
+                <h2 className="mt-2 break-words text-lg font-semibold text-slate-950 sm:text-xl">{activeInterview.title}</h2>
+                <p className="mt-2 break-words text-sm text-slate-600">
                   {activeInterview.provider === "ZOOM" ? "Zoom" : "Google Meet"} - {formatCourseDate(activeInterview.scheduledAt)}
                 </p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <span
-                    className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${
-                      activeInterview.isJoinReady
-                        ? "bg-emerald-100 text-emerald-800"
-                        : "bg-sky-100 text-sky-800"
-                    }`}
-                  >
-                    {activeInterview.isJoinReady ? "Join now" : activeInterview.status}
-                  </span>
-                  <span
-                    className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${
-                      activeInterview.isJoinReady
-                        ? "bg-emerald-100 text-emerald-800"
-                        : "bg-amber-100 text-amber-800"
-                    }`}
-                  >
-                    {activeInterview.isJoinReady ? "Live now" : `Starts in ${formatInterviewCountdown(activeInterview.scheduledAt, countdownNow)}`}
-                  </span>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveInterviewId(null)}
+                  className="shrink-0 rounded-full border border-emerald-200 bg-white/90 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700"
+                >
+                  Close
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setActiveInterviewId(null)}
-                className="rounded-full border border-emerald-200 bg-white/90 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700"
-              >
-                Close
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <span
+                  className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${
+                    activeInterview.isJoinReady
+                      ? "bg-emerald-100 text-emerald-800"
+                      : "bg-sky-100 text-sky-800"
+                  }`}
+                >
+                  {activeInterview.isJoinReady ? "Join now" : activeInterview.status}
+                </span>
+                <span
+                  className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${
+                    activeInterview.isJoinReady
+                      ? "bg-emerald-100 text-emerald-800"
+                      : "bg-amber-100 text-amber-800"
+                  }`}
+                >
+                  {activeInterview.isJoinReady ? "Live now" : `Starts in ${formatInterviewCountdown(activeInterview.scheduledAt, countdownNow)}`}
+                </span>
+              </div>
             </div>
-            <div className="p-4 sm:p-5">
-              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
-                <div className="rounded-[22px] border border-emerald-200 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.22),transparent_34%),linear-gradient(160deg,#052e2b_0%,#0f3d36_45%,#115e59_100%)] p-4 text-white sm:p-5">
+            <div className="p-3 sm:p-4">
+              <div className="grid gap-3">
+                <div className="rounded-[20px] border border-emerald-200 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.22),transparent_34%),linear-gradient(160deg,#052e2b_0%,#0f3d36_45%,#115e59_100%)] p-4 text-white sm:p-5">
                   <div className="grid gap-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="rounded-full bg-white/12 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-50">
@@ -780,7 +782,7 @@ export default function CourseDetailsPage() {
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div className="rounded-[18px] border border-white/10 bg-white/10 p-3.5">
                         <p className="text-xs uppercase tracking-[0.18em] text-white/55">Starts</p>
-                        <p className="mt-2 text-sm font-semibold sm:text-base">{formatCourseDate(activeInterview.scheduledAt)}</p>
+                        <p className="mt-2 break-words text-sm font-semibold sm:text-base">{formatCourseDate(activeInterview.scheduledAt)}</p>
                       </div>
                       <div className="rounded-[18px] border border-white/10 bg-white/10 p-3.5">
                         <p className="text-xs uppercase tracking-[0.18em] text-white/55">Countdown</p>
@@ -790,11 +792,11 @@ export default function CourseDetailsPage() {
                       </div>
                       <div className="rounded-[18px] border border-white/10 bg-white/10 p-3.5">
                         <p className="text-xs uppercase tracking-[0.18em] text-white/55">Course</p>
-                        <p className="mt-2 text-sm font-semibold sm:text-base">{activeInterview.course.title}</p>
+                        <p className="mt-2 break-words text-sm font-semibold sm:text-base">{activeInterview.course.title}</p>
                       </div>
                       <div className="rounded-[18px] border border-white/10 bg-white/10 p-3.5">
                         <p className="text-xs uppercase tracking-[0.18em] text-white/55">Instructor</p>
-                        <p className="mt-2 text-sm font-semibold sm:text-base">{activeInterview.course.instructor.fullName}</p>
+                        <p className="mt-2 break-words text-sm font-semibold sm:text-base">{activeInterview.course.instructor.fullName}</p>
                       </div>
                     </div>
 
@@ -809,12 +811,12 @@ export default function CourseDetailsPage() {
                       </div>
                     ) : null}
 
-                    <div className="flex flex-wrap gap-3">
+                    <div className="grid gap-2 sm:grid-cols-2">
                       <button
                         type="button"
                         onClick={() => void handleLaunchInterview()}
                         disabled={recordInterviewAttendanceMutation.isPending || !activeInterview.isJoinReady}
-                        className={`inline-flex rounded-full px-5 py-3 text-sm font-semibold transition ${
+                        className={`inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-semibold transition ${
                           activeInterview.isJoinReady
                             ? "bg-emerald-500 text-slate-950 hover:bg-emerald-400"
                             : "bg-white/80 text-slate-700"
@@ -829,7 +831,7 @@ export default function CourseDetailsPage() {
                       <button
                         type="button"
                         onClick={() => navigator.clipboard.writeText(activeInterview.meetingUrl)}
-                        className="inline-flex rounded-full border border-white/20 px-5 py-3 text-sm font-semibold text-white transition hover:border-white/35 hover:bg-white/10"
+                        className="inline-flex w-full items-center justify-center rounded-full border border-white/20 px-5 py-3 text-sm font-semibold text-white transition hover:border-white/35 hover:bg-white/10"
                       >
                         Copy link
                       </button>
@@ -837,7 +839,7 @@ export default function CourseDetailsPage() {
                   </div>
                 </div>
 
-                <div className="grid content-start gap-3">
+                <div className="grid gap-3 sm:grid-cols-2">
                   <div className="rounded-[18px] border border-emerald-100 bg-emerald-50/70 p-3.5">
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Status</p>
                     <p className="mt-2 text-base font-semibold text-slate-950">
@@ -851,7 +853,7 @@ export default function CourseDetailsPage() {
                   </div>
                   <div className="rounded-[18px] border border-slate-200 bg-white p-3.5">
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Attendance</p>
-                    <div className="mt-3 space-y-2.5">
+                    <div className="mt-3 grid gap-2">
                       <div className="rounded-2xl bg-slate-50 p-3">
                         <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Students recorded</p>
                         <p className="mt-1 text-lg font-semibold text-slate-950">{activeInterview.attendanceCount ?? 0}</p>
