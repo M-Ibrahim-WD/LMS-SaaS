@@ -285,6 +285,15 @@ export default function CourseDetailsPage() {
                                 Next live session
                               </span>
                             ) : null}
+                            {index === 0 && session.isJoinReady ? (
+                              <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                                <span className="relative inline-flex h-2.5 w-2.5">
+                                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500/70" />
+                                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                                </span>
+                                Live now
+                              </span>
+                            ) : null}
                             <span className="rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-800">
                               {session.provider === "ZOOM" ? "Zoom" : "Google Meet"}
                             </span>
