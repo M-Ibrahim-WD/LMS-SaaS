@@ -247,60 +247,83 @@ export default function CourseDetailsPage() {
       {canAccessLessons ? (
         <div className="mt-6">
           <div className="mb-6">
-            <WorkspacePanel
-              title="Interview sessions"
-              description="Open scheduled Zoom or Google Meet sessions from a large platform launch screen."
-            >
-              <div className="space-y-3">
-                {(interviewSessionsQuery.data ?? []).length ? (
-                  (interviewSessionsQuery.data ?? []).map((session) => (
-                    <button
-                      key={session.id}
-                      type="button"
-                      onClick={() => setActiveInterviewId(session.id)}
-                      className="w-full rounded-3xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-slate-300"
-                    >
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                          <p className="text-base font-semibold text-slate-950">{session.title}</p>
-                          <p className="mt-1 text-sm text-slate-600">
-                            {session.provider === "ZOOM" ? "Zoom" : "Google Meet"} • {formatCourseDate(session.scheduledAt)}
-                          </p>
-                          {session.description ? (
-                            <p className="mt-2 text-sm leading-6 text-slate-600">{session.description}</p>
-                          ) : null}
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          <span
-                            className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${
-                              session.isJoinReady
-                                ? "bg-emerald-100 text-emerald-800"
-                                : "bg-sky-100 text-sky-800"
-                            }`}
-                          >
-                            {session.isJoinReady ? "Join now" : session.status}
-                          </span>
-                          <span
-                            className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${
-                              session.isJoinReady
-                                ? "bg-emerald-100 text-emerald-800"
-                                : "bg-amber-100 text-amber-800"
-                            }`}
-                          >
-                            {formatInterviewCountdown(session.scheduledAt)}
-                          </span>
-                        </div>
-                      </div>
-                    </button>
-                  ))
-                ) : (
-                  <EmptyState
-                    title="No sessions yet"
-                    description="Scheduled course interviews will appear here as soon as the instructor publishes one."
-                  />
-                )}
+            <section className="overflow-hidden rounded-[32px] border border-emerald-200 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_26%),linear-gradient(145deg,#f8fffc_0%,#ecfdf5_45%,#f0fdfa_100%)] shadow-sm">
+              <div className="border-b border-emerald-100/80 px-6 py-5 lg:px-8">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-emerald-700">Live sessions</p>
+                    <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">Upcoming course interviews</h2>
+                    <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
+                      Keep live course events visible at the top of the workspace so learners can spot the next session quickly and join at the right moment.
+                    </p>
+                  </div>
+                  <div className="rounded-full border border-emerald-200 bg-white/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                    {(interviewSessionsQuery.data ?? []).length ? `${(interviewSessionsQuery.data ?? []).length} active` : "No sessions"}
+                  </div>
+                </div>
               </div>
-            </WorkspacePanel>
+
+              <div className="p-5 lg:p-6">
+                <div className="space-y-3">
+                  {(interviewSessionsQuery.data ?? []).length ? (
+                    (interviewSessionsQuery.data ?? []).map((session) => (
+                      <button
+                        key={session.id}
+                        type="button"
+                        onClick={() => setActiveInterviewId(session.id)}
+                        className="w-full rounded-[28px] border border-emerald-100 bg-white/90 p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-800">
+                                {session.provider === "ZOOM" ? "Zoom" : "Google Meet"}
+                              </span>
+                              <span className="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">
+                                {formatCourseDate(session.scheduledAt)}
+                              </span>
+                            </div>
+                            <p className="mt-3 text-lg font-semibold text-slate-950">{session.title}</p>
+                            {session.description ? (
+                              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">{session.description}</p>
+                            ) : (
+                              <p className="mt-2 text-sm text-slate-500">Open the launch screen to view details and join the live session safely.</p>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <span
+                              className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${
+                                session.isJoinReady
+                                  ? "bg-emerald-100 text-emerald-800"
+                                  : "bg-sky-100 text-sky-800"
+                              }`}
+                            >
+                              {session.isJoinReady ? "Join now" : session.status}
+                            </span>
+                            <span
+                              className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${
+                                session.isJoinReady
+                                  ? "bg-emerald-100 text-emerald-800"
+                                  : "bg-amber-100 text-amber-800"
+                              }`}
+                            >
+                              {formatInterviewCountdown(session.scheduledAt)}
+                            </span>
+                          </div>
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="rounded-[28px] border border-dashed border-emerald-200 bg-white/80 p-6">
+                      <EmptyState
+                        title="No sessions yet"
+                        description="Scheduled course interviews will appear here as soon as the instructor publishes one."
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
           </div>
 
           <WorkspaceShell
