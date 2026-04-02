@@ -18,25 +18,12 @@ import { useCourseDetailsWorkspace } from "./_hooks/use-course-details-workspace
 
 function formatInterviewCountdown(value: string) {
   const diffMs = new Date(value).getTime() - Date.now();
-  const diffMinutes = Math.round(diffMs / (1000 * 60));
+  const diffMinutes = Math.ceil(diffMs / (1000 * 60));
 
-  if (diffMinutes <= -5) {
+  if (diffMinutes <= 0) {
     return "Live now";
   }
-  if (diffMinutes <= 15) {
-    return "Join now";
-  }
-  if (diffMinutes < 60) {
-    return `In ${diffMinutes} min`;
-  }
-
-  const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) {
-    return `In ${diffHours}h`;
-  }
-
-  const diffDays = Math.floor(diffHours / 24);
-  return `In ${diffDays}d`;
+  return `${diffMinutes} min`;
 }
 
 function providerLaunchLabel(provider: "ZOOM" | "GOOGLE_MEET") {
@@ -83,6 +70,7 @@ export default function CourseDetailsPage() {
     previousLesson,
     quizAnswers,
     quizFormErrors,
+    recordInterviewAttendanceMutation,
     reviewComment,
     reviewRating,
     selectedCourse,
@@ -110,6 +98,25 @@ export default function CourseDetailsPage() {
     );
   }
 
+  const interviewSessions = interviewSessionsQuery.data ?? [];
+  const nextInterview = interviewSessions[0] ?? null;
+  const hasLiveSessions = interviewSessions.length > 0;
+  const activeInterview = activeInterviewQuery.data;
+
+  const handleLaunchInterview = async () => {
+    if (!activeInterview) {
+      return;
+    }
+
+    try {
+      await recordInterviewAttendanceMutation.mutateAsync(activeInterview.id);
+    } catch {
+      // Keep join flow resilient even if attendance tracking fails.
+    }
+
+    window.open(activeInterview.meetingUrl, "_blank", "noopener,noreferrer");
+  };
+
   return (
     <main className="mx-auto max-w-[1700px] p-6 lg:p-8">
       <BackButton fallbackHref="/courses" />
@@ -129,9 +136,22 @@ export default function CourseDetailsPage() {
                 <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">{selectedCourse.title}</h1>
                 <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">{selectedCourse.description}</p>
               </div>
-              <span className={`rounded-full px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] ${selectedCourse.isPaid ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}`}>
-                {selectedCourse.isPaid ? `Paid ${selectedCourse.price?.toFixed(2) ?? "0.00"}` : "Free"}
-              </span>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <span className={`rounded-full px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] ${selectedCourse.isPaid ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}`}>
+                  {selectedCourse.isPaid ? `Paid ${selectedCourse.price?.toFixed(2) ?? "0.00"}` : "Free"}
+                </span>
+                {nextInterview ? (
+                  <span
+                    className={`rounded-full px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] ${
+                      nextInterview.isJoinReady
+                        ? "bg-rose-100 text-rose-800"
+                        : "bg-sky-100 text-sky-800"
+                    }`}
+                  >
+                    {nextInterview.isJoinReady ? "Meeting live" : "Meeting scheduled"}
+                  </span>
+                ) : null}
+              </div>
             </div>
             <div className="mt-5 flex flex-wrap gap-2 text-xs text-slate-500">
               {selectedCourse.category ? <span className="rounded-full bg-slate-100 px-3 py-1">{selectedCourse.category}</span> : null}
@@ -246,6 +266,7 @@ export default function CourseDetailsPage() {
 
       {canAccessLessons ? (
         <div className="mt-6">
+          {hasLiveSessions ? (
           <div className="mb-6">
             <section className="overflow-hidden rounded-[32px] border border-emerald-200 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_26%),linear-gradient(145deg,#f8fffc_0%,#ecfdf5_45%,#f0fdfa_100%)] shadow-sm">
               <div className="border-b border-emerald-100/80 px-6 py-5 lg:px-8">
@@ -258,15 +279,14 @@ export default function CourseDetailsPage() {
                     </p>
                   </div>
                   <div className="rounded-full border border-emerald-200 bg-white/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
-                    {(interviewSessionsQuery.data ?? []).length ? `${(interviewSessionsQuery.data ?? []).length} active` : "No sessions"}
+                    {interviewSessions.length} active
                   </div>
                 </div>
               </div>
 
               <div className="p-5 lg:p-6">
                 <div className="space-y-3">
-                  {(interviewSessionsQuery.data ?? []).length ? (
-                  (interviewSessionsQuery.data ?? []).map((session, index) => (
+                  {interviewSessions.map((session, index) => (
                     <button
                       key={session.id}
                       type="button"
@@ -319,7 +339,7 @@ export default function CourseDetailsPage() {
                                 {session.isJoinReady ? "Join now" : "Starts soon"}
                               </span>
                               <span className="text-sm font-semibold text-slate-900">
-                                {formatInterviewCountdown(session.scheduledAt)}
+                                {session.isJoinReady ? "Live now" : `Starts in ${formatInterviewCountdown(session.scheduledAt)}`}
                               </span>
                               <span className="text-sm text-slate-500">Open the session card to launch the meeting room.</span>
                             </div>
@@ -332,17 +352,17 @@ export default function CourseDetailsPage() {
                                 ? "bg-emerald-100 text-emerald-800"
                                   : "bg-sky-100 text-sky-800"
                               }`}
-                            >
-                              {session.isJoinReady ? "Join now" : session.status}
-                            </span>
-                            <span
-                              className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${
-                                session.isJoinReady
-                                  ? "bg-emerald-100 text-emerald-800"
-                                  : "bg-amber-100 text-amber-800"
+                          >
+                            {session.isJoinReady ? "Join now" : session.status}
+                          </span>
+                          <span
+                            className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${
+                              session.isJoinReady
+                                ? "bg-emerald-100 text-emerald-800"
+                                : "bg-amber-100 text-amber-800"
                             }`}
                           >
-                            {formatInterviewCountdown(session.scheduledAt)}
+                            {session.isJoinReady ? "Live now" : `Starts in ${formatInterviewCountdown(session.scheduledAt)}`}
                           </span>
                         </div>
                       </div>
@@ -352,19 +372,12 @@ export default function CourseDetailsPage() {
                         </div>
                       ) : null}
                     </button>
-                  ))
-                ) : (
-                    <div className="rounded-[28px] border border-dashed border-emerald-200 bg-white/80 p-6">
-                      <EmptyState
-                        title="No sessions yet"
-                        description="Scheduled course interviews will appear here as soon as the instructor publishes one."
-                      />
-                    </div>
-                  )}
+                  ))}
                 </div>
               </div>
             </section>
           </div>
+          ) : null}
 
           <WorkspaceShell
             sidebar={
@@ -642,34 +655,34 @@ export default function CourseDetailsPage() {
         </div>
       ) : null}
 
-      {activeInterviewId && activeInterviewQuery.data ? (
+      {activeInterviewId && activeInterview ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
-          <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[32px] border border-emerald-200 bg-white shadow-2xl">
+          <div className="flex w-full max-w-5xl flex-col overflow-hidden rounded-[32px] border border-emerald-200 bg-white shadow-2xl">
             <div className="flex items-start justify-between gap-4 border-b border-emerald-100 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.16),transparent_28%),linear-gradient(145deg,#f8fffc_0%,#ecfdf5_52%,#f0fdfa_100%)] px-6 py-5">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Live session launch</p>
-                <h2 className="mt-2 text-2xl font-semibold text-slate-950">{activeInterviewQuery.data.title}</h2>
+                <h2 className="mt-2 text-2xl font-semibold text-slate-950">{activeInterview.title}</h2>
                 <p className="mt-2 text-sm text-slate-600">
-                  {activeInterviewQuery.data.provider === "ZOOM" ? "Zoom" : "Google Meet"} • {formatCourseDate(activeInterviewQuery.data.scheduledAt)}
+                  {activeInterview.provider === "ZOOM" ? "Zoom" : "Google Meet"} • {formatCourseDate(activeInterview.scheduledAt)}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <span
                     className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${
-                      activeInterviewQuery.data.isJoinReady
+                      activeInterview.isJoinReady
                         ? "bg-emerald-100 text-emerald-800"
                         : "bg-sky-100 text-sky-800"
                     }`}
                   >
-                    {activeInterviewQuery.data.isJoinReady ? "Join now" : activeInterviewQuery.data.status}
+                    {activeInterview.isJoinReady ? "Join now" : activeInterview.status}
                   </span>
                   <span
                     className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${
-                      activeInterviewQuery.data.isJoinReady
+                      activeInterview.isJoinReady
                         ? "bg-emerald-100 text-emerald-800"
                         : "bg-amber-100 text-amber-800"
                     }`}
                   >
-                    {formatInterviewCountdown(activeInterviewQuery.data.scheduledAt)}
+                    {activeInterview.isJoinReady ? "Live now" : `Starts in ${formatInterviewCountdown(activeInterview.scheduledAt)}`}
                   </span>
                 </div>
               </div>
@@ -681,107 +694,117 @@ export default function CourseDetailsPage() {
                 Close
               </button>
             </div>
-            <div className="min-h-0 overflow-y-auto p-6">
-              <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
-                <div className="space-y-4">
-                <div className="rounded-3xl border border-emerald-100 bg-emerald-50/70 p-4">
-                  <p className="text-sm font-semibold text-slate-900">Session details</p>
-                  <p className="mt-3 text-sm text-slate-600">
-                    Instructor: {activeInterviewQuery.data.course.instructor.fullName}
+            <div className="p-5 lg:p-6">
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_320px]">
+                <div className="rounded-[28px] border border-emerald-200 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.22),transparent_34%),linear-gradient(160deg,#052e2b_0%,#0f3d36_45%,#115e59_100%)] p-6 text-white lg:p-7">
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-100/80">
+                    Live sessions launch
                   </p>
-                  <p className="mt-2 text-sm text-slate-600">
-                    Status: {activeInterviewQuery.data.status}
+                  <h3 className="mt-4 text-2xl font-semibold tracking-tight lg:text-[2rem]">
+                    {activeInterview.provider === "ZOOM" ? "Zoom" : "Google Meet"} opens in a secure external room
+                  </h3>
+                  <p className="mt-4 text-sm leading-7 text-white/75">
+                    This launch window keeps the meeting organized inside the LMS, then opens the real interview in the provider's tab or app so the connection stays reliable.
                   </p>
-                  {activeInterviewQuery.data.description ? (
-                    <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-600">
-                      {activeInterviewQuery.data.description}
-                    </p>
-                  ) : null}
-                </div>
-                <div className="rounded-3xl border border-emerald-200 bg-white p-4">
-                  <p className="text-sm font-semibold text-emerald-900">How joining works</p>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">
-                    Zoom and Google Meet open outside the LMS in a new tab or app. This launch screen keeps the interview details here, then sends you safely to the provider.
-                  </p>
-                </div>
-                <a
-                  href={activeInterviewQuery.data.meetingUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={`inline-flex rounded-full px-5 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 ${
-                    activeInterviewQuery.data.isJoinReady ? "bg-emerald-600 shadow-lg shadow-emerald-200 hover:bg-emerald-500" : "bg-slate-950 hover:bg-slate-800"
-                  }`}
-                >
-                  {activeInterviewQuery.data.isJoinReady
-                    ? `Join now in ${activeInterviewQuery.data.provider === "ZOOM" ? "Zoom" : "Google Meet"}`
-                    : providerLaunchLabel(activeInterviewQuery.data.provider)}
-                </a>
-                </div>
-                <div className="rounded-[28px] border border-emerald-200 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.22),transparent_34%),linear-gradient(160deg,#052e2b_0%,#0f3d36_45%,#115e59_100%)] p-6 text-white lg:p-8">
-                <div className="flex h-full min-h-[420px] flex-col justify-between gap-6">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-100/80">
-                      Live sessions launch
-                    </p>
-                    <h3 className="mt-4 text-2xl font-semibold tracking-tight lg:text-3xl">
-                      {activeInterviewQuery.data.provider === "ZOOM" ? "Zoom" : "Google Meet"} will open outside the LMS
-                    </h3>
-                    <p className="mt-4 max-w-2xl text-sm leading-7 text-white/75">
-                      The LMS keeps the interview organized here, but the actual video room opens in the provider's own secure window. That avoids browser blocking and gives you the most reliable join flow.
-                    </p>
+
+                  <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-[22px] border border-white/10 bg-white/10 p-4">
+                      <p className="text-xs uppercase tracking-[0.18em] text-white/55">Course</p>
+                      <p className="mt-2 text-base font-semibold">{activeInterview.course.title}</p>
+                    </div>
+                    <div className="rounded-[22px] border border-white/10 bg-white/10 p-4">
+                      <p className="text-xs uppercase tracking-[0.18em] text-white/55">Instructor</p>
+                      <p className="mt-2 text-base font-semibold">{activeInterview.course.instructor.fullName}</p>
+                    </div>
+                    <div className="rounded-[22px] border border-white/10 bg-white/10 p-4">
+                      <p className="text-xs uppercase tracking-[0.18em] text-white/55">Scheduled</p>
+                      <p className="mt-2 text-base font-semibold">{formatCourseDate(activeInterview.scheduledAt)}</p>
+                    </div>
+                    <div className="rounded-[22px] border border-white/10 bg-white/10 p-4">
+                      <p className="text-xs uppercase tracking-[0.18em] text-white/55">Countdown</p>
+                      <p className="mt-2 text-base font-semibold">
+                        {activeInterview.isJoinReady ? "Live now" : `Starts in ${formatInterviewCountdown(activeInterview.scheduledAt)}`}
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="rounded-[24px] border border-white/10 bg-white/10 p-5">
-                      <p className="text-xs uppercase tracking-[0.18em] text-white/55">Provider</p>
-                      <p className="mt-2 text-lg font-semibold">
-                        {activeInterviewQuery.data.provider === "ZOOM" ? "Zoom" : "Google Meet"}
-                      </p>
+                  {activeInterview.description ? (
+                    <div className="mt-6 rounded-[22px] border border-white/10 bg-white/10 p-4">
+                      <p className="text-xs uppercase tracking-[0.18em] text-white/55">Notes</p>
+                      <p className="mt-2 text-sm leading-6 text-white/80">{activeInterview.description}</p>
                     </div>
-                    <div className="rounded-[24px] border border-white/10 bg-white/10 p-5">
-                      <p className="text-xs uppercase tracking-[0.18em] text-white/55">Schedule</p>
-                      <p className="mt-2 text-lg font-semibold">{formatCourseDate(activeInterviewQuery.data.scheduledAt)}</p>
-                    </div>
-                    <div className="rounded-[24px] border border-white/10 bg-white/10 p-5">
-                      <p className="text-xs uppercase tracking-[0.18em] text-white/55">Course</p>
-                      <p className="mt-2 text-lg font-semibold">{activeInterviewQuery.data.course.title}</p>
-                    </div>
-                    <div className="rounded-[24px] border border-white/10 bg-white/10 p-5">
-                      <p className="text-xs uppercase tracking-[0.18em] text-white/55">Next step</p>
-                      <p className="mt-2 text-lg font-semibold">
-                        {activeInterviewQuery.data.isJoinReady ? "Open the room now" : "Keep this window open until you're ready"}
-                      </p>
-                    </div>
-                  </div>
+                  ) : null}
 
                   <div className="mt-6 flex flex-wrap gap-3">
-                    <a
-                      href={activeInterviewQuery.data.meetingUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={`inline-flex rounded-full px-6 py-3 text-sm font-semibold ${
-                        activeInterviewQuery.data.isJoinReady
-                          ? "bg-emerald-500 text-slate-950"
-                          : "bg-white text-slate-950"
-                      }`}
-                    >
-                      {activeInterviewQuery.data.isJoinReady
-                        ? `Join now in ${activeInterviewQuery.data.provider === "ZOOM" ? "Zoom" : "Google Meet"}`
-                        : providerLaunchLabel(activeInterviewQuery.data.provider)}
-                    </a>
                     <button
                       type="button"
-                      onClick={() => navigator.clipboard.writeText(activeInterviewQuery.data.meetingUrl)}
+                      onClick={() => void handleLaunchInterview()}
+                      disabled={recordInterviewAttendanceMutation.isPending}
+                      className={`inline-flex rounded-full px-6 py-3 text-sm font-semibold transition ${
+                        activeInterview.isJoinReady
+                          ? "bg-emerald-500 text-slate-950 hover:bg-emerald-400"
+                          : "bg-white text-slate-950 hover:bg-emerald-50"
+                      } disabled:cursor-not-allowed disabled:opacity-70`}
+                    >
+                      {recordInterviewAttendanceMutation.isPending
+                        ? "Opening..."
+                        : activeInterview.isJoinReady
+                          ? `Join now in ${activeInterview.provider === "ZOOM" ? "Zoom" : "Google Meet"}`
+                          : providerLaunchLabel(activeInterview.provider)}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => navigator.clipboard.writeText(activeInterview.meetingUrl)}
                       className="inline-flex rounded-full border border-white/20 px-6 py-3 text-sm font-semibold text-white transition hover:border-white/35 hover:bg-white/10"
                     >
                       Copy meeting link
                     </button>
                   </div>
                 </div>
+
+                <div className="grid gap-3">
+                  <div className="rounded-[24px] border border-emerald-100 bg-emerald-50/70 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Meeting status</p>
+                    <p className="mt-3 text-lg font-semibold text-slate-950">
+                      {activeInterview.isJoinReady ? "Join now" : "Scheduled"}
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                      {activeInterview.isJoinReady
+                        ? "The room is ready. Open it now and your attendance will be recorded before launch."
+                        : "The meeting is scheduled. Keep this window ready so you can join at the right time."}
+                    </p>
+                  </div>
+                  <div className="rounded-[24px] border border-slate-200 bg-white p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Attendance</p>
+                    <div className="mt-3 grid gap-3">
+                      <div className="rounded-2xl bg-slate-50 p-3">
+                        <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Students recorded</p>
+                        <p className="mt-1 text-xl font-semibold text-slate-950">{activeInterview.attendanceCount ?? 0}</p>
+                      </div>
+                      {isStudent ? (
+                        <div className="rounded-2xl bg-slate-50 p-3">
+                          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Your attended meetings</p>
+                          <p className="mt-1 text-xl font-semibold text-slate-950">{activeInterview.studentAttendedCount ?? 0}</p>
+                        </div>
+                      ) : null}
+                      {!isStudent ? (
+                        <div className="rounded-2xl bg-slate-50 p-3">
+                          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Meetings you completed</p>
+                          <p className="mt-1 text-xl font-semibold text-slate-950">{activeInterview.instructorCreatedCount ?? 0}</p>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="rounded-[24px] border border-slate-200 bg-white p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">How it works</p>
+                    <p className="mt-3 text-sm leading-6 text-slate-600">
+                      Zoom and Google Meet open outside the LMS. This launch window keeps the details clean here, then hands you off safely to the provider.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
         </div>
       ) : null}
     </main>

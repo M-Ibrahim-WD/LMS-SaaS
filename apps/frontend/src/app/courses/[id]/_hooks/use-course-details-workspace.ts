@@ -132,6 +132,23 @@ export function useCourseDetailsWorkspace() {
     enabled: Boolean(accessToken && activeInterviewId)
   });
 
+  const recordInterviewAttendanceMutation = useMutation({
+    mutationFn: (interviewId: string) =>
+      apiFetch(`/courses/interviews/${interviewId}/attendance`, {
+        method: "POST",
+        token: accessToken ?? undefined
+      }),
+    onSuccess: async (_, interviewId) => {
+      await Promise.all([
+        activeInterviewQuery.refetch(),
+        interviewSessionsQuery.refetch(),
+        queryClient.invalidateQueries({
+          queryKey: ["course-interview", interviewId]
+        })
+      ]);
+    }
+  });
+
   const completionStatusQuery = useQuery({
     queryKey: ["course-certificate-status", params.id],
     queryFn: () =>
@@ -607,6 +624,7 @@ export function useCourseDetailsWorkspace() {
     assessmentsQuery,
     interviewSessionsQuery,
     activeInterviewQuery,
+    recordInterviewAttendanceMutation,
     completionStatusQuery,
     myReviewQuery,
     enrollMutation,

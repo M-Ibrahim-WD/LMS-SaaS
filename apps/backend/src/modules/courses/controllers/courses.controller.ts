@@ -123,6 +123,14 @@ export class CoursesController {
     return this.courseInterviewsService.getOne(user, interviewId);
   }
 
+  @Post("interviews/:interviewId/attendance")
+  recordInterviewAttendance(
+    @CurrentUser() user: JwtPayload,
+    @Param("interviewId") interviewId: string
+  ) {
+    return this.courseInterviewsService.recordAttendance(user, interviewId);
+  }
+
   @Roles("INSTRUCTOR")
   @Post(":id/interviews")
   createInterview(

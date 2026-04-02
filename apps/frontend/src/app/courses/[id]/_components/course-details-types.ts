@@ -162,6 +162,9 @@ export interface CourseInterviewSession {
   canManage: boolean;
   canEdit?: boolean;
   isJoinReady?: boolean;
+  attendanceCount?: number;
+  studentAttendedCount?: number;
+  instructorCreatedCount?: number;
   course: {
     id: string;
     title: string;

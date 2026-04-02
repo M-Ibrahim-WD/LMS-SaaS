@@ -274,6 +274,7 @@ model User {
   requestedSupportConversations Conversation[] @relation("SupportRequesterConversation")
   managedGroupConversations Conversation[] @relation("GroupConversationInstructor")
   createdInterviewSessions CourseInterviewSession[] @relation("CourseInterviewCreator")
+  interviewAttendances CourseInterviewAttendance[]
   conversationParticipants ConversationParticipant[]
   sentMessages Message[] @relation("ConversationMessageSender")
   supportAssignments SupportAssignment[] @relation("SupportAssignedAdmin")
@@ -629,10 +630,25 @@ model CourseInterviewSession {
 
   course             Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
   createdByInstructor User   @relation("CourseInterviewCreator", fields: [createdByInstructorId], references: [id], onDelete: Cascade)
+  attendances        CourseInterviewAttendance[]
 
   @@index([courseId, status])
   @@index([createdByInstructorId])
   @@index([scheduledAt])
+}
+
+model CourseInterviewAttendance {
+  id          String   @id @default(uuid())
+  interviewId String   @map("interview_id")
+  studentId   String   @map("student_id")
+  joinedAt    DateTime @default(now()) @map("joined_at")
+
+  interview CourseInterviewSession @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  student   User                   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([interviewId, studentId])
+  @@index([studentId])
+  @@index([interviewId])
 }
 
 model ConversationParticipant {

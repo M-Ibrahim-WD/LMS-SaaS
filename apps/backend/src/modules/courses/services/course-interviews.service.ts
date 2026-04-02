@@ -40,16 +40,17 @@ export class CourseInterviewsService {
     return items
       .filter((item) => this.getInterviewEndAt(item).getTime() > now.getTime())
       .map((item) => ({
-      ...item,
-      scheduledAt: item.scheduledAt.toISOString(),
-      createdAt: item.createdAt.toISOString(),
-      updatedAt: item.updatedAt.toISOString(),
-      course: {
-        id: course.id,
-        title: course.title
-      },
-      canManage: currentUser.role === UserRole.INSTRUCTOR
-    }));
+        ...item,
+        scheduledAt: item.scheduledAt.toISOString(),
+        createdAt: item.createdAt.toISOString(),
+        updatedAt: item.updatedAt.toISOString(),
+        course: {
+          id: course.id,
+          title: course.title
+        },
+        canManage: currentUser.role === UserRole.INSTRUCTOR,
+        isJoinReady: this.isJoinReady(item.scheduledAt)
+      }));
   }
 
   async listForInstructorDashboard(currentUser: JwtPayload) {
@@ -93,6 +94,11 @@ export class CourseInterviewsService {
     const interview = await this.prisma.courseInterviewSession.findUnique({
       where: { id: interviewId },
       include: {
+        attendances: {
+          select: {
+            studentId: true
+          }
+        },
         course: {
           select: {
             id: true,
@@ -122,6 +128,25 @@ export class CourseInterviewsService {
       throw new ForbiddenException("Draft interview sessions are not visible yet.");
     }
 
+    const [instructorCreatedCount, studentAttendedCount] = await Promise.all([
+      this.prisma.courseInterviewSession.count({
+        where: {
+          createdByInstructorId: interview.createdByInstructorId,
+          status: InterviewSessionStatus.COMPLETED
+        }
+      }),
+      currentUser.role === UserRole.STUDENT
+        ? this.prisma.courseInterviewAttendance.count({
+            where: {
+              studentId: currentUser.sub,
+              interview: {
+                status: InterviewSessionStatus.COMPLETED
+              }
+            }
+          })
+        : Promise.resolve(0)
+    ]);
+
     return {
       ...interview,
       scheduledAt: interview.scheduledAt.toISOString(),
@@ -132,7 +157,75 @@ export class CourseInterviewsService {
         currentUser.role === UserRole.INSTRUCTOR
           ? this.canEditInterview(interview.scheduledAt)
           : false,
-      isJoinReady: this.isJoinReady(interview.scheduledAt)
+      isJoinReady: this.isJoinReady(interview.scheduledAt),
+      attendanceCount: interview.attendances.length,
+      studentAttendedCount,
+      instructorCreatedCount
+    };
+  }
+
+  async recordAttendance(currentUser: JwtPayload, interviewId: string) {
+    const interview = await this.prisma.courseInterviewSession.findUnique({
+      where: { id: interviewId },
+      include: {
+        course: {
+          select: {
+            id: true
+          }
+        }
+      }
+    });
+
+    if (!interview) {
+      throw new NotFoundException("Interview session not found.");
+    }
+
+    await this.getCourseAccess(currentUser, interview.courseId);
+
+    if (currentUser.role === UserRole.STUDENT) {
+      await this.prisma.courseInterviewAttendance.upsert({
+        where: {
+          interviewId_studentId: {
+            interviewId,
+            studentId: currentUser.sub
+          }
+        },
+        update: {},
+        create: {
+          interviewId,
+          studentId: currentUser.sub
+        }
+      });
+    }
+
+    const [attendanceCount, studentAttendedCount, instructorCreatedCount] = await Promise.all([
+      this.prisma.courseInterviewAttendance.count({
+        where: {
+          interviewId
+        }
+      }),
+      currentUser.role === UserRole.STUDENT
+        ? this.prisma.courseInterviewAttendance.count({
+            where: {
+              studentId: currentUser.sub,
+              interview: {
+                status: InterviewSessionStatus.COMPLETED
+              }
+            }
+          })
+        : Promise.resolve(0),
+      this.prisma.courseInterviewSession.count({
+        where: {
+          createdByInstructorId: interview.createdByInstructorId,
+          status: InterviewSessionStatus.COMPLETED
+        }
+      })
+    ]);
+
+    return {
+      attendanceCount,
+      studentAttendedCount,
+      instructorCreatedCount
     };
   }
 
