@@ -132,16 +132,15 @@ export class CourseInterviewsService {
       this.prisma.courseInterviewSession.count({
         where: {
           createdByInstructorId: interview.createdByInstructorId,
-          status: InterviewSessionStatus.COMPLETED
+          status: {
+            in: [InterviewSessionStatus.SCHEDULED, InterviewSessionStatus.COMPLETED]
+          }
         }
       }),
       currentUser.role === UserRole.STUDENT
         ? this.prisma.courseInterviewAttendance.count({
-            where: {
-              studentId: currentUser.sub,
-              interview: {
-                status: InterviewSessionStatus.COMPLETED
-              }
+          where: {
+              studentId: currentUser.sub
             }
           })
         : Promise.resolve(0)
@@ -217,17 +216,16 @@ export class CourseInterviewsService {
       currentUser.role === UserRole.STUDENT
         ? this.prisma.courseInterviewAttendance.count({
             where: {
-              studentId: currentUser.sub,
-              interview: {
-                status: InterviewSessionStatus.COMPLETED
-              }
+              studentId: currentUser.sub
             }
           })
         : Promise.resolve(0),
       this.prisma.courseInterviewSession.count({
         where: {
           createdByInstructorId: interview.createdByInstructorId,
-          status: InterviewSessionStatus.COMPLETED
+          status: {
+            in: [InterviewSessionStatus.SCHEDULED, InterviewSessionStatus.COMPLETED]
+          }
         }
       })
     ]);

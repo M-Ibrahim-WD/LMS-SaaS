@@ -666,7 +666,7 @@ export default function CourseDetailsPage() {
                                   : "border border-slate-300 bg-white text-slate-600 hover:border-slate-400"
                               }`}
                             >
-                              {"?".repeat(value)}
+                              <span className="tracking-[0.2em] text-amber-500">{"★".repeat(value)}</span>
                             </button>
                           ))}
                         </div>
@@ -718,7 +718,7 @@ export default function CourseDetailsPage() {
             }
           }}
         >
-          <div className="flex w-full max-w-2xl flex-col overflow-hidden rounded-[24px] border border-emerald-200 bg-white shadow-2xl">
+          <div className="flex max-h-[calc(100vh-1rem)] w-full max-w-2xl flex-col overflow-hidden rounded-[24px] border border-emerald-200 bg-white shadow-2xl">
             <div className="flex flex-col gap-4 border-b border-emerald-100 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.16),transparent_28%),linear-gradient(145deg,#f8fffc_0%,#ecfdf5_52%,#f0fdfa_100%)] px-4 py-4 sm:px-5">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
@@ -757,7 +757,7 @@ export default function CourseDetailsPage() {
                 </span>
               </div>
             </div>
-            <div className="p-3 sm:p-4">
+            <div className="overflow-y-auto p-3 sm:p-4">
               <div className="grid gap-3">
                 <div className="rounded-[20px] border border-emerald-200 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.22),transparent_34%),linear-gradient(160deg,#052e2b_0%,#0f3d36_45%,#115e59_100%)] p-4 text-white sm:p-5">
                   <div className="grid gap-3">
@@ -865,7 +865,7 @@ export default function CourseDetailsPage() {
                         </div>
                       ) : (
                         <div className="rounded-2xl bg-slate-50 p-3">
-                          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Meetings you completed</p>
+                          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Meetings you created</p>
                           <p className="mt-1 text-lg font-semibold text-slate-950">{activeInterview.instructorCreatedCount ?? 0}</p>
                         </div>
                       )}
