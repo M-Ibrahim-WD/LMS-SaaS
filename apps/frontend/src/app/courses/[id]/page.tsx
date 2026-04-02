@@ -48,14 +48,6 @@ function providerLaunchLabel(provider: "ZOOM" | "GOOGLE_MEET") {
 export default function CourseDetailsPage() {
   const [countdownNow, setCountdownNow] = useState(() => Date.now());
 
-  useEffect(() => {
-    const interval = window.setInterval(() => {
-      setCountdownNow(Date.now());
-    }, 30_000);
-
-    return () => window.clearInterval(interval);
-  }, []);
-
   const {
     activeLesson,
     activeInterviewId,
@@ -127,6 +119,7 @@ export default function CourseDetailsPage() {
   const nextInterview = interviewSessions[0] ?? null;
   const hasLiveSessions = interviewSessions.length > 0;
   const activeInterview = activeInterviewQuery.data;
+  const trackedInterviewTime = activeInterview?.scheduledAt ?? nextInterview?.scheduledAt ?? null;
 
   const handleLaunchInterview = async () => {
     if (!activeInterview) {
@@ -141,6 +134,36 @@ export default function CourseDetailsPage() {
 
     window.open(activeInterview.meetingUrl, "_blank", "noopener,noreferrer");
   };
+
+  useEffect(() => {
+    if (!trackedInterviewTime) {
+      return;
+    }
+
+    const diffMs = new Date(trackedInterviewTime).getTime() - countdownNow;
+    const refreshRate = diffMs <= 5 * 60 * 1000 ? 1_000 : 30_000;
+
+    const interval = window.setInterval(() => {
+      setCountdownNow(Date.now());
+    }, refreshRate);
+
+    return () => window.clearInterval(interval);
+  }, [trackedInterviewTime, countdownNow]);
+
+  useEffect(() => {
+    if (!activeInterviewId) {
+      return;
+    }
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setActiveInterviewId(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [activeInterviewId, setActiveInterviewId]);
 
   return (
     <main className="mx-auto max-w-[1700px] p-6 lg:p-8">
@@ -681,14 +704,21 @@ export default function CourseDetailsPage() {
       ) : null}
 
       {activeInterviewId && activeInterview ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
-          <div className="flex w-full max-w-5xl flex-col overflow-hidden rounded-[32px] border border-emerald-200 bg-white shadow-2xl">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/60 p-4"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              setActiveInterviewId(null);
+            }
+          }}
+        >
+          <div className="flex max-h-[calc(100vh-2rem)] w-full max-w-4xl flex-col overflow-hidden rounded-[28px] border border-emerald-200 bg-white shadow-2xl">
             <div className="flex items-start justify-between gap-4 border-b border-emerald-100 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.16),transparent_28%),linear-gradient(145deg,#f8fffc_0%,#ecfdf5_52%,#f0fdfa_100%)] px-6 py-5">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Live session launch</p>
                 <h2 className="mt-2 text-2xl font-semibold text-slate-950">{activeInterview.title}</h2>
                 <p className="mt-2 text-sm text-slate-600">
-                  {activeInterview.provider === "ZOOM" ? "Zoom" : "Google Meet"} � {formatCourseDate(activeInterview.scheduledAt)}
+                  {activeInterview.provider === "ZOOM" ? "Zoom" : "Google Meet"} - {formatCourseDate(activeInterview.scheduledAt)}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <span
@@ -720,8 +750,8 @@ export default function CourseDetailsPage() {
               </button>
             </div>
             <div className="p-5 lg:p-6">
-              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
-                <div className="rounded-[28px] border border-emerald-200 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.22),transparent_34%),linear-gradient(160deg,#052e2b_0%,#0f3d36_45%,#115e59_100%)] p-6 text-white lg:p-7">
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_240px]">
+                <div className="rounded-[24px] border border-emerald-200 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.22),transparent_34%),linear-gradient(160deg,#052e2b_0%,#0f3d36_45%,#115e59_100%)] p-5 text-white lg:p-6">
                   <div className="grid gap-4">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="rounded-full bg-white/12 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-50">
@@ -733,7 +763,7 @@ export default function CourseDetailsPage() {
                     </div>
 
                     <div>
-                      <h3 className="text-2xl font-semibold tracking-tight lg:text-[2rem]">
+                      <h3 className="text-xl font-semibold tracking-tight lg:text-[1.65rem]">
                         {activeInterview.provider === "ZOOM" ? "Zoom" : "Google Meet"} meeting
                       </h3>
                       <p className="mt-3 text-sm leading-7 text-white/75">
@@ -742,28 +772,28 @@ export default function CourseDetailsPage() {
                     </div>
 
                     <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="rounded-[22px] border border-white/10 bg-white/10 p-4">
+                      <div className="rounded-[20px] border border-white/10 bg-white/10 p-4">
                         <p className="text-xs uppercase tracking-[0.18em] text-white/55">Starts</p>
                         <p className="mt-2 text-base font-semibold">{formatCourseDate(activeInterview.scheduledAt)}</p>
                       </div>
-                      <div className="rounded-[22px] border border-white/10 bg-white/10 p-4">
+                      <div className="rounded-[20px] border border-white/10 bg-white/10 p-4">
                         <p className="text-xs uppercase tracking-[0.18em] text-white/55">Countdown</p>
                         <p className="mt-2 text-base font-semibold">
                           {activeInterview.isJoinReady ? "Live now" : formatInterviewCountdown(activeInterview.scheduledAt, countdownNow)}
                         </p>
                       </div>
-                      <div className="rounded-[22px] border border-white/10 bg-white/10 p-4">
+                      <div className="rounded-[20px] border border-white/10 bg-white/10 p-4">
                         <p className="text-xs uppercase tracking-[0.18em] text-white/55">Course</p>
                         <p className="mt-2 text-base font-semibold">{activeInterview.course.title}</p>
                       </div>
-                      <div className="rounded-[22px] border border-white/10 bg-white/10 p-4">
+                      <div className="rounded-[20px] border border-white/10 bg-white/10 p-4">
                         <p className="text-xs uppercase tracking-[0.18em] text-white/55">Instructor</p>
                         <p className="mt-2 text-base font-semibold">{activeInterview.course.instructor.fullName}</p>
                       </div>
                     </div>
 
                     {activeInterview.description ? (
-                      <div className="rounded-[22px] border border-white/10 bg-white/10 p-4">
+                      <div className="rounded-[20px] border border-white/10 bg-white/10 p-4">
                         <p className="text-xs uppercase tracking-[0.18em] text-white/55">Notes</p>
                         <p className="mt-2 text-sm leading-6 text-white/80">{activeInterview.description}</p>
                       </div>
@@ -773,18 +803,18 @@ export default function CourseDetailsPage() {
                       <button
                         type="button"
                         onClick={() => void handleLaunchInterview()}
-                        disabled={recordInterviewAttendanceMutation.isPending}
+                        disabled={recordInterviewAttendanceMutation.isPending || !activeInterview.isJoinReady}
                         className={`inline-flex rounded-full px-6 py-3 text-sm font-semibold transition ${
                           activeInterview.isJoinReady
                             ? "bg-emerald-500 text-slate-950 hover:bg-emerald-400"
-                            : "bg-white text-slate-950 hover:bg-emerald-50"
+                            : "bg-white/80 text-slate-700"
                         } disabled:cursor-not-allowed disabled:opacity-70`}
                       >
                         {recordInterviewAttendanceMutation.isPending
                           ? "Opening..."
                           : activeInterview.isJoinReady
                             ? `Join now in ${activeInterview.provider === "ZOOM" ? "Zoom" : "Google Meet"}`
-                            : providerLaunchLabel(activeInterview.provider)}
+                            : "Available at start time"}
                       </button>
                       <button
                         type="button"

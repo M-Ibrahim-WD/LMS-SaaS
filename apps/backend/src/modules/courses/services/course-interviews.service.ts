@@ -49,7 +49,7 @@ export class CourseInterviewsService {
           title: course.title
         },
         canManage: currentUser.role === UserRole.INSTRUCTOR,
-        isJoinReady: this.isJoinReady(item.scheduledAt)
+        isJoinReady: this.isJoinReady(item.scheduledAt, item.durationMinutes)
       }));
   }
 
@@ -86,7 +86,7 @@ export class CourseInterviewsService {
         updatedAt: item.updatedAt.toISOString(),
         canManage: true,
         canEdit: this.canEditInterview(item.scheduledAt),
-        isJoinReady: this.isJoinReady(item.scheduledAt)
+        isJoinReady: this.isJoinReady(item.scheduledAt, item.durationMinutes)
       }));
   }
 
@@ -157,7 +157,7 @@ export class CourseInterviewsService {
         currentUser.role === UserRole.INSTRUCTOR
           ? this.canEditInterview(interview.scheduledAt)
           : false,
-      isJoinReady: this.isJoinReady(interview.scheduledAt),
+      isJoinReady: this.isJoinReady(interview.scheduledAt, interview.durationMinutes),
       attendanceCount: interview.attendances.length,
       studentAttendedCount,
       instructorCreatedCount
@@ -181,6 +181,16 @@ export class CourseInterviewsService {
     }
 
     await this.getCourseAccess(currentUser, interview.courseId);
+
+    if (interview.status !== InterviewSessionStatus.SCHEDULED) {
+      throw new BadRequestException("Only scheduled interviews can be joined.");
+    }
+
+    if (!this.isJoinReady(interview.scheduledAt, interview.durationMinutes)) {
+      throw new BadRequestException(
+        "This interview will be available only at its scheduled time."
+      );
+    }
 
     if (currentUser.role === UserRole.STUDENT) {
       await this.prisma.courseInterviewAttendance.upsert({
@@ -231,6 +241,7 @@ export class CourseInterviewsService {
 
   async create(currentUser: JwtPayload, courseId: string, dto: CreateCourseInterviewDto) {
     const course = await this.getCourseAccess(currentUser, courseId, true);
+    const meetingUrl = this.validateMeetingUrl(dto.provider, dto.meetingUrl);
 
     const created = await this.prisma.courseInterviewSession.create({
       data: {
@@ -238,7 +249,7 @@ export class CourseInterviewsService {
         provider: dto.provider,
         title: dto.title.trim(),
         description: dto.description?.trim() || null,
-        meetingUrl: dto.meetingUrl.trim(),
+        meetingUrl,
         scheduledAt: new Date(dto.scheduledAt),
         durationMinutes: dto.durationMinutes ?? null,
         status: InterviewSessionStatus.DRAFT,
@@ -273,7 +284,14 @@ export class CourseInterviewsService {
         ...(dto.title ? { title: dto.title.trim() } : {}),
         ...(dto.description !== undefined ? { description: dto.description?.trim() || null } : {}),
         ...(dto.provider ? { provider: dto.provider } : {}),
-        ...(dto.meetingUrl ? { meetingUrl: dto.meetingUrl.trim() } : {}),
+        ...((dto.meetingUrl || dto.provider)
+          ? {
+              meetingUrl: this.validateMeetingUrl(
+                dto.provider ?? interview.provider,
+                dto.meetingUrl ?? interview.meetingUrl
+              )
+            }
+          : {}),
         ...(dto.scheduledAt ? { scheduledAt: new Date(dto.scheduledAt) } : {}),
         ...(dto.durationMinutes !== undefined ? { durationMinutes: dto.durationMinutes ?? null } : {})
       }
@@ -296,7 +314,7 @@ export class CourseInterviewsService {
       updatedAt: updated.updatedAt.toISOString(),
       canManage: true,
       canEdit: this.canEditInterview(updated.scheduledAt),
-      isJoinReady: this.isJoinReady(updated.scheduledAt)
+      isJoinReady: this.isJoinReady(updated.scheduledAt, updated.durationMinutes)
     };
   }
 
@@ -311,6 +329,10 @@ export class CourseInterviewsService {
       !interview.meetingUrl.trim()
     ) {
       throw new BadRequestException("Interview link is required before scheduling.");
+    }
+
+    if (dto.status === InterviewSessionStatus.SCHEDULED) {
+      this.validateMeetingUrl(interview.provider, interview.meetingUrl);
     }
 
     const updated = await this.prisma.courseInterviewSession.update({
@@ -345,7 +367,7 @@ export class CourseInterviewsService {
       updatedAt: updated.updatedAt.toISOString(),
       canManage: true,
       canEdit: this.canEditInterview(updated.scheduledAt),
-      isJoinReady: this.isJoinReady(updated.scheduledAt)
+      isJoinReady: this.isJoinReady(updated.scheduledAt, updated.durationMinutes)
     };
   }
 
@@ -417,6 +439,7 @@ export class CourseInterviewsService {
         id: true,
         courseId: true,
         createdByInstructorId: true,
+        provider: true,
         meetingUrl: true,
         title: true,
         scheduledAt: true
@@ -471,9 +494,61 @@ export class CourseInterviewsService {
     return Date.now() < cutoff;
   }
 
-  private isJoinReady(scheduledAt: Date) {
-    const diffMs = scheduledAt.getTime() - Date.now();
-    return diffMs <= 15 * 60 * 1000 && diffMs >= -5 * 60 * 1000;
+  private isJoinReady(scheduledAt: Date, durationMinutes: number | null = null) {
+    const now = Date.now();
+    return (
+      scheduledAt.getTime() <= now &&
+      this.getInterviewEndAt({ scheduledAt, durationMinutes }).getTime() >= now
+    );
+  }
+
+  private validateMeetingUrl(provider: "ZOOM" | "GOOGLE_MEET", rawUrl: string) {
+    const meetingUrl = rawUrl.trim();
+
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(meetingUrl);
+    } catch {
+      throw new BadRequestException("Interview link must be a valid URL.");
+    }
+
+    const hostname = parsedUrl.hostname.toLowerCase();
+    const pathname = parsedUrl.pathname.toLowerCase();
+
+    if (provider === "GOOGLE_MEET") {
+      const isMeetHost =
+        hostname === "meet.google.com" ||
+        (hostname === "g.co" && pathname.startsWith("/meet"));
+      const hasMeetCode =
+        /^\/[a-z]{3}-[a-z]{4}-[a-z]{3}$/.test(pathname) ||
+        pathname.startsWith("/meet");
+
+      if (!isMeetHost || !hasMeetCode) {
+        throw new BadRequestException(
+          "Google Meet links must use a valid meet.google.com room link or g.co/meet link."
+        );
+      }
+    }
+
+    if (provider === "ZOOM") {
+      const isZoomHost =
+        hostname === "zoom.us" ||
+        hostname.endsWith(".zoom.us") ||
+        hostname === "zoomgov.com" ||
+        hostname.endsWith(".zoomgov.com");
+      const hasZoomPath =
+        pathname.startsWith("/j/") ||
+        pathname.startsWith("/wc/") ||
+        pathname.startsWith("/my/");
+
+      if (!isZoomHost || !hasZoomPath) {
+        throw new BadRequestException(
+          "Zoom links must use a valid zoom.us or zoomgov.com meeting link."
+        );
+      }
+    }
+
+    return meetingUrl;
   }
 
   private getInterviewEndAt(interview: {
