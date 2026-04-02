@@ -496,8 +496,9 @@ export class CourseInterviewsService {
 
   private isJoinReady(scheduledAt: Date, durationMinutes: number | null = null) {
     const now = Date.now();
+    const joinWindowStartsAt = scheduledAt.getTime() - 5 * 60 * 1000;
     return (
-      scheduledAt.getTime() <= now &&
+      joinWindowStartsAt <= now &&
       this.getInterviewEndAt({ scheduledAt, durationMinutes }).getTime() >= now
     );
   }
