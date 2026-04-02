@@ -644,10 +644,10 @@ export default function CourseDetailsPage() {
 
       {activeInterviewId && activeInterviewQuery.data ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
-          <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-2xl">
-            <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
+          <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[32px] border border-emerald-200 bg-white shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-emerald-100 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.16),transparent_28%),linear-gradient(145deg,#f8fffc_0%,#ecfdf5_52%,#f0fdfa_100%)] px-6 py-5">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Interview session</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Live session launch</p>
                 <h2 className="mt-2 text-2xl font-semibold text-slate-950">{activeInterviewQuery.data.title}</h2>
                 <p className="mt-2 text-sm text-slate-600">
                   {activeInterviewQuery.data.provider === "ZOOM" ? "Zoom" : "Google Meet"} • {formatCourseDate(activeInterviewQuery.data.scheduledAt)}
@@ -676,7 +676,7 @@ export default function CourseDetailsPage() {
               <button
                 type="button"
                 onClick={() => setActiveInterviewId(null)}
-                className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
+                className="rounded-full border border-emerald-200 bg-white/90 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700"
               >
                 Close
               </button>
@@ -684,7 +684,7 @@ export default function CourseDetailsPage() {
             <div className="min-h-0 overflow-y-auto p-6">
               <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
                 <div className="space-y-4">
-                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                <div className="rounded-3xl border border-emerald-100 bg-emerald-50/70 p-4">
                   <p className="text-sm font-semibold text-slate-900">Session details</p>
                   <p className="mt-3 text-sm text-slate-600">
                     Instructor: {activeInterviewQuery.data.course.instructor.fullName}
@@ -698,9 +698,9 @@ export default function CourseDetailsPage() {
                     </p>
                   ) : null}
                 </div>
-                <div className="rounded-3xl border border-amber-200 bg-amber-50 p-4">
-                  <p className="text-sm font-semibold text-amber-900">How joining works</p>
-                  <p className="mt-2 text-sm leading-6 text-amber-800">
+                <div className="rounded-3xl border border-emerald-200 bg-white p-4">
+                  <p className="text-sm font-semibold text-emerald-900">How joining works</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
                     Zoom and Google Meet open outside the LMS in a new tab or app. This launch screen keeps the interview details here, then sends you safely to the provider.
                   </p>
                 </div>
@@ -708,8 +708,8 @@ export default function CourseDetailsPage() {
                   href={activeInterviewQuery.data.meetingUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className={`inline-flex rounded-full px-5 py-3 text-sm font-semibold text-white ${
-                    activeInterviewQuery.data.isJoinReady ? "bg-emerald-600 shadow-lg shadow-emerald-200" : "bg-slate-950"
+                  className={`inline-flex rounded-full px-5 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 ${
+                    activeInterviewQuery.data.isJoinReady ? "bg-emerald-600 shadow-lg shadow-emerald-200 hover:bg-emerald-500" : "bg-slate-950 hover:bg-slate-800"
                   }`}
                 >
                   {activeInterviewQuery.data.isJoinReady
@@ -717,11 +717,11 @@ export default function CourseDetailsPage() {
                     : providerLaunchLabel(activeInterviewQuery.data.provider)}
                 </a>
                 </div>
-                <div className="rounded-[28px] border border-slate-200 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.18),transparent_34%),linear-gradient(160deg,#0f172a_0%,#111827_45%,#1f2937_100%)] p-6 text-white lg:p-8">
+                <div className="rounded-[28px] border border-emerald-200 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.22),transparent_34%),linear-gradient(160deg,#052e2b_0%,#0f3d36_45%,#115e59_100%)] p-6 text-white lg:p-8">
                 <div className="flex h-full min-h-[420px] flex-col justify-between gap-6">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/60">
-                      Platform interview launch
+                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-100/80">
+                      Live sessions launch
                     </p>
                     <h3 className="mt-4 text-2xl font-semibold tracking-tight lg:text-3xl">
                       {activeInterviewQuery.data.provider === "ZOOM" ? "Zoom" : "Google Meet"} will open outside the LMS
@@ -732,21 +732,21 @@ export default function CourseDetailsPage() {
                   </div>
 
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="rounded-[24px] border border-white/10 bg-white/8 p-5">
+                    <div className="rounded-[24px] border border-white/10 bg-white/10 p-5">
                       <p className="text-xs uppercase tracking-[0.18em] text-white/55">Provider</p>
                       <p className="mt-2 text-lg font-semibold">
                         {activeInterviewQuery.data.provider === "ZOOM" ? "Zoom" : "Google Meet"}
                       </p>
                     </div>
-                    <div className="rounded-[24px] border border-white/10 bg-white/8 p-5">
+                    <div className="rounded-[24px] border border-white/10 bg-white/10 p-5">
                       <p className="text-xs uppercase tracking-[0.18em] text-white/55">Schedule</p>
                       <p className="mt-2 text-lg font-semibold">{formatCourseDate(activeInterviewQuery.data.scheduledAt)}</p>
                     </div>
-                    <div className="rounded-[24px] border border-white/10 bg-white/8 p-5">
+                    <div className="rounded-[24px] border border-white/10 bg-white/10 p-5">
                       <p className="text-xs uppercase tracking-[0.18em] text-white/55">Course</p>
                       <p className="mt-2 text-lg font-semibold">{activeInterviewQuery.data.course.title}</p>
                     </div>
-                    <div className="rounded-[24px] border border-white/10 bg-white/8 p-5">
+                    <div className="rounded-[24px] border border-white/10 bg-white/10 p-5">
                       <p className="text-xs uppercase tracking-[0.18em] text-white/55">Next step</p>
                       <p className="mt-2 text-lg font-semibold">
                         {activeInterviewQuery.data.isJoinReady ? "Open the room now" : "Keep this window open until you're ready"}
@@ -772,7 +772,7 @@ export default function CourseDetailsPage() {
                     <button
                       type="button"
                       onClick={() => navigator.clipboard.writeText(activeInterviewQuery.data.meetingUrl)}
-                      className="inline-flex rounded-full border border-white/20 px-6 py-3 text-sm font-semibold text-white"
+                      className="inline-flex rounded-full border border-white/20 px-6 py-3 text-sm font-semibold text-white transition hover:border-white/35 hover:bg-white/10"
                     >
                       Copy meeting link
                     </button>
