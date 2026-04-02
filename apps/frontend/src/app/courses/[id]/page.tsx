@@ -1,6 +1,7 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 import { BackButton } from "../../../components/back-button";
 import { VideoPlayer } from "../../../components/video-player";
@@ -16,14 +17,28 @@ import { StatusBanner } from "../../../components/status-banner";
 import { formatCourseDate } from "./_components/course-details-types";
 import { useCourseDetailsWorkspace } from "./_hooks/use-course-details-workspace";
 
-function formatInterviewCountdown(value: string) {
-  const diffMs = new Date(value).getTime() - Date.now();
+function formatInterviewCountdown(value: string, now = Date.now()) {
+  const diffMs = new Date(value).getTime() - now;
   const diffMinutes = Math.ceil(diffMs / (1000 * 60));
 
   if (diffMinutes <= 0) {
     return "Live now";
   }
-  return `${diffMinutes} min`;
+
+  const days = Math.floor(diffMinutes / (60 * 24));
+  const hours = Math.floor((diffMinutes % (60 * 24)) / 60);
+  const minutes = diffMinutes % 60;
+
+  const parts: string[] = [];
+  if (days > 0) {
+    parts.push(`${days}d`);
+  }
+  if (hours > 0 || days > 0) {
+    parts.push(`${hours}h`);
+  }
+  parts.push(`${minutes}m`);
+
+  return parts.join(" ");
 }
 
 function providerLaunchLabel(provider: "ZOOM" | "GOOGLE_MEET") {
@@ -31,6 +46,16 @@ function providerLaunchLabel(provider: "ZOOM" | "GOOGLE_MEET") {
 }
 
 export default function CourseDetailsPage() {
+  const [countdownNow, setCountdownNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setCountdownNow(Date.now());
+    }, 30_000);
+
+    return () => window.clearInterval(interval);
+  }, []);
+
   const {
     activeLesson,
     activeInterviewId,
@@ -339,7 +364,7 @@ export default function CourseDetailsPage() {
                                 {session.isJoinReady ? "Join now" : "Starts soon"}
                               </span>
                               <span className="text-sm font-semibold text-slate-900">
-                                {session.isJoinReady ? "Live now" : `Starts in ${formatInterviewCountdown(session.scheduledAt)}`}
+                                {session.isJoinReady ? "Live now" : `Starts in ${formatInterviewCountdown(session.scheduledAt, countdownNow)}`}
                               </span>
                               <span className="text-sm text-slate-500">Open the session card to launch the meeting room.</span>
                             </div>
@@ -362,7 +387,7 @@ export default function CourseDetailsPage() {
                                 : "bg-amber-100 text-amber-800"
                             }`}
                           >
-                            {session.isJoinReady ? "Live now" : `Starts in ${formatInterviewCountdown(session.scheduledAt)}`}
+                            {session.isJoinReady ? "Live now" : `Starts in ${formatInterviewCountdown(session.scheduledAt, countdownNow)}`}
                           </span>
                         </div>
                       </div>
@@ -427,7 +452,7 @@ export default function CourseDetailsPage() {
             main={
               <>
                 {isStudent && courseProgress ? (
-                  <WorkspacePanel title="Progress header" description="See exactly what’s done, what’s next, and how close you are to the certificate.">
+                  <WorkspacePanel title="Progress header" description="See exactly what�s done, what�s next, and how close you are to the certificate.">
                     <div className="grid gap-3 md:grid-cols-4">
                       <StatPill label="Progress" value={`${courseProgress.percentage}%`} tone="info" />
                       <StatPill label="Lessons" value={`${courseProgress.completedLessons}/${courseProgress.totalLessons}`} tone="default" />
@@ -513,7 +538,7 @@ export default function CourseDetailsPage() {
                         </div>
                       ))
                     ) : (
-                      <EmptyState title="No quizzes yet" description="When the instructor adds quizzes, they’ll appear here in the course flow." />
+                      <EmptyState title="No quizzes yet" description="When the instructor adds quizzes, they�ll appear here in the course flow." />
                     )}
                   </div>
                 </WorkspacePanel>
@@ -569,7 +594,7 @@ export default function CourseDetailsPage() {
             utility={
               <>
                 {isStudent && completionStatusQuery.data ? (
-                  <WorkspacePanel title="Completion status" description="Track what’s done and unlock the certificate at the right time.">
+                  <WorkspacePanel title="Completion status" description="Track what�s done and unlock the certificate at the right time.">
                     <div className="grid gap-3">
                       <StatPill label="Lessons" value={`${completionStatusQuery.data.lessons.completed}/${completionStatusQuery.data.lessons.total}`} tone={completionStatusQuery.data.lessons.done ? "success" : "default"} />
                       <StatPill label="Quizzes" value={`${completionStatusQuery.data.quizzes.completed}/${completionStatusQuery.data.quizzes.total}`} tone={completionStatusQuery.data.quizzes.done ? "success" : "default"} />
@@ -634,7 +659,7 @@ export default function CourseDetailsPage() {
                 ) : null}
 
                 {selectedCourse.instructor ? (
-                  <WorkspacePanel title="Instructor" description="Visit the instructor’s public profile and course storefront.">
+                  <WorkspacePanel title="Instructor" description="Visit the instructor�s public profile and course storefront.">
                     <p className="text-sm font-semibold text-slate-900">{selectedCourse.instructor.fullName}</p>
                   <div className="mt-4 flex flex-wrap gap-2">
                       <Link href={`/instructors/${selectedCourse.instructor.id}`} className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">Open instructor profile</Link>
@@ -663,7 +688,7 @@ export default function CourseDetailsPage() {
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Live session launch</p>
                 <h2 className="mt-2 text-2xl font-semibold text-slate-950">{activeInterview.title}</h2>
                 <p className="mt-2 text-sm text-slate-600">
-                  {activeInterview.provider === "ZOOM" ? "Zoom" : "Google Meet"} • {formatCourseDate(activeInterview.scheduledAt)}
+                  {activeInterview.provider === "ZOOM" ? "Zoom" : "Google Meet"} � {formatCourseDate(activeInterview.scheduledAt)}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <span
@@ -682,7 +707,7 @@ export default function CourseDetailsPage() {
                         : "bg-amber-100 text-amber-800"
                     }`}
                   >
-                    {activeInterview.isJoinReady ? "Live now" : `Starts in ${formatInterviewCountdown(activeInterview.scheduledAt)}`}
+                    {activeInterview.isJoinReady ? "Live now" : `Starts in ${formatInterviewCountdown(activeInterview.scheduledAt, countdownNow)}`}
                   </span>
                 </div>
               </div>
@@ -695,88 +720,98 @@ export default function CourseDetailsPage() {
               </button>
             </div>
             <div className="p-5 lg:p-6">
-              <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_320px]">
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
                 <div className="rounded-[28px] border border-emerald-200 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.22),transparent_34%),linear-gradient(160deg,#052e2b_0%,#0f3d36_45%,#115e59_100%)] p-6 text-white lg:p-7">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-100/80">
-                    Live sessions launch
-                  </p>
-                  <h3 className="mt-4 text-2xl font-semibold tracking-tight lg:text-[2rem]">
-                    {activeInterview.provider === "ZOOM" ? "Zoom" : "Google Meet"} opens in a secure external room
-                  </h3>
-                  <p className="mt-4 text-sm leading-7 text-white/75">
-                    This launch window keeps the meeting organized inside the LMS, then opens the real interview in the provider's tab or app so the connection stays reliable.
-                  </p>
+                  <div className="grid gap-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-white/12 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-50">
+                        {activeInterview.provider === "ZOOM" ? "Zoom" : "Google Meet"}
+                      </span>
+                      <span className="rounded-full bg-white/12 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-50">
+                        {activeInterview.isJoinReady ? "Live now" : "Scheduled"}
+                      </span>
+                    </div>
 
-                  <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-[22px] border border-white/10 bg-white/10 p-4">
-                      <p className="text-xs uppercase tracking-[0.18em] text-white/55">Course</p>
-                      <p className="mt-2 text-base font-semibold">{activeInterview.course.title}</p>
-                    </div>
-                    <div className="rounded-[22px] border border-white/10 bg-white/10 p-4">
-                      <p className="text-xs uppercase tracking-[0.18em] text-white/55">Instructor</p>
-                      <p className="mt-2 text-base font-semibold">{activeInterview.course.instructor.fullName}</p>
-                    </div>
-                    <div className="rounded-[22px] border border-white/10 bg-white/10 p-4">
-                      <p className="text-xs uppercase tracking-[0.18em] text-white/55">Scheduled</p>
-                      <p className="mt-2 text-base font-semibold">{formatCourseDate(activeInterview.scheduledAt)}</p>
-                    </div>
-                    <div className="rounded-[22px] border border-white/10 bg-white/10 p-4">
-                      <p className="text-xs uppercase tracking-[0.18em] text-white/55">Countdown</p>
-                      <p className="mt-2 text-base font-semibold">
-                        {activeInterview.isJoinReady ? "Live now" : `Starts in ${formatInterviewCountdown(activeInterview.scheduledAt)}`}
+                    <div>
+                      <h3 className="text-2xl font-semibold tracking-tight lg:text-[2rem]">
+                        {activeInterview.provider === "ZOOM" ? "Zoom" : "Google Meet"} meeting
+                      </h3>
+                      <p className="mt-3 text-sm leading-7 text-white/75">
+                        Join from this launch window, then the provider opens in its own secure tab or app.
                       </p>
                     </div>
-                  </div>
 
-                  {activeInterview.description ? (
-                    <div className="mt-6 rounded-[22px] border border-white/10 bg-white/10 p-4">
-                      <p className="text-xs uppercase tracking-[0.18em] text-white/55">Notes</p>
-                      <p className="mt-2 text-sm leading-6 text-white/80">{activeInterview.description}</p>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="rounded-[22px] border border-white/10 bg-white/10 p-4">
+                        <p className="text-xs uppercase tracking-[0.18em] text-white/55">Starts</p>
+                        <p className="mt-2 text-base font-semibold">{formatCourseDate(activeInterview.scheduledAt)}</p>
+                      </div>
+                      <div className="rounded-[22px] border border-white/10 bg-white/10 p-4">
+                        <p className="text-xs uppercase tracking-[0.18em] text-white/55">Countdown</p>
+                        <p className="mt-2 text-base font-semibold">
+                          {activeInterview.isJoinReady ? "Live now" : formatInterviewCountdown(activeInterview.scheduledAt, countdownNow)}
+                        </p>
+                      </div>
+                      <div className="rounded-[22px] border border-white/10 bg-white/10 p-4">
+                        <p className="text-xs uppercase tracking-[0.18em] text-white/55">Course</p>
+                        <p className="mt-2 text-base font-semibold">{activeInterview.course.title}</p>
+                      </div>
+                      <div className="rounded-[22px] border border-white/10 bg-white/10 p-4">
+                        <p className="text-xs uppercase tracking-[0.18em] text-white/55">Instructor</p>
+                        <p className="mt-2 text-base font-semibold">{activeInterview.course.instructor.fullName}</p>
+                      </div>
                     </div>
-                  ) : null}
 
-                  <div className="mt-6 flex flex-wrap gap-3">
-                    <button
-                      type="button"
-                      onClick={() => void handleLaunchInterview()}
-                      disabled={recordInterviewAttendanceMutation.isPending}
-                      className={`inline-flex rounded-full px-6 py-3 text-sm font-semibold transition ${
-                        activeInterview.isJoinReady
-                          ? "bg-emerald-500 text-slate-950 hover:bg-emerald-400"
-                          : "bg-white text-slate-950 hover:bg-emerald-50"
-                      } disabled:cursor-not-allowed disabled:opacity-70`}
-                    >
-                      {recordInterviewAttendanceMutation.isPending
-                        ? "Opening..."
-                        : activeInterview.isJoinReady
-                          ? `Join now in ${activeInterview.provider === "ZOOM" ? "Zoom" : "Google Meet"}`
-                          : providerLaunchLabel(activeInterview.provider)}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => navigator.clipboard.writeText(activeInterview.meetingUrl)}
-                      className="inline-flex rounded-full border border-white/20 px-6 py-3 text-sm font-semibold text-white transition hover:border-white/35 hover:bg-white/10"
-                    >
-                      Copy meeting link
-                    </button>
+                    {activeInterview.description ? (
+                      <div className="rounded-[22px] border border-white/10 bg-white/10 p-4">
+                        <p className="text-xs uppercase tracking-[0.18em] text-white/55">Notes</p>
+                        <p className="mt-2 text-sm leading-6 text-white/80">{activeInterview.description}</p>
+                      </div>
+                    ) : null}
+
+                    <div className="flex flex-wrap gap-3">
+                      <button
+                        type="button"
+                        onClick={() => void handleLaunchInterview()}
+                        disabled={recordInterviewAttendanceMutation.isPending}
+                        className={`inline-flex rounded-full px-6 py-3 text-sm font-semibold transition ${
+                          activeInterview.isJoinReady
+                            ? "bg-emerald-500 text-slate-950 hover:bg-emerald-400"
+                            : "bg-white text-slate-950 hover:bg-emerald-50"
+                        } disabled:cursor-not-allowed disabled:opacity-70`}
+                      >
+                        {recordInterviewAttendanceMutation.isPending
+                          ? "Opening..."
+                          : activeInterview.isJoinReady
+                            ? `Join now in ${activeInterview.provider === "ZOOM" ? "Zoom" : "Google Meet"}`
+                            : providerLaunchLabel(activeInterview.provider)}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => navigator.clipboard.writeText(activeInterview.meetingUrl)}
+                        className="inline-flex rounded-full border border-white/20 px-6 py-3 text-sm font-semibold text-white transition hover:border-white/35 hover:bg-white/10"
+                      >
+                        Copy link
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                <div className="grid gap-3">
+                <div className="grid content-start gap-3">
                   <div className="rounded-[24px] border border-emerald-100 bg-emerald-50/70 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Meeting status</p>
-                    <p className="mt-3 text-lg font-semibold text-slate-950">
-                      {activeInterview.isJoinReady ? "Join now" : "Scheduled"}
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Status</p>
+                    <p className="mt-2 text-lg font-semibold text-slate-950">
+                      {activeInterview.isJoinReady ? "Ready to join" : "Waiting to start"}
                     </p>
                     <p className="mt-2 text-sm leading-6 text-slate-600">
                       {activeInterview.isJoinReady
-                        ? "The room is ready. Open it now and your attendance will be recorded before launch."
-                        : "The meeting is scheduled. Keep this window ready so you can join at the right time."}
+                        ? "Open the meeting now. Attendance is recorded before the provider launches."
+                        : `Starts in ${formatInterviewCountdown(activeInterview.scheduledAt, countdownNow)}.`}
                     </p>
                   </div>
                   <div className="rounded-[24px] border border-slate-200 bg-white p-4">
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Attendance</p>
-                    <div className="mt-3 grid gap-3">
+                    <div className="mt-3 space-y-3">
                       <div className="rounded-2xl bg-slate-50 p-3">
                         <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Students recorded</p>
                         <p className="mt-1 text-xl font-semibold text-slate-950">{activeInterview.attendanceCount ?? 0}</p>
@@ -786,20 +821,13 @@ export default function CourseDetailsPage() {
                           <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Your attended meetings</p>
                           <p className="mt-1 text-xl font-semibold text-slate-950">{activeInterview.studentAttendedCount ?? 0}</p>
                         </div>
-                      ) : null}
-                      {!isStudent ? (
+                      ) : (
                         <div className="rounded-2xl bg-slate-50 p-3">
                           <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Meetings you completed</p>
                           <p className="mt-1 text-xl font-semibold text-slate-950">{activeInterview.instructorCreatedCount ?? 0}</p>
                         </div>
-                      ) : null}
+                      )}
                     </div>
-                  </div>
-                  <div className="rounded-[24px] border border-slate-200 bg-white p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">How it works</p>
-                    <p className="mt-3 text-sm leading-6 text-slate-600">
-                      Zoom and Google Meet open outside the LMS. This launch window keeps the details clean here, then hands you off safely to the provider.
-                    </p>
                   </div>
                 </div>
               </div>
@@ -810,6 +838,7 @@ export default function CourseDetailsPage() {
     </main>
   );
 }
+
 
 
 
