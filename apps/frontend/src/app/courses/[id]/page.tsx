@@ -298,7 +298,24 @@ export default function CourseDetailsPage() {
                           ) : (
                             <p className="mt-2 text-sm text-slate-500">Open the launch screen to view details and join the live session safely.</p>
                           )}
-                          </div>
+                          {index === 0 ? (
+                            <div className="mt-4 flex flex-wrap items-center gap-2 rounded-[22px] border border-emerald-200 bg-emerald-50 px-3 py-3">
+                              <span
+                                className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${
+                                  session.isJoinReady
+                                    ? "bg-emerald-600 text-white"
+                                    : "bg-white text-emerald-700"
+                                }`}
+                              >
+                                {session.isJoinReady ? "Join now" : "Starts soon"}
+                              </span>
+                              <span className="text-sm font-semibold text-slate-900">
+                                {formatInterviewCountdown(session.scheduledAt)}
+                              </span>
+                              <span className="text-sm text-slate-500">Open the session card to launch the meeting room.</span>
+                            </div>
+                          ) : null}
+                        </div>
                           <div className="flex flex-wrap gap-2">
                             <span
                               className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${
