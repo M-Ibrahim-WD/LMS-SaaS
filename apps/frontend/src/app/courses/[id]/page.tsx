@@ -266,29 +266,38 @@ export default function CourseDetailsPage() {
               <div className="p-5 lg:p-6">
                 <div className="space-y-3">
                   {(interviewSessionsQuery.data ?? []).length ? (
-                    (interviewSessionsQuery.data ?? []).map((session) => (
-                      <button
-                        key={session.id}
-                        type="button"
-                        onClick={() => setActiveInterviewId(session.id)}
-                        className="w-full rounded-[28px] border border-emerald-100 bg-white/90 p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md"
-                      >
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div className="min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-800">
-                                {session.provider === "ZOOM" ? "Zoom" : "Google Meet"}
+                  (interviewSessionsQuery.data ?? []).map((session, index) => (
+                    <button
+                      key={session.id}
+                      type="button"
+                      onClick={() => setActiveInterviewId(session.id)}
+                      className={`w-full rounded-[28px] border p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
+                        index === 0
+                          ? "border-emerald-300 bg-[linear-gradient(145deg,rgba(255,255,255,0.98)_0%,rgba(236,253,245,0.96)_100%)] p-5 shadow-emerald-100 hover:border-emerald-400"
+                          : "border-emerald-100 bg-white/90 hover:border-emerald-300"
+                      }`}
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            {index === 0 ? (
+                              <span className="rounded-full bg-slate-950 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white">
+                                Next live session
                               </span>
-                              <span className="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">
-                                {formatCourseDate(session.scheduledAt)}
-                              </span>
-                            </div>
-                            <p className="mt-3 text-lg font-semibold text-slate-950">{session.title}</p>
-                            {session.description ? (
-                              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">{session.description}</p>
-                            ) : (
-                              <p className="mt-2 text-sm text-slate-500">Open the launch screen to view details and join the live session safely.</p>
-                            )}
+                            ) : null}
+                            <span className="rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-800">
+                              {session.provider === "ZOOM" ? "Zoom" : "Google Meet"}
+                            </span>
+                            <span className="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">
+                              {formatCourseDate(session.scheduledAt)}
+                            </span>
+                          </div>
+                          <p className={`mt-3 font-semibold text-slate-950 ${index === 0 ? "text-xl" : "text-lg"}`}>{session.title}</p>
+                          {session.description ? (
+                            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">{session.description}</p>
+                          ) : (
+                            <p className="mt-2 text-sm text-slate-500">Open the launch screen to view details and join the live session safely.</p>
+                          )}
                           </div>
                           <div className="flex flex-wrap gap-2">
                             <span
