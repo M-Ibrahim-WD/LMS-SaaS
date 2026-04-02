@@ -271,10 +271,10 @@ export default function CourseDetailsPage() {
                       key={session.id}
                       type="button"
                       onClick={() => setActiveInterviewId(session.id)}
-                      className={`w-full rounded-[28px] border p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
+                      className={`group w-full rounded-[28px] border p-4 text-left shadow-sm transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200 focus-visible:ring-offset-2 active:translate-y-[1px] ${
                         index === 0
-                          ? "border-emerald-300 bg-[linear-gradient(145deg,rgba(255,255,255,0.98)_0%,rgba(236,253,245,0.96)_100%)] p-5 shadow-emerald-100 hover:border-emerald-400"
-                          : "border-emerald-100 bg-white/90 hover:border-emerald-300"
+                          ? "border-emerald-300 bg-[linear-gradient(145deg,rgba(255,255,255,0.98)_0%,rgba(236,253,245,0.96)_100%)] p-5 shadow-emerald-100 hover:-translate-y-1 hover:border-emerald-400 hover:shadow-lg hover:shadow-emerald-100/80"
+                          : "border-emerald-100 bg-white/90 hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md"
                       }`}
                     >
                       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -292,14 +292,14 @@ export default function CourseDetailsPage() {
                               {formatCourseDate(session.scheduledAt)}
                             </span>
                           </div>
-                          <p className={`mt-3 font-semibold text-slate-950 ${index === 0 ? "text-xl" : "text-lg"}`}>{session.title}</p>
+                          <p className={`mt-3 font-semibold text-slate-950 transition-colors ${index === 0 ? "text-xl group-hover:text-emerald-900" : "text-lg"}`}>{session.title}</p>
                           {session.description ? (
                             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">{session.description}</p>
                           ) : (
                             <p className="mt-2 text-sm text-slate-500">Open the launch screen to view details and join the live session safely.</p>
                           )}
                           {index === 0 ? (
-                            <div className="mt-4 flex flex-wrap items-center gap-2 rounded-[22px] border border-emerald-200 bg-emerald-50 px-3 py-3">
+                            <div className="mt-4 flex flex-wrap items-center gap-2 rounded-[22px] border border-emerald-200 bg-emerald-50 px-3 py-3 transition-colors group-hover:border-emerald-300 group-hover:bg-emerald-100/80">
                               <span
                                 className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${
                                   session.isJoinReady
@@ -316,11 +316,11 @@ export default function CourseDetailsPage() {
                             </div>
                           ) : null}
                         </div>
-                          <div className="flex flex-wrap gap-2">
-                            <span
-                              className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${
-                                session.isJoinReady
-                                  ? "bg-emerald-100 text-emerald-800"
+                        <div className="flex flex-wrap gap-2">
+                          <span
+                            className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${
+                              session.isJoinReady
+                                ? "bg-emerald-100 text-emerald-800"
                                   : "bg-sky-100 text-sky-800"
                               }`}
                             >
@@ -331,15 +331,20 @@ export default function CourseDetailsPage() {
                                 session.isJoinReady
                                   ? "bg-emerald-100 text-emerald-800"
                                   : "bg-amber-100 text-amber-800"
-                              }`}
-                            >
-                              {formatInterviewCountdown(session.scheduledAt)}
-                            </span>
-                          </div>
+                            }`}
+                          >
+                            {formatInterviewCountdown(session.scheduledAt)}
+                          </span>
                         </div>
-                      </button>
-                    ))
-                  ) : (
+                      </div>
+                      {index === 0 ? (
+                        <div className="mt-4 flex items-center justify-end text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 transition-transform duration-200 group-hover:translate-x-1">
+                          Open live session
+                        </div>
+                      ) : null}
+                    </button>
+                  ))
+                ) : (
                     <div className="rounded-[28px] border border-dashed border-emerald-200 bg-white/80 p-6">
                       <EmptyState
                         title="No sessions yet"
