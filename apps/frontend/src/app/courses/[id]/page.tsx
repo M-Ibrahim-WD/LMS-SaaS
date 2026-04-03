@@ -43,6 +43,7 @@ function formatInterviewCountdown(value: string, now = Date.now()) {
 
 export default function CourseDetailsPage() {
   const [countdownNow, setCountdownNow] = useState(() => Date.now());
+  const [hoveredReviewRating, setHoveredReviewRating] = useState<number | null>(null);
 
   const {
     activeLesson,
