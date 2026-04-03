@@ -16,6 +16,25 @@ interface ProfileCourseCardProps {
   href?: string;
 }
 
+function RatingStars({ rating }: { rating: number }) {
+  return (
+    <span className="flex items-center gap-0.5" aria-label={`${rating.toFixed(1)} out of 5 stars`}>
+      {Array.from({ length: 5 }, (_, index) => {
+        const filled = rating >= index + 0.5;
+
+        return (
+          <span
+            key={index}
+            className={`text-[12px] leading-none ${filled ? "text-amber-500" : "text-slate-300"}`}
+          >
+            {"\u2605"}
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
 function gradientForTitle(title: string) {
   const gradients = [
     "from-sky-500 via-cyan-500 to-emerald-400",
@@ -73,11 +92,17 @@ export function ProfileCourseCard({
           <div className="flex flex-wrap items-center gap-3">
             <span>{studentsCount ?? 0} students</span>
             {reviewsCount ? (
-              <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700">
-                {averageRating !== null && averageRating !== undefined
-                  ? `${averageRating.toFixed(1)}★`
-                  : "Rated"}{" "}
-                · {reviewsCount}
+              <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700">
+                {averageRating !== null && averageRating !== undefined ? (
+                  <>
+                    <RatingStars rating={averageRating} />
+                    <span>{averageRating.toFixed(1)}</span>
+                  </>
+                ) : (
+                  <span>Rated</span>
+                )}
+                <span className="text-slate-400">•</span>
+                <span>{reviewsCount}</span>
               </span>
             ) : null}
           </div>
@@ -87,3 +112,4 @@ export function ProfileCourseCard({
     </Link>
   );
 }
+

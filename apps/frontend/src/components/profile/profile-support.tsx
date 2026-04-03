@@ -37,6 +37,24 @@ interface ReviewItem {
   };
 }
 
+function StarRow({ rating }: { rating: number }) {
+  return (
+    <div className="flex items-center gap-1" aria-label={`${rating} out of 5 stars`}>
+      {Array.from({ length: 5 }, (_, index) => {
+        const filled = index < rating;
+        return (
+          <span
+            key={index}
+            className={`text-base leading-none ${filled ? "text-amber-400" : "text-slate-300"}`}
+          >
+            {"\u2605"}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 export function ReviewsList({ reviews }: { reviews: ReviewItem[] }) {
   if (reviews.length === 0) {
     return (
@@ -61,8 +79,9 @@ export function ReviewsList({ reviews }: { reviews: ReviewItem[] }) {
                 {new Date(review.createdAt).toLocaleDateString()}
               </p>
             </div>
-            <div className="rounded-full bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-700">
-              {review.rating}/5
+            <div className="flex flex-col items-end gap-1 rounded-2xl bg-amber-50 px-3 py-2">
+              <StarRow rating={review.rating} />
+              <span className="text-xs font-semibold text-amber-700">{review.rating}/5</span>
             </div>
           </div>
           <p className="mt-4 text-sm leading-6 text-slate-600">
@@ -87,3 +106,4 @@ export function EmptyProfilePanel({
     </ProfilePanel>
   );
 }
+
