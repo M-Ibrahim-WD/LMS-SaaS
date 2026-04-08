@@ -46,6 +46,25 @@ interface PublicInstructorProfile {
 
 type PublicTab = "courses" | "reviews";
 
+function RatingStars({ rating }: { rating: number }) {
+  return (
+    <span className="flex items-center gap-0.5" aria-label={`${rating.toFixed(1)} out of 5 stars`}>
+      {Array.from({ length: 5 }, (_, index) => {
+        const filled = rating >= index + 0.5;
+
+        return (
+          <span
+            key={index}
+            className={`text-sm leading-none ${filled ? "text-amber-500" : "text-slate-300"}`}
+          >
+            {"\u2605"}
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
 export default function PublicInstructorProfilePage() {
   const params = useParams<{ id: string }>();
   const [tab, setTab] = useState<PublicTab>("courses");
@@ -81,7 +100,12 @@ export default function PublicInstructorProfilePage() {
                 label: "Reviews",
                 value:
                   profileQuery.data.stats.averageRating !== null
-                    ? `${profileQuery.data.stats.averageRating.toFixed(1)} / 5`
+                    ? (
+                        <span className="flex flex-wrap items-center gap-2">
+                          <RatingStars rating={profileQuery.data.stats.averageRating} />
+                          <span>{profileQuery.data.stats.averageRating.toFixed(1)} / 5</span>
+                        </span>
+                      )
                     : "No ratings",
                 helper: `${profileQuery.data.stats.reviewsCount} review${profileQuery.data.stats.reviewsCount === 1 ? "" : "s"}`
               }

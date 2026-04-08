@@ -5,8 +5,8 @@ import { ProfilePanel } from "./profile-shell";
 
 interface StatItem {
   label: string;
-  value: string;
-  helper?: string;
+  value: ReactNode;
+  helper?: ReactNode;
 }
 
 interface ProfileHeaderProps {
