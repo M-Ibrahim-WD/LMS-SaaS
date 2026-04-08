@@ -13,6 +13,7 @@ import {
 import type {
   DashboardInterviewSession,
   InstructorCourseOption,
+  InstructorDashboardProfile,
   InstructorPayment,
   PaymentMethod
 } from "./dashboard-types";
@@ -25,6 +26,7 @@ interface InstructorDashboardSectionProps {
   methodDetails: string;
   methodValidationError: string | null;
   deleteMethodError: string | null;
+  instructorProfile?: InstructorDashboardProfile | null;
   instructorCourses?: InstructorCourseOption[];
   interviewSessions?: DashboardInterviewSession[];
   interviewCourseId: string;
@@ -103,6 +105,25 @@ function interviewCountdownTone(session: DashboardInterviewSession) {
   return "default" as const;
 }
 
+function RatingStars({ rating }: { rating: number }) {
+  return (
+    <span className="flex items-center gap-0.5" aria-label={`${rating.toFixed(1)} out of 5 stars`}>
+      {Array.from({ length: 5 }, (_, index) => {
+        const filled = rating >= index + 0.5;
+
+        return (
+          <span
+            key={index}
+            className={`text-sm leading-none ${filled ? "text-amber-400" : "text-white/25"}`}
+          >
+            {"\u2605"}
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
 export function InstructorDashboardSection({
   accessToken,
   inviteCode,
@@ -111,6 +132,7 @@ export function InstructorDashboardSection({
   methodDetails,
   methodValidationError,
   deleteMethodError,
+  instructorProfile,
   instructorCourses,
   interviewSessions,
   interviewCourseId,
@@ -188,6 +210,29 @@ export function InstructorDashboardSection({
               <div className="rounded-[24px] border border-white/12 bg-white/10 p-4">
                 <p className="text-xs uppercase tracking-[0.18em] text-white/60">Payment methods</p>
                 <p className="mt-2 text-2xl font-semibold">{paymentMethods?.length ?? 0}</p>
+              </div>
+              <div className="rounded-[24px] border border-white/12 bg-white/10 p-4 sm:col-span-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.18em] text-white/60">Reviews</p>
+                    {instructorProfile?.stats.averageRating !== null &&
+                    instructorProfile?.stats.averageRating !== undefined ? (
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <RatingStars rating={instructorProfile.stats.averageRating} />
+                        <p className="text-2xl font-semibold">
+                          {instructorProfile.stats.averageRating.toFixed(1)}
+                        </p>
+                        <span className="text-sm text-white/70">/ 5</span>
+                      </div>
+                    ) : (
+                      <p className="mt-2 text-2xl font-semibold">No ratings yet</p>
+                    )}
+                  </div>
+                  <div className="text-right text-sm text-white/70">
+                    <p>{instructorProfile?.stats.reviewsCount ?? 0} total review{(instructorProfile?.stats.reviewsCount ?? 0) === 1 ? "" : "s"}</p>
+                    <p>{instructorProfile?.stats.publicCoursesCount ?? 0} published course{(instructorProfile?.stats.publicCoursesCount ?? 0) === 1 ? "" : "s"}</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

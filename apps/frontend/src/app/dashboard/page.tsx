@@ -259,6 +259,7 @@ export default function DashboardPage() {
               methodDetails={dashboard.methodDetails}
               methodValidationError={dashboard.methodValidationError}
               deleteMethodError={dashboard.deleteMethodError}
+              instructorProfile={dashboard.instructorProfileQuery.data}
               paymentMethods={dashboard.paymentMethodsQuery.data}
               instructorPayments={dashboard.instructorPaymentsQuery.data}
               instructorCourses={dashboard.instructorCoursesQuery.data}

@@ -200,6 +200,30 @@ export interface InstructorCourseOption {
   title: string;
 }
 
+export interface InstructorDashboardProfile {
+  id: string;
+  fullName: string;
+  email: string;
+  bio?: string | null;
+  profileImage?: string | null;
+  tenantId: string | null;
+  tenant?: {
+    id: string;
+    name: string;
+    inviteCode: string;
+  } | null;
+  createdAt: string;
+  stats: {
+    studentsCount: number;
+    coursesCount: number;
+    publicCoursesCount: number;
+    totalRevenue: number;
+    salesCount: number;
+    reviewsCount: number;
+    averageRating: number | null;
+  };
+}
+
 export interface DashboardInterviewSession {
   id: string;
   title: string;

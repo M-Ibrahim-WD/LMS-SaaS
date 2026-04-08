@@ -17,6 +17,7 @@ import type {
   ConversationUnreadItem,
   CourseFilter,
   DashboardInterviewSession,
+  InstructorDashboardProfile,
   EnrolledCourse,
   InstructorCourseOption,
   InstructorPayment,
@@ -113,6 +114,15 @@ export function useDashboardWorkspace() {
   const instructorCoursesQuery = useQuery({
     queryKey: ["courses", "instructor-dashboard"],
     queryFn: () => apiFetch<InstructorCourseOption[]>("/courses", { token: accessToken ?? undefined }),
+    enabled: Boolean(accessToken && user?.role === "INSTRUCTOR")
+  });
+
+  const instructorProfileQuery = useQuery({
+    queryKey: ["instructor", "profile", "dashboard"],
+    queryFn: () =>
+      apiFetch<InstructorDashboardProfile>("/instructor/profile", {
+        token: accessToken ?? undefined
+      }),
     enabled: Boolean(accessToken && user?.role === "INSTRUCTOR")
   });
 
@@ -601,6 +611,7 @@ export function useDashboardWorkspace() {
     studentMyCoursesQuery,
     continueLearningQuery,
     instructorCoursesQuery,
+    instructorProfileQuery,
     dashboardInterviewsQuery,
     notificationsQuery,
     unreadCountQuery,
