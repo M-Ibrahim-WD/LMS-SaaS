@@ -64,7 +64,6 @@ function Invoke-FrontendBuildValidation {
     try {
         Set-Location $frontendPath
         $env:PATH = "$nodePath;$env:PATH"
-        $env:COREPACK_HOME = $corepackHome
         $env:NEXT_DIST_DIR = $validationDistDir
         if (Test-Path $validationDistDir) {
             Remove-Item $validationDistDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -87,12 +86,6 @@ function Invoke-FrontendBuildValidation {
             $env:NEXT_DIST_DIR = $originalDistDir
         } else {
             Remove-Item Env:NEXT_DIST_DIR -ErrorAction SilentlyContinue
-        }
-
-        if ($null -ne $originalCorepackHome) {
-            $env:COREPACK_HOME = $originalCorepackHome
-        } else {
-            Remove-Item Env:COREPACK_HOME -ErrorAction SilentlyContinue
         }
 
         if ($null -ne $originalPath) {
@@ -161,7 +154,6 @@ Invoke-Step "Backup and summary" {
 
 Invoke-Step "Frontend lint" {
     $env:PATH = "$nodePath;$env:PATH"
-    $env:COREPACK_HOME = $corepackHome
     Set-Location $projectPath
     & $corepackCmd pnpm --filter "@lms/frontend" lint
     if ($LASTEXITCODE -ne 0) {
@@ -171,7 +163,6 @@ Invoke-Step "Frontend lint" {
 
 Invoke-Step "Backend build" {
     $env:PATH = "$nodePath;$env:PATH"
-    $env:COREPACK_HOME = $corepackHome
     Set-Location $projectPath
     & $corepackCmd pnpm --filter "@lms/backend" build
     if ($LASTEXITCODE -ne 0) {
@@ -182,7 +173,6 @@ Invoke-Step "Backend build" {
 if (-not $SkipBackendTests) {
     Invoke-Step "Backend tests" {
         $env:PATH = "$nodePath;$env:PATH"
-        $env:COREPACK_HOME = $corepackHome
         Set-Location $projectPath
         & $corepackCmd pnpm --filter "@lms/backend" test
         if ($LASTEXITCODE -ne 0) {

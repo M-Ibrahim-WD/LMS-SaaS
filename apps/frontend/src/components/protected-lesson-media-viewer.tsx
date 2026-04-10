@@ -159,7 +159,7 @@ function ProtectedPdfCanvasViewer({
   if (loading) {
     return (
       <div className="flex h-full min-h-[320px] items-center justify-center rounded-[24px] bg-white p-6 text-sm text-slate-600">
-        Loading {title}...
+        {title}
       </div>
     );
   }
@@ -356,7 +356,7 @@ export function ProtectedLessonMediaViewer({
   if (mediaSessionQuery.isLoading) {
     return (
       <div className={`rounded-[28px] border border-slate-200 bg-slate-50 p-5 text-sm text-slate-600 ${className ?? ""}`}>
-        Preparing protected lesson media...
+        {lessonTitle}
       </div>
     );
   }
@@ -364,12 +364,7 @@ export function ProtectedLessonMediaViewer({
   if (mediaSessionQuery.isError || !mediaSessionQuery.data) {
     return (
       <div className={`rounded-[28px] border border-amber-200 bg-amber-50 p-5 text-sm text-amber-800 ${className ?? ""}`}>
-        <p className="font-semibold">Protected media is unavailable right now.</p>
-        <p className="mt-2">
-          {mediaSessionQuery.error instanceof Error
-            ? mediaSessionQuery.error.message
-            : "Please refresh the lesson to create a fresh protected session."}
-        </p>
+        <p className="font-semibold">{lessonTitle}</p>
       </div>
     );
   }
@@ -490,20 +485,6 @@ export function ProtectedLessonMediaViewer({
         </div>
       </div>
 
-      <div className="grid gap-3 border-t border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600 sm:grid-cols-3">
-        <div className="rounded-2xl bg-white px-3 py-3">
-          <p className="font-semibold uppercase tracking-[0.18em] text-slate-500">Access</p>
-          <p className="mt-2 leading-5">This lesson stays available inside the course whenever the enrolled learner returns. The access session renews in the background when needed.</p>
-        </div>
-        <div className="rounded-2xl bg-white px-3 py-3">
-          <p className="font-semibold uppercase tracking-[0.18em] text-slate-500">Protection</p>
-          <p className="mt-2 leading-5">Access is tied to authenticated course membership and short-lived protected media sessions instead of a permanent public lesson file.</p>
-        </div>
-        <div className="rounded-2xl bg-white px-3 py-3">
-          <p className="font-semibold uppercase tracking-[0.18em] text-slate-500">Note</p>
-          <p className="mt-2 leading-5">We removed the visual watermark and noisy viewer alerts so the lesson experience stays readable while we continue hardening delivery.</p>
-        </div>
-      </div>
     </div>
   );
 }

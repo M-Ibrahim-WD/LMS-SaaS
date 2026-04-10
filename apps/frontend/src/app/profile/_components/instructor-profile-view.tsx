@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
@@ -85,7 +85,7 @@ export function InstructorProfileView({
             <SectionHeader
               eyebrow="Courses"
               title="Your course grid"
-              description="Published and draft learning products in one clean creator view."
+              description=""
               action={<Link href="/instructor/courses" className="rounded-full bg-slate-950 px-4 py-2 text-sm font-medium text-white">Manage courses</Link>}
             />
             {courses?.length ? (
@@ -114,7 +114,7 @@ export function InstructorProfileView({
         {tab === "payments" ? (
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
             <ProfilePanel>
-              <SectionHeader eyebrow="Payment Methods" title="Active payment accounts" description="Manual payment methods available to students." />
+              <SectionHeader eyebrow="Payment Methods" title="Active payment accounts" description="" />
               {paymentMethods?.length ? (
                 <div className="space-y-3">
                   {paymentMethods.map((method) => (
@@ -130,7 +130,7 @@ export function InstructorProfileView({
               )}
             </ProfilePanel>
             <ProfilePanel>
-              <SectionHeader eyebrow="Recent Payments" title="Latest submissions" description="Quick access to student payment proofs." />
+              <SectionHeader eyebrow="Recent Payments" title="Latest submissions" description="" />
               {payments?.length ? (
                 <div className="space-y-3">
                   {payments.slice(0, 5).map((payment) => (
@@ -175,7 +175,7 @@ export function InstructorProfileView({
               ))}
             </div>
             <ProfilePanel>
-              <SectionHeader eyebrow="Sales" title="Sales per course" description="Simple course performance without heavy charts." />
+              <SectionHeader eyebrow="Sales" title="Sales per course" description="" />
               {analytics?.salesPerCourse.length ? (
                 <div className="space-y-3">
                   {analytics.salesPerCourse.map((course) => (
@@ -201,3 +201,7 @@ export function InstructorProfileView({
     </>
   );
 }
+
+
+
+

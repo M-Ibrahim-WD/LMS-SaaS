@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 export const dynamic = "force-dynamic";
 
@@ -28,11 +28,11 @@ export default function SupportPage() {
   }, []);
 
   if (!workspace.hasHydrated) {
-    return <p className="p-6 text-sm text-slate-500">Loading support inbox...</p>;
+    return <p className="p-6 text-sm text-slate-500">Support Center</p>;
   }
 
   if (!workspace.accessToken) {
-    return <p className="p-6 text-sm text-slate-500">Redirecting...</p>;
+    return <p className="p-6 text-sm text-slate-500">Support Center</p>;
   }
 
   if (!workspace.canUseSupportInbox) {
@@ -47,7 +47,7 @@ export default function SupportPage() {
   return (
     <PageShell
       title="Support Center"
-      description="Handle platform technical support with a live, trackable inbox."
+      description=""
       backHref="/dashboard"
       maxWidthClassName="max-w-7xl"
     >
@@ -56,9 +56,6 @@ export default function SupportPage() {
           {!isSupportAdmin ? (
             <section ref={composeRef} className="rounded-[28px] border border-slate-200 bg-white/90 p-5 shadow-sm">
               <h2 className="text-lg font-semibold text-slate-950">Create support request</h2>
-              <p className="mt-2 text-sm text-slate-600">
-                Open a technical support conversation with the platform team.
-              </p>
               <div className="mt-4 space-y-3">
                 <input
                   value={workspace.supportSubject}
@@ -154,11 +151,11 @@ export default function SupportPage() {
             <div className="mt-4 space-y-3">
               {workspace.conversationsQuery.isLoading ? (
                 <p className="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-sm text-slate-500">
-                  Loading support threads...
+                  Support
                 </p>
               ) : conversations.length === 0 ? (
                 <p className="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-sm text-slate-500">
-                  No support conversations found.
+                  No conversations
                 </p>
               ) : (
                 conversations.map((conversation) => (
@@ -203,11 +200,9 @@ export default function SupportPage() {
 
         <section className="rounded-[32px] border border-slate-200 bg-white/95 shadow-sm">
           {workspace.activeConversationQuery.isLoading ? (
-            <div className="p-8 text-sm text-slate-500">Loading support conversation...</div>
+            <div className="p-8 text-sm text-slate-500">Support</div>
           ) : !active ? (
-            <div className="p-8 text-sm text-slate-500">
-              Select or create a support conversation.
-            </div>
+            <div className="p-8 text-sm text-slate-500">Support</div>
           ) : (
             <div className="flex min-h-[640px] flex-col">
               <div className="border-b border-slate-200 px-6 py-5">
@@ -251,7 +246,7 @@ export default function SupportPage() {
               <div className="flex-1 space-y-4 overflow-y-auto px-6 py-6">
                 {active.messages.length === 0 ? (
                   <p className="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-sm text-slate-500">
-                    No support messages yet.
+                    No messages
                   </p>
                 ) : (
                   groupedMessages.map((group) => (
@@ -324,4 +319,8 @@ export default function SupportPage() {
     </PageShell>
   );
 }
+
+
+
+
 

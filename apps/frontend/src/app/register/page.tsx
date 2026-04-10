@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
@@ -73,7 +73,7 @@ export default function RegisterPage() {
   return (
     <AuthPanel
       title="Register"
-      description="Choose whether you're here to teach or learn, then create the right account for that role."
+      description=""
       footer={
         <p className="text-center text-sm text-slate-600">
           Already have an account?{" "}
@@ -168,3 +168,5 @@ export default function RegisterPage() {
     </AuthPanel>
   );
 }
+
+

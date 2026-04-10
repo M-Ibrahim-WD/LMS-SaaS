@@ -57,16 +57,16 @@ export default function MyCoursesPage() {
   });
 
   if (!hasHydrated) {
-    return <main className="p-8">Loading session...</main>;
+    return <main className="p-8">My Courses</main>;
   }
 
   return (
     <PageShell
       title="My Courses"
-      description="Courses you enrolled in will appear here, with the next lesson ready to resume."
+      description=""
       backHref="/dashboard"
     >
-      {myCoursesQuery.isLoading ? <StatusBanner>Loading courses...</StatusBanner> : null}
+      {myCoursesQuery.isLoading ? <StatusBanner>My Courses</StatusBanner> : null}
       {myCoursesQuery.isError ? (
         <StatusBanner variant="error">Failed to load your courses. Please try again.</StatusBanner>
       ) : null}
@@ -153,4 +153,6 @@ export default function MyCoursesPage() {
     </PageShell>
   );
 }
+
+
 

@@ -45,9 +45,9 @@ export function ProfileHeader({ name, bio, imageUrl, badge, stats, actions }: Pr
           <p className="mt-4 text-xs uppercase tracking-[0.28em] text-slate-400">{badge}</p>
         ) : null}
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">{name}</h1>
-        <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
-          {bio?.trim() ? bio : "A focused learning profile built for clear discovery and fast navigation."}
-        </p>
+        {bio?.trim() ? (
+          <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">{bio}</p>
+        ) : null}
         {actions ? <div className="mt-5 flex flex-wrap items-center justify-center gap-3">{actions}</div> : null}
         <div className="mx-auto mt-8 grid max-w-3xl grid-cols-2 gap-3 sm:grid-cols-3">
           {stats.map((stat) => (
@@ -57,7 +57,6 @@ export function ProfileHeader({ name, bio, imageUrl, badge, stats, actions }: Pr
             >
               <p className="text-[11px] uppercase tracking-[0.24em] text-slate-400">{stat.label}</p>
               <p className="mt-2 text-2xl font-semibold text-slate-950">{stat.value}</p>
-              {stat.helper ? <p className="mt-1 text-xs text-slate-500">{stat.helper}</p> : null}
             </div>
           ))}
         </div>

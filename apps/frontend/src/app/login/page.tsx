@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
@@ -76,7 +76,7 @@ export default function LoginPage() {
   return (
     <AuthPanel
       title="Login"
-      description="Access your LMS account with a calmer, role-aware workspace waiting on the other side."
+      description=""
       footer={
         <p className="text-center text-sm text-slate-600">
           Don&apos;t have an account?{" "}
@@ -125,3 +125,5 @@ export default function LoginPage() {
     </AuthPanel>
   );
 }
+
+

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -378,7 +378,7 @@ export default function CourseDetailsPage() {
     return (
       <main className="mx-auto max-w-6xl p-8">
         <BackButton fallbackHref="/courses" />
-        <StatusBanner>Loading course...</StatusBanner>
+        <StatusBanner>Course</StatusBanner>
       </main>
     );
   }
@@ -440,7 +440,7 @@ export default function CourseDetailsPage() {
           {!selectedCourse.isPaid ? (
             <>
               <h2 className="text-xl font-semibold text-slate-950">Join this course</h2>
-              <p className="mt-2 text-sm text-slate-600">This is a free course, so you can enroll and begin learning immediately.</p>
+              
               <button
                 type="button"
                 onClick={() => enrollMutation.mutate()}
@@ -456,7 +456,7 @@ export default function CourseDetailsPage() {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <h2 className="text-xl font-semibold text-slate-950">Complete payment to unlock the course</h2>
-                  <p className="mt-2 text-sm text-slate-600">Choose a manual payment method, upload proof, and wait for approval.</p>
+                  
                 </div>
                 <StatPill label="Price" value={selectedCourse.price?.toFixed(2) ?? "0.00"} tone="warning" />
               </div>
@@ -474,11 +474,11 @@ export default function CourseDetailsPage() {
                         </div>
                       ))
                     ) : (
-                      <EmptyState title="No payment methods yet" description="The instructor still needs to configure at least one manual payment method." />
+                      <EmptyState title="No payment methods yet" description="" />
                     )}
                   </div>
                 </div>
-                <WorkspacePanel title="Payment proof" description="Upload a screenshot or file showing the completed payment.">
+                <WorkspacePanel title="Payment proof">
                   <form onSubmit={onSubmitPayment} className="space-y-4">
                     <select
                       className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm"
@@ -538,8 +538,8 @@ export default function CourseDetailsPage() {
               <div className="border-b border-emerald-100/80 px-6 py-5 lg:px-8">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-emerald-700">Live sessions</p>
-                    <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">Upcoming course interviews</h2>
+                    
+                    <h2 className="text-2xl font-semibold tracking-tight text-slate-950">Interviews</h2>
                     <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
                       Keep live course events visible at the top of the workspace so learners can spot the next session quickly and join at the right moment.
                     </p>
@@ -595,9 +595,7 @@ export default function CourseDetailsPage() {
                           <p className={`mt-3 font-semibold text-slate-950 transition-colors ${index === 0 ? "text-xl group-hover:text-emerald-900" : "text-lg"}`}>{session.title}</p>
                           {session.description ? (
                             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">{session.description}</p>
-                          ) : (
-                            <p className="mt-2 text-sm text-slate-500">Open the launch screen to view details and join the live session safely.</p>
-                          )}
+                          ) : null}
                           {index === 0 ? (
                             <div className="mt-4 flex flex-wrap items-center gap-2 rounded-[22px] border border-emerald-200 bg-emerald-50 px-3 py-3 transition-colors group-hover:border-emerald-300 group-hover:bg-emerald-100/80">
                               <span
@@ -656,7 +654,7 @@ export default function CourseDetailsPage() {
 
           <WorkspaceShell
             sidebar={
-              <WorkspacePanel title="Course navigation" description="Move through the course like a real learning workspace.">
+              <WorkspacePanel title="Course navigation">
                 <div className="space-y-4">
                   {courseQuery.data?.sections.map((section) => (
                     <div key={section.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-3">
@@ -705,7 +703,7 @@ export default function CourseDetailsPage() {
             main={
               <>
                 {isStudent && courseProgress ? (
-                  <WorkspacePanel title="Progress header" description="See exactly what�s done, what�s next, and how close you are to the certificate.">
+                  <WorkspacePanel title="Progress header" description="See exactly whatï¿½s done, whatï¿½s next, and how close you are to the certificate.">
                     <div className="grid gap-3 md:grid-cols-4">
                       <StatPill label="Progress" value={`${courseProgress.percentage}%`} tone="info" />
                       <StatPill label="Lessons" value={`${courseProgress.completedLessons}/${courseProgress.totalLessons}`} tone="default" />
@@ -756,8 +754,8 @@ export default function CourseDetailsPage() {
                     </div>
                   </WorkspacePanel>
                 ) : (
-                  <WorkspacePanel title="No lesson selected" description="Choose a lesson from the navigation to start learning.">
-                    <EmptyState title="Nothing to show yet" description="Once the course has lessons, the active lesson will appear here with progress actions." />
+                  <WorkspacePanel title="No lesson selected">
+                    <EmptyState title="Nothing to show yet" description="" />
                   </WorkspacePanel>
                 )}
                 {visibleLessonQuizzes.length || visibleLessonAssignments.length ? (
@@ -801,7 +799,7 @@ export default function CourseDetailsPage() {
             utility={
               <>
                 {isStudent && completionStatusQuery.data ? (
-                  <WorkspacePanel title="Completion status" description="Track what is done and unlock the certificate at the right time.">
+                  <WorkspacePanel title="Completion status">
                     <div className="grid gap-3">
                       <StatPill label="Lessons" value={`${completionStatusQuery.data.lessons.completed}/${completionStatusQuery.data.lessons.total}`} tone={completionStatusQuery.data.lessons.done ? "success" : "default"} />
                       <StatPill label="Quizzes" value={`${completionStatusQuery.data.quizzes.completed}/${completionStatusQuery.data.quizzes.total}`} tone={completionStatusQuery.data.quizzes.done ? "success" : "default"} />
@@ -843,7 +841,7 @@ export default function CourseDetailsPage() {
                 ) : null}
 
                 {isStudent ? (
-                  <WorkspacePanel title="Course review" description="Leave a rating and comment after working through the course.">
+                  <WorkspacePanel title="Course review">
                     <form onSubmit={(event) => void onSubmitReview(event)} className="space-y-4">
                       <div>
                         <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Rating</p>
@@ -863,7 +861,7 @@ export default function CourseDetailsPage() {
                                     : "border border-slate-300 bg-white text-slate-600 hover:border-slate-400"
                                 }`}
                               >
-                                <span className="tracking-[0.2em] text-amber-500">{"★".repeat(value)}</span>
+                                <span className="tracking-[0.2em] text-amber-500">{"â˜…".repeat(value)}</span>
                               </button>
                             );
                           })}
@@ -886,7 +884,7 @@ export default function CourseDetailsPage() {
                 ) : null}
 
                 {selectedCourse.instructor ? (
-                  <WorkspacePanel title="Instructor" description="Visit the instructor's public profile and course storefront.">
+                  <WorkspacePanel title="Instructor">
                     <p className="text-sm font-semibold text-slate-900">{selectedCourse.instructor.fullName}</p>
                   <div className="mt-4 flex flex-wrap gap-2">
                       <Link href={`/instructors/${selectedCourse.instructor.id}`} className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">Open instructor profile</Link>
@@ -1268,6 +1266,10 @@ export default function CourseDetailsPage() {
     </main>
   );
 }
+
+
+
+
 
 
 

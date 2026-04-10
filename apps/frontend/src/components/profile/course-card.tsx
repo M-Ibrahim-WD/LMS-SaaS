@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 
@@ -86,7 +86,7 @@ export function ProfileCourseCard({
       <div className="p-4">
         <h3 className="text-base font-semibold text-slate-950 transition group-hover:text-sky-700">{title}</h3>
         <p className="mt-2 text-sm leading-6 text-slate-600">
-          {description?.trim() ? description : "Explore this course and open the full learning details."}
+          {description?.trim() ? description : ""}
         </p>
         <div className="mt-4 flex items-center justify-between gap-3 text-xs text-slate-500">
           <div className="flex flex-wrap items-center gap-3">
@@ -112,4 +112,6 @@ export function ProfileCourseCard({
     </Link>
   );
 }
+
+
 

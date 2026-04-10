@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
@@ -190,7 +190,7 @@ export default function ProfilePage() {
 
   const settingsForm = (
     <ProfilePanel>
-      <SectionHeader eyebrow="Settings" title="Edit profile" description="Update your visible identity, short bio, and image." />
+      <SectionHeader eyebrow="Settings" title="Edit profile" description="" />
       <form
         className="space-y-4"
         onSubmit={(event: FormEvent<HTMLFormElement>) => {
@@ -269,7 +269,7 @@ export default function ProfilePage() {
   );
 
   if (!hasHydrated) {
-    return <main className="p-8">Loading session...</main>;
+    return <main className="p-8">Profile</main>;
   }
 
   return (
@@ -284,7 +284,7 @@ export default function ProfilePage() {
       {summaryQuery.isLoading ? <ProfileSkeleton /> : null}
       {summaryQuery.isError ? (
         <div className="mt-6">
-          <EmptyProfilePanel title="Profile unavailable" description="We could not load the profile page right now. Please refresh and try again." />
+          <EmptyProfilePanel title="Profile unavailable" description="" />
         </div>
       ) : null}
 
@@ -314,3 +314,5 @@ export default function ProfilePage() {
     </ProfileShell>
   );
 }
+
+

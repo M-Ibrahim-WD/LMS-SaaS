@@ -25,11 +25,11 @@ export default function MessagesPage() {
   const workspace = useConversationsWorkspace({ kind: "MESSAGES" });
 
   if (!workspace.hasHydrated) {
-    return <p className="p-6 text-sm text-slate-500">Loading your messages...</p>;
+    return <p className="p-6 text-sm text-slate-500">Messages</p>;
   }
 
   if (!workspace.isAuthorized || !workspace.accessToken) {
-    return <p className="p-6 text-sm text-slate-500">Redirecting...</p>;
+    return <p className="p-6 text-sm text-slate-500">Messages</p>;
   }
 
   const conversations = workspace.filteredConversations ?? [];
@@ -40,7 +40,6 @@ export default function MessagesPage() {
   return (
     <PageShell
       title="Messages"
-      description="Keep direct and group conversations moving in one real-time workspace."
       backHref="/dashboard"
       maxWidthClassName="max-w-7xl"
       actions={
@@ -56,14 +55,11 @@ export default function MessagesPage() {
         <aside className="space-y-4">
           {workspace.conversationsQuery.isError ? (
             <StatusBanner variant="error">
-              We could not load your conversations right now. Refresh the page and try again.
+              Conversations unavailable
             </StatusBanner>
           ) : null}
           <section className="rounded-[28px] border border-slate-200 bg-white/90 p-5 shadow-sm">
             <h2 className="text-lg font-semibold text-slate-950">Start a direct chat</h2>
-            <p className="mt-2 text-sm text-slate-600">
-              Pick a teacher or student you already belong with in the workspace.
-            </p>
             <div className="mt-4 space-y-3">
               <select
                 value={workspace.directTargetId}
@@ -92,9 +88,6 @@ export default function MessagesPage() {
           {isInstructor ? (
             <section className="rounded-[28px] border border-slate-200 bg-white/90 p-5 shadow-sm">
               <h2 className="text-lg font-semibold text-slate-950">Create a group chat</h2>
-              <p className="mt-2 text-sm text-slate-600">
-                Open one room for a course, all followers, or a selected student list.
-              </p>
               <div className="mt-4 space-y-3">
                 <input
                   value={workspace.groupTitle}
@@ -175,9 +168,9 @@ export default function MessagesPage() {
             />
             <div className="mt-4 space-y-3">
               {workspace.conversationsQuery.isLoading ? (
-                <p className="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-sm text-slate-500">Loading conversations...</p>
+                <p className="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-sm text-slate-500">Conversations</p>
               ) : conversations.length === 0 ? (
-                <p className="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-sm text-slate-500">No conversations yet.</p>
+                <p className="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-sm text-slate-500">No conversations</p>
               ) : (
                 conversations.map((conversation) => (
                   <button
@@ -211,15 +204,15 @@ export default function MessagesPage() {
 
         <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white/95 shadow-sm sm:rounded-[32px]">
           {workspace.activeConversationQuery.isLoading ? (
-            <div className="p-8 text-sm text-slate-500">Loading conversation...</div>
+            <div className="p-8 text-sm text-slate-500">Conversation</div>
           ) : workspace.activeConversationQuery.isError ? (
             <div className="p-8">
               <StatusBanner variant="error">
-                We could not load this conversation. Please pick another thread or refresh the page.
+                Conversation unavailable
               </StatusBanner>
             </div>
           ) : !active ? (
-            <div className="p-8 text-sm text-slate-500">Select a conversation to start chatting.</div>
+            <div className="p-8 text-sm text-slate-500">Conversation</div>
           ) : (
             <div className="flex min-h-[70vh] flex-col sm:min-h-[640px]">
               <div className="border-b border-slate-200 px-4 py-4 sm:px-6 sm:py-5">
@@ -231,11 +224,11 @@ export default function MessagesPage() {
                     <h2 className="mt-2 text-xl font-semibold text-slate-950">
                       {active.kind === "GROUP" ? active.groupTitle ?? "Group conversation" : active.otherParticipant?.fullName ?? "Conversation"}
                     </h2>
-                    <p className="mt-2 text-sm text-slate-600">
-                      {active.kind === "GROUP"
-                        ? `${active.participantCount} participants${active.course ? ` • ${active.course.title}` : ""}`
-                        : "Messages update live while the conversation is open."}
-                    </p>
+                    {active.kind === "GROUP" ? (
+                      <p className="mt-2 text-sm text-slate-600">
+                        {`${active.participantCount} participants${active.course ? ` • ${active.course.title}` : ""}`}
+                      </p>
+                    ) : null}
                     {active.kind === "GROUP" ? (
                       <div className="mt-4 space-y-3 rounded-3xl border border-slate-200 bg-slate-50 p-4">
                         <div className="flex flex-wrap gap-2">
@@ -323,7 +316,7 @@ export default function MessagesPage() {
 
               <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
                 {active.messages.length === 0 ? (
-                  <p className="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-sm text-slate-500">No messages yet. Send the first one.</p>
+                  <p className="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-sm text-slate-500">No messages</p>
                 ) : (
                   groupedMessages.map((group) => (
                     <div key={group.label} className="space-y-4">
@@ -370,4 +363,6 @@ export default function MessagesPage() {
     </PageShell>
   );
 }
+
+
 

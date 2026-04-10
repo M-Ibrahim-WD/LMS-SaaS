@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import type { ReactNode } from "react";
 import { EmptyState } from "../empty-state";
@@ -11,13 +11,12 @@ interface SectionHeaderProps {
   action?: ReactNode;
 }
 
-export function SectionHeader({ eyebrow, title, description, action }: SectionHeaderProps) {
+export function SectionHeader({ eyebrow, title, description: _description, action }: SectionHeaderProps) {
   return (
     <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div>
         {eyebrow ? <p className="text-xs uppercase tracking-[0.24em] text-slate-400">{eyebrow}</p> : null}
         <h2 className="mt-1 text-xl font-semibold text-slate-950">{title}</h2>
-        {description ? <p className="mt-1 text-sm text-slate-500">{description}</p> : null}
       </div>
       {action}
     </div>
@@ -59,10 +58,7 @@ export function ReviewsList({ reviews }: { reviews: ReviewItem[] }) {
   if (reviews.length === 0) {
     return (
       <ProfilePanel>
-        <EmptyState
-          title="No reviews yet"
-          description="Once learners start leaving feedback, their reviews will show up here."
-        />
+        <EmptyState title="No reviews yet" description="" />
       </ProfilePanel>
     );
   }
@@ -84,9 +80,7 @@ export function ReviewsList({ reviews }: { reviews: ReviewItem[] }) {
               <span className="text-xs font-semibold text-amber-700">{review.rating}/5</span>
             </div>
           </div>
-          <p className="mt-4 text-sm leading-6 text-slate-600">
-            {review.comment?.trim() ? review.comment : "No written comment was added for this review."}
-          </p>
+          {review.comment?.trim() ? <p className="mt-4 text-sm leading-6 text-slate-600">{review.comment}</p> : null}
         </ProfilePanel>
       ))}
     </div>
@@ -106,4 +100,5 @@ export function EmptyProfilePanel({
     </ProfilePanel>
   );
 }
+
 

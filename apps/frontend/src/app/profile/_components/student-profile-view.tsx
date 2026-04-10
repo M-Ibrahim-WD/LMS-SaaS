@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
@@ -75,7 +75,7 @@ export function StudentProfileView({
       <div className="mt-6">
         {tab === "courses" ? (
           <ProfilePanel>
-            <SectionHeader eyebrow="Learning" title="Continue where you left off" description="Courses stay organized around progress, certificates, and next lessons." />
+            <SectionHeader eyebrow="Learning" title="Continue where you left off" description="" />
             {courses?.length ? (
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {courses.map((enrollment) => (
@@ -104,11 +104,7 @@ export function StudentProfileView({
                       <div className="mt-3 h-2 rounded-full bg-slate-200">
                         <div className="h-full rounded-full bg-sky-600" style={{ width: `${enrollment.progress?.percentage ?? 0}%` }} />
                       </div>
-                      <p className="mt-3 text-sm text-slate-500">
-                        {enrollment.learningState?.nextLesson?.title
-                          ? `Next lesson: ${enrollment.learningState.nextLesson.title}`
-                          : "You are caught up on the current lesson sequence."}
-                      </p>
+                      {enrollment.learningState?.nextLesson?.title ? (<p className="mt-3 text-sm text-slate-500">{enrollment.learningState.nextLesson.title}</p>) : null}
                     </div>
                   </div>
                 ))}
@@ -121,7 +117,7 @@ export function StudentProfileView({
 
         {tab === "certificates" ? (
           <ProfilePanel>
-            <SectionHeader eyebrow="Certificates" title="Earned outcomes" description="Certificates are collected here once you complete the course requirements." />
+            <SectionHeader eyebrow="Certificates" title="Earned outcomes" description="" />
             {certificates?.length ? (
               <div className="grid gap-4 md:grid-cols-2">
                 {certificates.map((certificate) => (
@@ -148,7 +144,7 @@ export function StudentProfileView({
 
         {tab === "activity" ? (
           <ProfilePanel>
-            <SectionHeader eyebrow="Activity" title="Recent updates" description="A compact timeline of what changed across your learning journey." />
+            <SectionHeader eyebrow="Activity" title="Recent updates" description="" />
             {notifications?.length ? (
               <div className="space-y-3">
                 {notifications.slice(0, 8).map((item) => (
@@ -172,7 +168,7 @@ export function StudentProfileView({
 
         {tab === "following" ? (
           <ProfilePanel>
-            <SectionHeader eyebrow="Following" title="Instructors you follow" description="Each instructor opens a public creator-style profile with courses and reviews." />
+            <SectionHeader eyebrow="Following" title="Instructors you follow" description="" />
             {following?.length ? (
               <div className="grid gap-4 md:grid-cols-2">
                 {following.map((relation) => (
@@ -202,3 +198,7 @@ export function StudentProfileView({
     </>
   );
 }
+
+
+
+
