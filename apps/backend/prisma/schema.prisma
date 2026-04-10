@@ -53,6 +53,12 @@ enum AssignmentSubmissionStatus {
   REVIEWED
 }
 
+enum AssessmentScopeType {
+  LESSON
+  SECTION
+  COURSE
+}
+
 enum PaymentMethodType {
   INSTAPAY
   VODAFONE_CASH
@@ -98,6 +104,19 @@ enum NotificationType {
   INTERVIEW_SCHEDULED
   INTERVIEW_UPDATED
   INTERVIEW_COMPLETED
+  CONTENT_SECURITY_ALERT
+}
+
+enum ProtectedContentEventType {
+  MEDIA_SESSION_STARTED
+  MEDIA_SESSION_ENDED
+  TAB_HIDDEN
+  FULLSCREEN_EXITED
+  PRINT_ATTEMPT
+  COPY_ATTEMPT
+  CONTEXT_MENU_ATTEMPT
+  INVALID_MEDIA_TOKEN
+  SUSPICIOUS_SESSION_REGENERATION
 }
 
 enum ConversationKind {
@@ -278,6 +297,8 @@ model User {
   conversationParticipants ConversationParticipant[]
   sentMessages Message[] @relation("ConversationMessageSender")
   supportAssignments SupportAssignment[] @relation("SupportAssignedAdmin")
+  mediaSessions MediaSession[]
+  protectedContentEvents ProtectedContentEvent[]
 
   @@index([tenantId])
   @@index([tenantId, role])
@@ -363,6 +384,8 @@ model Course {
   reviews CourseReview[]
   conversations Conversation[]
   interviewSessions CourseInterviewSession[]
+  mediaSessions MediaSession[]
+  protectedContentEvents ProtectedContentEvent[]
 
   @@index([tenantId])
   @@index([tenantId, status])
@@ -374,11 +397,14 @@ model Course {
 model Section {
   id       String   @id @default(uuid())
   title    String
+  description String?
   courseId String   @map("course_id")
   order    Int
 
   course  Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
   lessons Lesson[]
+  quizzes Quiz[]
+  assignments Assignment[]
 
   @@index([courseId])
   @@unique([courseId, order])
@@ -388,13 +414,21 @@ model Lesson {
   id        String     @id @default(uuid())
   title     String
   content   String
+  description String?
   type      LessonType
   sectionId String     @map("section_id")
   order     Int
+  mediaAsset String?   @map("media_asset")
+  mediaFileName String? @map("media_file_name")
+  mediaContentType String? @map("media_content_type")
 
   section Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
   completions LessonCompletion[]
   learnerStates CourseLearnerState[] @relation("LastViewedLesson")
+  quizzes Quiz[]
+  assignments Assignment[]
+  mediaSessions MediaSession[]
+  protectedContentEvents ProtectedContentEvent[]
 
   @@index([sectionId])
   @@unique([sectionId, order])
@@ -420,20 +454,28 @@ model LessonCompletion {
 model Quiz {
   id           String   @id @default(uuid())
   courseId     String   @map("course_id")
+  sectionId    String?  @map("section_id")
+  lessonId     String?  @map("lesson_id")
   tenantId     String   @map("tenant_id")
   instructorId String   @map("instructor_id")
+  scopeType    AssessmentScopeType @default(COURSE) @map("scope_type")
   title        String
   description  String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   course      Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  section     Section?         @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  lesson      Lesson?          @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   questions   QuizQuestion[]
   submissions QuizSubmission[]
 
   @@index([courseId])
+  @@index([sectionId])
+  @@index([lessonId])
   @@index([tenantId])
   @@index([instructorId])
+  @@index([scopeType])
 }
 
 model QuizQuestion {
@@ -472,8 +514,11 @@ model QuizSubmission {
 model Assignment {
   id           String   @id @default(uuid())
   courseId     String   @map("course_id")
+  sectionId    String?  @map("section_id")
+  lessonId     String?  @map("lesson_id")
   tenantId     String   @map("tenant_id")
   instructorId String   @map("instructor_id")
+  scopeType    AssessmentScopeType @default(COURSE) @map("scope_type")
   title        String
   description  String?
   instructions String?
@@ -481,11 +526,16 @@ model Assignment {
   updatedAt    DateTime @updatedAt
 
   course      Course                 @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  section     Section?               @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  lesson      Lesson?                @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   submissions AssignmentSubmission[]
 
   @@index([courseId])
+  @@index([sectionId])
+  @@index([lessonId])
   @@index([tenantId])
   @@index([instructorId])
+  @@index([scopeType])
 }
 
 model AssignmentSubmission {
@@ -560,6 +610,54 @@ model Notification {
   @@index([userId])
   @@index([tenantId])
   @@index([userId, isRead])
+}
+
+model MediaSession {
+  id             String   @id @default(uuid())
+  tenantId       String   @map("tenant_id")
+  userId         String   @map("user_id")
+  courseId       String   @map("course_id")
+  lessonId       String   @map("lesson_id")
+  tokenHash      String   @unique @map("token_hash")
+  expiresAt      DateTime @map("expires_at")
+  lastAccessedAt DateTime? @map("last_accessed_at")
+  createdAt      DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  events ProtectedContentEvent[]
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([courseId])
+  @@index([lessonId])
+  @@index([expiresAt])
+}
+
+model ProtectedContentEvent {
+  id             String                    @id @default(uuid())
+  tenantId       String                    @map("tenant_id")
+  userId         String                    @map("user_id")
+  courseId       String                    @map("course_id")
+  lessonId       String                    @map("lesson_id")
+  mediaSessionId String?                   @map("media_session_id")
+  eventType      ProtectedContentEventType @map("event_type")
+  eventMetadata  Json?                     @map("event_metadata")
+  createdAt      DateTime                  @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course       Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lesson       Lesson       @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  mediaSession MediaSession? @relation(fields: [mediaSessionId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([courseId])
+  @@index([lessonId])
+  @@index([mediaSessionId])
+  @@index([eventType])
+  @@index([createdAt])
 }
 
 model NotificationJob {

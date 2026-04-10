@@ -8,7 +8,7 @@ interface WorkspaceShellProps {
 
 export function WorkspaceShell({ sidebar, main, utility }: WorkspaceShellProps) {
   return (
-    <div className="grid gap-4 lg:gap-5 xl:grid-cols-[300px_minmax(0,1fr)_320px] 2xl:grid-cols-[320px_minmax(0,1fr)_340px]">
+    <div className="grid gap-4 lg:gap-5 xl:grid-cols-[280px_minmax(0,1fr)_300px] 2xl:grid-cols-[320px_minmax(0,1fr)_340px]">
       <aside className="space-y-5 xl:sticky xl:top-6 xl:self-start">{sidebar}</aside>
       <section className="space-y-5">{main}</section>
       {utility ? <aside className="space-y-5 xl:sticky xl:top-6 xl:self-start">{utility}</aside> : null}
@@ -26,7 +26,7 @@ interface WorkspacePanelProps {
 
 export function WorkspacePanel({ title, description, actions, children, className = "" }: WorkspacePanelProps) {
   return (
-    <div className={`surface-card rounded-[28px] p-4 sm:p-5 ${className}`.trim()}>
+    <div className={`surface-card overflow-hidden rounded-[22px] p-4 sm:rounded-[28px] sm:p-5 ${className}`.trim()}>
       {title || description || actions ? (
         <div className="mb-4 flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
           <div>

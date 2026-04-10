@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { Dispatch, SetStateAction } from "react";
 import { EmptyState, PillButton, WorkspacePanel } from "../../../../../../components/course-workspace";
 
 import type {
@@ -21,8 +22,8 @@ interface CourseBuilderUtilityRailProps {
   learners: LearnerSummary[] | undefined;
   assignmentSubmissions: AssignmentSubmissionGroup[] | undefined;
   reviewState: Record<string, { feedback: string; score: string }>;
-  setReviewState: React.Dispatch<
-    React.SetStateAction<Record<string, { feedback: string; score: string }>>
+  setReviewState: Dispatch<
+    SetStateAction<Record<string, { feedback: string; score: string }>>
   >;
   submitReview: (assignmentId: string, submissionId: string) => Promise<void>;
 }
@@ -68,7 +69,8 @@ export function CourseBuilderUtilityRail({
                     }`}
                   >
                     <p className="text-sm font-semibold">{quiz.title}</p>
-                    <p className="mt-1 text-xs opacity-80">{quiz.questions.length} questions</p>
+                    <p className="mt-1 text-xs opacity-80">{quiz.scopeLabel}</p>
+                    <p className="mt-1 text-xs opacity-70">{quiz.questions.length} questions</p>
                   </button>
                 ))
               ) : (
@@ -96,7 +98,8 @@ export function CourseBuilderUtilityRail({
                     }`}
                   >
                     <p className="text-sm font-semibold">{assignment.title}</p>
-                    <p className="mt-1 text-xs opacity-80">Assignment brief + submission flow</p>
+                    <p className="mt-1 text-xs opacity-80">{assignment.scopeLabel}</p>
+                    <p className="mt-1 text-xs opacity-70">Assignment brief + submission flow</p>
                   </button>
                 ))
               ) : (
@@ -162,6 +165,7 @@ export function CourseBuilderUtilityRail({
             assignmentSubmissions.map((assignment) => (
               <div key={assignment.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <p className="text-sm font-semibold text-slate-900">{assignment.title}</p>
+                <p className="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">{assignment.scopeLabel}</p>
                 <div className="mt-3 space-y-3">
                   {assignment.submissions.length ? (
                     assignment.submissions.map((submission) => {

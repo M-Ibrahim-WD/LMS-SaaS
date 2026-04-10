@@ -1,4 +1,5 @@
 import {
+  AssessmentScopeType,
   AssignmentSubmissionStatus,
   Prisma
 } from "@prisma/client";
@@ -22,6 +23,12 @@ import { UpdateAssignmentDto } from "../dto/update-assignment.dto";
 import { UpdateQuizDto } from "../dto/update-quiz.dto";
 import { AssessmentAuthoringService } from "./assessment-authoring.service";
 
+type CourseOutlineSection = {
+  id: string;
+  title: string;
+  lessons: Array<{ id: string; title: string }>;
+};
+
 @Injectable()
 export class AssessmentsService {
   constructor(
@@ -37,10 +44,35 @@ export class AssessmentsService {
         ? await this.assertInstructorOwnsCourse(courseId, user)
         : await this.assertStudentCanAccessCourse(courseId, user);
 
+    const sections = await this.prisma.section.findMany({
+      where: { courseId: course.id },
+      orderBy: { order: "asc" },
+      select: {
+        id: true,
+        title: true,
+        lessons: {
+          orderBy: { order: "asc" },
+          select: { id: true, title: true }
+        }
+      }
+    });
+
+    const completedLessonIds =
+      user.role === "STUDENT"
+        ? new Set(
+            (
+              await this.prisma.lessonCompletion.findMany({
+                where: { userId: user.sub, courseId: course.id },
+                select: { lessonId: true }
+              })
+            ).map((item) => item.lessonId)
+          )
+        : new Set<string>();
+
     const [quizzes, assignments] = await Promise.all([
       this.prisma.quiz.findMany({
         where: { courseId: course.id },
-        orderBy: { createdAt: "asc" },
+        orderBy: [{ scopeType: "asc" }, { createdAt: "asc" }],
         include: {
           questions: {
             orderBy: { order: "asc" }
@@ -57,12 +89,18 @@ export class AssessmentsService {
                     answers: true
                   }
                 }
-              : false
+              : false,
+          section: {
+            select: { id: true, title: true }
+          },
+          lesson: {
+            select: { id: true, title: true }
+          }
         }
       }),
       this.prisma.assignment.findMany({
         where: { courseId: course.id },
-        orderBy: { createdAt: "asc" },
+        orderBy: [{ scopeType: "asc" }, { createdAt: "asc" }],
         include: {
           submissions:
             user.role === "STUDENT"
@@ -79,35 +117,97 @@ export class AssessmentsService {
                     reviewedAt: true
                   }
                 }
-              : false
+              : false,
+          section: {
+            select: { id: true, title: true }
+          },
+          lesson: {
+            select: { id: true, title: true }
+          }
         }
       })
     ]);
 
     return {
-      quizzes: quizzes.map((quiz) => ({
-        id: quiz.id,
-        title: quiz.title,
-        description: quiz.description,
-        createdAt: quiz.createdAt,
-        questions: quiz.questions.map((question) => ({
-          id: question.id,
-          question: question.question,
-          type: question.type,
-          options: question.options,
-          order: question.order,
-          ...(user.role === "INSTRUCTOR" ? { correctAnswer: question.correctAnswer } : {})
-        })),
-        submission: user.role === "STUDENT" ? quiz.submissions[0] ?? null : null
-      })),
-      assignments: assignments.map((assignment) => ({
-        id: assignment.id,
-        title: assignment.title,
-        description: assignment.description,
-        instructions: assignment.instructions,
-        createdAt: assignment.createdAt,
-        submission: user.role === "STUDENT" ? assignment.submissions[0] ?? null : null
-      }))
+      quizzes: quizzes.map((quiz) => {
+        const gate = this.resolveAssessmentGate(
+          sections,
+          completedLessonIds,
+          quiz.scopeType,
+          quiz.sectionId,
+          quiz.lessonId,
+          user.role
+        );
+
+        return {
+          id: quiz.id,
+          title: quiz.title,
+          description: quiz.description,
+          createdAt: quiz.createdAt,
+          scopeType: quiz.scopeType,
+          sectionId: quiz.sectionId,
+          lessonId: quiz.lessonId,
+          scopeLabel: this.buildScopeLabel(quiz.scopeType, quiz.section?.title, quiz.lesson?.title),
+          isLocked: gate.isLocked,
+          canAccess: !gate.isLocked,
+          canEdit: user.role === "INSTRUCTOR",
+          status:
+            gate.isLocked
+              ? "LOCKED"
+              : user.role === "STUDENT" && quiz.submissions[0]
+                ? "SUBMITTED"
+                : "READY",
+          lockReason: gate.lockReason,
+          questions: quiz.questions.map((question) => ({
+            id: question.id,
+            question: question.question,
+            type: question.type,
+            options: question.options,
+            order: question.order,
+            ...(user.role === "INSTRUCTOR" ? { correctAnswer: question.correctAnswer } : {})
+          })),
+          submission: user.role === "STUDENT" ? quiz.submissions[0] ?? null : null
+        };
+      }),
+      assignments: assignments.map((assignment) => {
+        const gate = this.resolveAssessmentGate(
+          sections,
+          completedLessonIds,
+          assignment.scopeType,
+          assignment.sectionId,
+          assignment.lessonId,
+          user.role
+        );
+
+        return {
+          id: assignment.id,
+          title: assignment.title,
+          description: assignment.description,
+          instructions: assignment.instructions,
+          createdAt: assignment.createdAt,
+          scopeType: assignment.scopeType,
+          sectionId: assignment.sectionId,
+          lessonId: assignment.lessonId,
+          scopeLabel: this.buildScopeLabel(
+            assignment.scopeType,
+            assignment.section?.title,
+            assignment.lesson?.title
+          ),
+          isLocked: gate.isLocked,
+          canAccess: !gate.isLocked,
+          canEdit: user.role === "INSTRUCTOR",
+          status:
+            gate.isLocked
+              ? "LOCKED"
+              : user.role === "STUDENT" && assignment.submissions[0]
+                ? assignment.submissions[0].status === AssignmentSubmissionStatus.REVIEWED
+                  ? "REVIEWED"
+                  : "SUBMITTED"
+                : "READY",
+          lockReason: gate.lockReason,
+          submission: user.role === "STUDENT" ? assignment.submissions[0] ?? null : null
+        };
+      })
     };
   }
 
@@ -116,8 +216,10 @@ export class AssessmentsService {
 
     const assignments = await this.prisma.assignment.findMany({
       where: { courseId },
-      orderBy: { createdAt: "asc" },
+      orderBy: [{ scopeType: "asc" }, { createdAt: "asc" }],
       include: {
+        section: { select: { id: true, title: true } },
+        lesson: { select: { id: true, title: true } },
         submissions: {
           orderBy: { updatedAt: "desc" },
           include: {
@@ -138,6 +240,14 @@ export class AssessmentsService {
       title: assignment.title,
       description: assignment.description,
       instructions: assignment.instructions,
+      scopeType: assignment.scopeType,
+      sectionId: assignment.sectionId,
+      lessonId: assignment.lessonId,
+      scopeLabel: this.buildScopeLabel(
+        assignment.scopeType,
+        assignment.section?.title,
+        assignment.lesson?.title
+      ),
       submissions: assignment.submissions.map((submission) => ({
         id: submission.id,
         content: submission.content,
@@ -147,6 +257,59 @@ export class AssessmentsService {
         createdAt: submission.createdAt,
         updatedAt: submission.updatedAt,
         reviewedAt: submission.reviewedAt,
+        student: submission.student
+      }))
+    }));
+  }
+
+  async getCourseQuizSubmissions(user: JwtPayload, courseId: string) {
+    await this.assertInstructorOwnsCourse(courseId, user);
+
+    const quizzes = await this.prisma.quiz.findMany({
+      where: { courseId },
+      orderBy: [{ scopeType: "asc" }, { createdAt: "asc" }],
+      include: {
+        questions: {
+          orderBy: { order: "asc" }
+        },
+        section: { select: { id: true, title: true } },
+        lesson: { select: { id: true, title: true } },
+        submissions: {
+          orderBy: { createdAt: "desc" },
+          include: {
+            student: {
+              select: {
+                id: true,
+                fullName: true,
+                email: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    return quizzes.map((quiz) => ({
+      id: quiz.id,
+      title: quiz.title,
+      description: quiz.description,
+      scopeType: quiz.scopeType,
+      sectionId: quiz.sectionId,
+      lessonId: quiz.lessonId,
+      scopeLabel: this.buildScopeLabel(quiz.scopeType, quiz.section?.title, quiz.lesson?.title),
+      questions: quiz.questions.map((question) => ({
+        id: question.id,
+        question: question.question,
+        options: question.options,
+        correctAnswer: question.correctAnswer,
+        order: question.order
+      })),
+      submissions: quiz.submissions.map((submission) => ({
+        id: submission.id,
+        score: submission.score,
+        totalQuestions: submission.totalQuestions,
+        createdAt: submission.createdAt,
+        answers: submission.answers,
         student: submission.student
       }))
     }));
@@ -197,16 +360,17 @@ export class AssessmentsService {
 
   async createQuiz(user: JwtPayload, dto: CreateQuizDto) {
     await this.subscriptionsService.assertPermission(user, "canUseQuizzes");
-    const course = await this.assertInstructorOwnsCourse(dto.courseId, user);
-
-    const normalizedQuestions =
-      this.assessmentAuthoringService.normalizeQuizQuestions(dto.questions);
+    const scope = await this.resolveAssessmentScopeForWrite(user, dto.courseId, dto.scopeType, dto.sectionId, dto.lessonId);
+    const normalizedQuestions = this.assessmentAuthoringService.normalizeQuizQuestions(dto.questions);
 
     return this.prisma.quiz.create({
       data: {
-        courseId: course.id,
-        tenantId: course.tenantId,
+        courseId: scope.courseId,
+        sectionId: scope.sectionId,
+        lessonId: scope.lessonId,
+        tenantId: scope.tenantId,
         instructorId: user.sub,
+        scopeType: scope.scopeType,
         title: dto.title.trim(),
         description: dto.description?.trim() || null,
         questions: {
@@ -225,13 +389,16 @@ export class AssessmentsService {
 
   async createAssignment(user: JwtPayload, dto: CreateAssignmentDto) {
     await this.subscriptionsService.assertPermission(user, "canUseAssignments");
-    const course = await this.assertInstructorOwnsCourse(dto.courseId, user);
+    const scope = await this.resolveAssessmentScopeForWrite(user, dto.courseId, dto.scopeType, dto.sectionId, dto.lessonId);
 
     return this.prisma.assignment.create({
       data: {
-        courseId: course.id,
-        tenantId: course.tenantId,
+        courseId: scope.courseId,
+        sectionId: scope.sectionId,
+        lessonId: scope.lessonId,
+        tenantId: scope.tenantId,
         instructorId: user.sub,
+        scopeType: scope.scopeType,
         title: dto.title.trim(),
         description: dto.description?.trim() || null,
         instructions: dto.instructions?.trim() || null
@@ -249,8 +416,7 @@ export class AssessmentsService {
       },
       select: {
         id: true,
-        courseId: true,
-        tenantId: true
+        courseId: true
       }
     });
 
@@ -258,8 +424,8 @@ export class AssessmentsService {
       throw new NotFoundException("Quiz not found");
     }
 
-    const normalizedQuestions =
-      this.assessmentAuthoringService.normalizeQuizQuestions(dto.questions);
+    const scope = await this.resolveAssessmentScopeForWrite(user, quiz.courseId, dto.scopeType, dto.sectionId, dto.lessonId);
+    const normalizedQuestions = this.assessmentAuthoringService.normalizeQuizQuestions(dto.questions);
 
     return this.prisma.$transaction(async (tx) => {
       await tx.quizQuestion.deleteMany({
@@ -271,6 +437,9 @@ export class AssessmentsService {
         data: {
           title: dto.title.trim(),
           description: dto.description?.trim() || null,
+          scopeType: scope.scopeType,
+          sectionId: scope.sectionId,
+          lessonId: scope.lessonId,
           questions: {
             create: normalizedQuestions.map((question) =>
               this.assessmentAuthoringService.toQuizQuestionCreateInput(question)
@@ -316,19 +485,27 @@ export class AssessmentsService {
         tenantId: user.tenantId ?? undefined,
         instructorId: user.sub
       },
-      select: { id: true }
+      select: {
+        id: true,
+        courseId: true
+      }
     });
 
     if (!assignment) {
       throw new NotFoundException("Assignment not found");
     }
 
+    const scope = await this.resolveAssessmentScopeForWrite(user, assignment.courseId, dto.scopeType, dto.sectionId, dto.lessonId);
+
     return this.prisma.assignment.update({
       where: { id: assignment.id },
       data: {
         title: dto.title.trim(),
         description: dto.description?.trim() || null,
-        instructions: dto.instructions?.trim() || null
+        instructions: dto.instructions?.trim() || null,
+        scopeType: scope.scopeType,
+        sectionId: scope.sectionId,
+        lessonId: scope.lessonId
       }
     });
   }
@@ -363,7 +540,30 @@ export class AssessmentsService {
     const quiz = await this.prisma.quiz.findFirst({
       where: { id: quizId },
       include: {
-        questions: { orderBy: { order: "asc" } }
+        questions: { orderBy: { order: "asc" } },
+        section: {
+          select: { id: true, title: true }
+        },
+        lesson: {
+          select: { id: true, title: true }
+        },
+        course: {
+          select: {
+            id: true,
+            tenantId: true,
+            sections: {
+              orderBy: { order: "asc" },
+              select: {
+                id: true,
+                title: true,
+                lessons: {
+                  orderBy: { order: "asc" },
+                  select: { id: true, title: true }
+                }
+              }
+            }
+          }
+        }
       }
     });
 
@@ -372,6 +572,28 @@ export class AssessmentsService {
     }
 
     await this.assertStudentCanAccessCourse(quiz.courseId, user);
+
+    const completedLessonIds = new Set(
+      (
+        await this.prisma.lessonCompletion.findMany({
+          where: { userId: user.sub, courseId: quiz.courseId },
+          select: { lessonId: true }
+        })
+      ).map((item) => item.lessonId)
+    );
+
+    const gate = this.resolveAssessmentGate(
+      quiz.course.sections,
+      completedLessonIds,
+      quiz.scopeType,
+      quiz.sectionId,
+      quiz.lessonId,
+      user.role
+    );
+
+    if (gate.isLocked) {
+      throw new ForbiddenException(gate.lockReason ?? "Complete the required learning first");
+    }
 
     if (dto.answers.length !== quiz.questions.length) {
       throw new BadRequestException("All quiz questions must be answered");
@@ -415,7 +637,25 @@ export class AssessmentsService {
       select: {
         id: true,
         tenantId: true,
-        courseId: true
+        courseId: true,
+        scopeType: true,
+        sectionId: true,
+        lessonId: true,
+        course: {
+          select: {
+            sections: {
+              orderBy: { order: "asc" },
+              select: {
+                id: true,
+                title: true,
+                lessons: {
+                  orderBy: { order: "asc" },
+                  select: { id: true, title: true }
+                }
+              }
+            }
+          }
+        }
       }
     });
 
@@ -424,6 +664,28 @@ export class AssessmentsService {
     }
 
     await this.assertStudentCanAccessCourse(assignment.courseId, user);
+
+    const completedLessonIds = new Set(
+      (
+        await this.prisma.lessonCompletion.findMany({
+          where: { userId: user.sub, courseId: assignment.courseId },
+          select: { lessonId: true }
+        })
+      ).map((item) => item.lessonId)
+    );
+
+    const gate = this.resolveAssessmentGate(
+      assignment.course.sections,
+      completedLessonIds,
+      assignment.scopeType,
+      assignment.sectionId,
+      assignment.lessonId,
+      user.role
+    );
+
+    if (gate.isLocked) {
+      throw new ForbiddenException(gate.lockReason ?? "Complete the required learning first");
+    }
 
     return this.prisma.assignmentSubmission.upsert({
       where: {
@@ -502,5 +764,143 @@ export class AssessmentsService {
     }
 
     return course;
+  }
+
+  private async resolveAssessmentScopeForWrite(
+    user: JwtPayload,
+    courseId: string,
+    scopeType: AssessmentScopeType,
+    sectionId?: string | null,
+    lessonId?: string | null
+  ) {
+    const course = await this.assertInstructorOwnsCourse(courseId, user);
+
+    if (scopeType === AssessmentScopeType.COURSE) {
+      if (sectionId || lessonId) {
+        throw new BadRequestException("Course-level assessments cannot target a section or lesson");
+      }
+
+      return {
+        courseId: course.id,
+        tenantId: course.tenantId,
+        scopeType,
+        sectionId: null,
+        lessonId: null
+      };
+    }
+
+    if (scopeType === AssessmentScopeType.SECTION) {
+      if (!sectionId) {
+        throw new BadRequestException("Section-level assessments must target a section");
+      }
+      if (lessonId) {
+        throw new BadRequestException("Section-level assessments cannot target a lesson");
+      }
+
+      const section = await this.prisma.section.findFirst({
+        where: {
+          id: sectionId,
+          courseId: course.id
+        },
+        select: { id: true }
+      });
+
+      if (!section) {
+        throw new BadRequestException("Selected section does not belong to this course");
+      }
+
+      return {
+        courseId: course.id,
+        tenantId: course.tenantId,
+        scopeType,
+        sectionId: section.id,
+        lessonId: null
+      };
+    }
+
+    if (!lessonId) {
+      throw new BadRequestException("Lesson-level assessments must target a lesson");
+    }
+
+    const lesson = await this.prisma.lesson.findFirst({
+      where: {
+        id: lessonId,
+        section: {
+          courseId: course.id,
+          ...(sectionId ? { id: sectionId } : {})
+        }
+      },
+      select: {
+        id: true,
+        sectionId: true
+      }
+    });
+
+    if (!lesson) {
+      throw new BadRequestException("Selected lesson does not belong to this course");
+    }
+
+    return {
+      courseId: course.id,
+      tenantId: course.tenantId,
+      scopeType,
+      sectionId: lesson.sectionId,
+      lessonId: lesson.id
+    };
+  }
+
+  private resolveAssessmentGate(
+    sections: CourseOutlineSection[],
+    completedLessonIds: Set<string>,
+    scopeType: AssessmentScopeType,
+    sectionId: string | null,
+    lessonId: string | null,
+    role: JwtPayload["role"]
+  ) {
+    if (role === "INSTRUCTOR") {
+      return { isLocked: false, lockReason: null };
+    }
+
+    if (scopeType === AssessmentScopeType.LESSON) {
+      const unlocked = lessonId ? completedLessonIds.has(lessonId) : false;
+      return {
+        isLocked: !unlocked,
+        lockReason: unlocked ? null : "Complete this lesson to unlock the assessment"
+      };
+    }
+
+    if (scopeType === AssessmentScopeType.SECTION) {
+      const section = sections.find((item) => item.id === sectionId);
+      const unlocked = section
+        ? section.lessons.every((lesson) => completedLessonIds.has(lesson.id))
+        : false;
+      return {
+        isLocked: !unlocked,
+        lockReason: unlocked ? null : "Complete every lesson in this section to unlock the assessment"
+      };
+    }
+
+    const allLessons = sections.flatMap((section) => section.lessons);
+    const unlocked = allLessons.every((lesson) => completedLessonIds.has(lesson.id));
+    return {
+      isLocked: !unlocked,
+      lockReason: unlocked ? null : "Complete the full course to unlock the assessment"
+    };
+  }
+
+  private buildScopeLabel(
+    scopeType: AssessmentScopeType,
+    sectionTitle?: string | null,
+    lessonTitle?: string | null
+  ) {
+    if (scopeType === AssessmentScopeType.LESSON) {
+      return lessonTitle ? `Lesson: ${lessonTitle}` : "Lesson";
+    }
+
+    if (scopeType === AssessmentScopeType.SECTION) {
+      return sectionTitle ? `Section: ${sectionTitle}` : "Section";
+    }
+
+    return "Course";
   }
 }

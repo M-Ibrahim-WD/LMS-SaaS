@@ -2,18 +2,26 @@
 
 import type { PaymentMethodType } from "../../../../lib/payments/payment-methods";
 
+export type AssessmentScopeType = "LESSON" | "SECTION" | "COURSE";
+
 export interface Lesson {
   id: string;
   title: string;
-  content: string;
+  description?: string | null;
+  content?: string;
   type: "VIDEO" | "TEXT" | "FILE";
   order: number;
+  hasProtectedMedia?: boolean;
+  mediaKind?: "VIDEO" | "FILE" | null;
+  mediaFileName?: string | null;
+  mediaContentType?: string | null;
   isCompleted?: boolean;
 }
 
 export interface Section {
   id: string;
   title: string;
+  description?: string | null;
   order: number;
   lessons: Lesson[];
 }
@@ -122,6 +130,15 @@ export interface CourseQuiz {
   id: string;
   title: string;
   description?: string | null;
+  scopeType: AssessmentScopeType;
+  sectionId?: string | null;
+  lessonId?: string | null;
+  scopeLabel: string;
+  isLocked: boolean;
+  canAccess: boolean;
+  canEdit: boolean;
+  status: "LOCKED" | "READY" | "SUBMITTED";
+  lockReason?: string | null;
   questions: QuizQuestion[];
   submission: QuizSubmission | null;
 }
@@ -142,6 +159,15 @@ export interface CourseAssignment {
   title: string;
   description?: string | null;
   instructions?: string | null;
+  scopeType: AssessmentScopeType;
+  sectionId?: string | null;
+  lessonId?: string | null;
+  scopeLabel: string;
+  isLocked: boolean;
+  canAccess: boolean;
+  canEdit: boolean;
+  status: "LOCKED" | "READY" | "SUBMITTED" | "REVIEWED";
+  lockReason?: string | null;
   submission: AssignmentSubmission | null;
 }
 
@@ -187,7 +213,10 @@ export interface CourseCompletionStatus {
     total: number;
     done: boolean;
   };
+  status: "LOCKED" | "ELIGIBLE" | "CERTIFICATE_READY";
   isEligible: boolean;
+  lockReason: string | null;
+  nextAction: string;
   certificate: {
     id: string;
     issuedAt: string;

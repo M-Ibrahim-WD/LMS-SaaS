@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { BackButton } from "../../../components/back-button";
-import { VideoPlayer } from "../../../components/video-player";
+import { ProtectedLessonMediaViewer } from "../../../components/protected-lesson-media-viewer";
 import {
   EmptyState,
   PillButton,
@@ -109,6 +109,28 @@ export default function CourseDetailsPage() {
   const hasLiveSessions = interviewSessions.length > 0;
   const activeInterview = activeInterviewQuery.data;
   const trackedInterviewTime = activeInterview?.scheduledAt ?? nextInterview?.scheduledAt ?? null;
+  const activeSection =
+    courseQuery.data?.sections.find((section) =>
+      section.lessons.some((lesson) => lesson.id === activeLesson?.id)
+    ) ?? null;
+  const lessonQuizzes =
+    assessmentsQuery.data?.quizzes.filter((quiz) => quiz.lessonId === activeLesson?.id) ?? [];
+  const lessonAssignments =
+    assessmentsQuery.data?.assignments.filter((assignment) => assignment.lessonId === activeLesson?.id) ?? [];
+  const sectionQuizzes =
+    assessmentsQuery.data?.quizzes.filter(
+      (quiz) => quiz.scopeType === "SECTION" && quiz.sectionId === activeSection?.id
+    ) ?? [];
+  const sectionAssignments =
+    assessmentsQuery.data?.assignments.filter(
+      (assignment) => assignment.scopeType === "SECTION" && assignment.sectionId === activeSection?.id
+    ) ?? [];
+  const courseQuizzes =
+    assessmentsQuery.data?.quizzes.filter((quiz) => quiz.scopeType === "COURSE") ?? [];
+  const courseAssignments =
+    assessmentsQuery.data?.assignments.filter(
+      (assignment) => assignment.scopeType === "COURSE"
+    ) ?? [];
 
   const handleLaunchInterview = async () => {
     if (!activeInterview) {
@@ -164,18 +186,18 @@ export default function CourseDetailsPage() {
   }
 
   return (
-    <main className="mx-auto max-w-[1700px] p-6 lg:p-8">
+    <main className="mx-auto max-w-[1700px] px-3 py-4 sm:px-5 sm:py-6 lg:p-8">
       <BackButton fallbackHref="/courses" />
 
-      <div className="mt-4 rounded-[32px] border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
+      <div className="mt-4 overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm sm:rounded-[32px]">
+        <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)] xl:grid-cols-[360px_minmax(0,1fr)]">
           <div className="h-full min-h-[280px] overflow-hidden bg-gradient-to-br from-sky-500 via-cyan-500 to-emerald-400">
             {selectedCourse.thumbnailImage ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={selectedCourse.thumbnailImage} alt={`${selectedCourse.title} thumbnail`} className="h-full w-full object-cover" />
             ) : null}
           </div>
-          <div className="p-6 lg:p-8">
+          <div className="p-4 sm:p-6 lg:p-8">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-emerald-700">Learning workspace</p>
@@ -241,7 +263,7 @@ export default function CourseDetailsPage() {
                 <StatPill label="Price" value={selectedCourse.price?.toFixed(2) ?? "0.00"} tone="warning" />
               </div>
 
-              <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+              <div className="mt-6 grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
                 <div>
                   <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Available payment methods</p>
                   <div className="mt-3 space-y-3">
@@ -442,6 +464,9 @@ export default function CourseDetailsPage() {
                     <div key={section.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-3">
                       <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Section {section.order}</p>
                       <p className="mt-1 text-sm font-semibold text-slate-900">{section.title}</p>
+                      {section.description ? (
+                        <p className="mt-2 text-sm leading-6 text-slate-600">{section.description}</p>
+                      ) : null}
                       <div className="mt-3 space-y-2">
                         {section.lessons.map((lesson) => {
                           const isCurrent = activeLesson?.id === lesson.id;
@@ -504,12 +529,27 @@ export default function CourseDetailsPage() {
                       {activeLesson.isCompleted ? <span className="rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-800">Completed</span> : null}
                       {learningState?.lastLessonId === activeLesson.id ? <span className="rounded-full bg-sky-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-sky-800">Current</span> : null}
                     </div>
-                    <div className="mt-5 rounded-[28px] border border-slate-200 bg-slate-50 p-5">
-                      {activeLesson.type === "VIDEO" ? (
-                        <VideoPlayer title={activeLesson.title} url={activeLesson.content} />
-                      ) : (
-                        <div className="whitespace-pre-wrap text-sm leading-7 text-slate-700">{activeLesson.content}</div>
-                      )}
+                    <div className="mt-5 grid gap-4">
+                      <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-5">
+                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                          Lesson description
+                        </p>
+                        <div className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-700">
+                          {activeLesson.description ?? activeLesson.content ?? "No lesson description yet."}
+                        </div>
+                      </div>
+                      {(activeLesson.mediaKind === "VIDEO" || activeLesson.mediaKind === "FILE") &&
+                      activeLesson.hasProtectedMedia ? (
+                        <ProtectedLessonMediaViewer
+                          lessonId={activeLesson.id}
+                          lessonTitle={activeLesson.title}
+                          mediaKind={activeLesson.mediaKind}
+                          mediaContentType={activeLesson.mediaContentType}
+                          mediaFileName={activeLesson.mediaFileName}
+                          courseTitle={selectedCourse.title}
+                          className="mt-1"
+                        />
+                      ) : null}
                     </div>
                     <div className="mt-5 flex flex-wrap gap-2">
                       {previousLesson ? <PillButton onClick={() => void onSelectLesson(previousLesson.id)}>Previous lesson</PillButton> : null}
@@ -522,113 +562,222 @@ export default function CourseDetailsPage() {
                     <EmptyState title="Nothing to show yet" description="Once the course has lessons, the active lesson will appear here with progress actions." />
                   </WorkspacePanel>
                 )}
-
-                <WorkspacePanel title="Quizzes" description="Assess understanding with structured submissions and visible result states.">
+                <WorkspacePanel title="Lesson checkpoints" description="These lesson-level quizzes and assignments unlock only after the selected lesson is completed.">
                   <div className="space-y-4">
-                    {assessmentsQuery.data?.quizzes.length ? (
-                      assessmentsQuery.data.quizzes.map((quiz) => (
-                        <div key={quiz.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                          <div className="flex flex-wrap items-start justify-between gap-3">
-                            <div>
-                              <p className="text-lg font-semibold text-slate-950">{quiz.title}</p>
-                              {quiz.description ? <p className="mt-2 text-sm text-slate-600">{quiz.description}</p> : null}
-                            </div>
-                            {quiz.submission ? <span className="rounded-full bg-emerald-100 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-800">Submitted</span> : null}
-                          </div>
-                          <div className="mt-4 space-y-3">
-                            {quiz.questions.map((question, index) => (
-                              <div key={question.id} className="rounded-2xl border border-slate-200 bg-white p-4">
-                                <p className="text-sm font-semibold text-slate-900">{question.order}. {question.question}</p>
-                                <div className="mt-3 space-y-2">
-                                  {question.options.map((option) => (
-                                    <label key={option} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700">
-                                      <input
-                                        type="radio"
-                                        name={`${quiz.id}-${question.id}`}
-                                        value={option}
-                                        checked={(quizAnswers[quiz.id] ?? quiz.submission?.answers ?? [])[index] === option}
-                                        onChange={(event) => setQuizAnswer(quiz.id, index, event.target.value)}
-                                        disabled={Boolean(quiz.submission)}
-                                      />
-                                      {option}
-                                    </label>
-                                  ))}
-                                </div>
+                    {lessonQuizzes.length || lessonAssignments.length ? (
+                      <>
+                        {lessonQuizzes.map((quiz) => (
+                          <div key={quiz.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                              <div>
+                                <p className="text-lg font-semibold text-slate-950">{quiz.title}</p>
+                                {quiz.description ? <p className="mt-2 text-sm text-slate-600">{quiz.description}</p> : null}
+                                <p className="mt-2 text-xs uppercase tracking-[0.2em] text-slate-500">{quiz.scopeLabel}</p>
                               </div>
-                            ))}
-                          </div>
-                          {quiz.submission ? (
-                            <p className="mt-4 text-sm font-medium text-emerald-700">Submitted. Score: {quiz.submission.score}/{quiz.submission.totalQuestions}</p>
-                          ) : isStudent ? (
-                            <div className="mt-4 flex flex-wrap items-center gap-3">
-                              <PillButton onClick={() => void onSubmitQuiz(quiz.id, quiz.questions.length)} disabled={submitQuizMutation.isPending}>{submitQuizMutation.isPending ? "Submitting..." : "Submit quiz"}</PillButton>
-                              {quizFormErrors[quiz.id] ? <p className="text-sm text-red-600">{quizFormErrors[quiz.id]}</p> : null}
-                            </div>
-                          ) : null}
-                        </div>
-                      ))
-                    ) : (
-                      <EmptyState title="No quizzes yet" description="When the instructor adds quizzes, they�ll appear here in the course flow." />
-                    )}
-                  </div>
-                </WorkspacePanel>
-
-                <WorkspacePanel title="Assignments" description="Submit work, check review state, and see feedback without losing context.">
-                  <div className="space-y-4">
-                    {assessmentsQuery.data?.assignments.length ? (
-                      assessmentsQuery.data.assignments.map((assignment) => (
-                        <div key={assignment.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                          <p className="text-lg font-semibold text-slate-950">{assignment.title}</p>
-                          {assignment.description ? <p className="mt-2 text-sm text-slate-600">{assignment.description}</p> : null}
-                          {assignment.instructions ? <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">{assignment.instructions}</p> : null}
-                          {isStudent ? (
-                            <>
-                              <textarea
-                                className="mt-4 min-h-32 w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm"
-                                placeholder="Write your assignment response"
-                                value={assignmentDrafts[assignment.id] ?? assignment.submission?.content ?? ""}
-                                onChange={(event) => {
-                                  setAssignmentDrafts((current) => ({ ...current, [assignment.id]: event.target.value }));
-                                  setAssignmentFormErrors((current) => ({ ...current, [assignment.id]: "" }));
-                                }}
-                              />
-                              <div className="mt-3 flex flex-wrap items-center gap-3">
-                                <PillButton onClick={() => void onSubmitAssignment(assignment.id)} disabled={submitAssignmentMutation.isPending}>
-                                  {assignment.submission ? submitAssignmentMutation.isPending ? "Updating..." : "Update submission" : submitAssignmentMutation.isPending ? "Submitting..." : "Submit assignment"}
-                                </PillButton>
-                                {assignmentFormErrors[assignment.id] ? <p className="text-sm text-red-600">{assignmentFormErrors[assignment.id]}</p> : null}
+                              <div className="flex flex-wrap gap-2">
+                                {quiz.submission ? <span className="rounded-full bg-emerald-100 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-800">Submitted</span> : null}
+                                {quiz.isLocked ? <span className="rounded-full bg-slate-200 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-700">Locked</span> : null}
                               </div>
-                              {assignment.submission ? (
-                                <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 text-sm">
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${assignment.submission.status === "REVIEWED" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>
-                                      {assignment.submission.status === "REVIEWED" ? "Reviewed" : "Pending review"}
-                                    </span>
-                                    <span className="text-xs text-slate-500">Updated {formatCourseDate(assignment.submission.updatedAt)}</span>
+                            </div>
+                            {quiz.isLocked && quiz.lockReason ? <p className="mt-3 text-sm text-slate-500">{quiz.lockReason}</p> : null}
+                            <div className="mt-4 space-y-3">
+                              {quiz.questions.map((question, index) => (
+                                <div key={question.id} className="rounded-2xl border border-slate-200 bg-white p-4">
+                                  <p className="text-sm font-semibold text-slate-900">{question.order}. {question.question}</p>
+                                  <div className="mt-3 space-y-2">
+                                    {question.options.map((option) => (
+                                      <label key={option} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700">
+                                        <input type="radio" name={`${quiz.id}-${question.id}`} value={option} checked={(quizAnswers[quiz.id] ?? quiz.submission?.answers ?? [])[index] === option} onChange={(event) => setQuizAnswer(quiz.id, index, event.target.value)} disabled={Boolean(quiz.submission) || Boolean(quiz.isLocked)} />
+                                        {option}
+                                      </label>
+                                    ))}
                                   </div>
-                                  {assignment.submission.score !== null && assignment.submission.score !== undefined ? <p className="mt-3 text-slate-700">Score: {assignment.submission.score}</p> : null}
-                                  {assignment.submission.feedback ? <p className="mt-2 text-slate-700">Feedback: {assignment.submission.feedback}</p> : null}
                                 </div>
-                              ) : null}
-                            </>
-                          ) : null}
-                        </div>
-                      ))
+                              ))}
+                            </div>
+                            {quiz.submission ? (
+                              <p className="mt-4 text-sm font-medium text-emerald-700">Submitted. Score: {quiz.submission.score}/{quiz.submission.totalQuestions}</p>
+                            ) : isStudent ? (
+                              <div className="mt-4 flex flex-wrap items-center gap-3">
+                                <PillButton onClick={() => void onSubmitQuiz(quiz.id, quiz.questions.length)} disabled={submitQuizMutation.isPending || Boolean(quiz.isLocked)}>{submitQuizMutation.isPending ? "Submitting..." : "Submit quiz"}</PillButton>
+                                {quizFormErrors[quiz.id] ? <p className="text-sm text-red-600">{quizFormErrors[quiz.id]}</p> : null}
+                              </div>
+                            ) : null}
+                          </div>
+                        ))}
+                        {lessonAssignments.map((assignment) => (
+                          <div key={assignment.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                            <p className="text-lg font-semibold text-slate-950">{assignment.title}</p>
+                            {assignment.description ? <p className="mt-2 text-sm text-slate-600">{assignment.description}</p> : null}
+                            <p className="mt-2 text-xs uppercase tracking-[0.2em] text-slate-500">{assignment.scopeLabel}</p>
+                            {assignment.instructions ? <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">{assignment.instructions}</p> : null}
+                            {assignment.isLocked && assignment.lockReason ? <p className="mt-3 text-sm text-slate-500">{assignment.lockReason}</p> : null}
+                            {isStudent ? (
+                              <>
+                                <textarea className="mt-4 min-h-32 w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Write your assignment response" value={assignmentDrafts[assignment.id] ?? assignment.submission?.content ?? ""} onChange={(event) => { setAssignmentDrafts((current) => ({ ...current, [assignment.id]: event.target.value })); setAssignmentFormErrors((current) => ({ ...current, [assignment.id]: "" })); }} disabled={Boolean(assignment.isLocked)} />
+                                <div className="mt-3 flex flex-wrap items-center gap-3">
+                                  <PillButton onClick={() => void onSubmitAssignment(assignment.id)} disabled={submitAssignmentMutation.isPending || Boolean(assignment.isLocked)}>{assignment.submission ? submitAssignmentMutation.isPending ? "Updating..." : "Update submission" : submitAssignmentMutation.isPending ? "Submitting..." : "Submit assignment"}</PillButton>
+                                  {assignmentFormErrors[assignment.id] ? <p className="text-sm text-red-600">{assignmentFormErrors[assignment.id]}</p> : null}
+                                </div>
+                              </>
+                            ) : null}
+                          </div>
+                        ))}
+                      </>
                     ) : (
-                      <EmptyState title="No assignments yet" description="Assignments will appear here as soon as the instructor adds them to the course." />
+                      <EmptyState title="No lesson checkpoints yet" description="Lesson-level quizzes and assignments will appear here once the instructor attaches them to this lesson." />
                     )}
                   </div>
                 </WorkspacePanel>
+
+                <WorkspacePanel title="Section checkpoints" description="These section-level assessments unlock after all lessons in this section are complete.">
+                  <div className="space-y-4">
+                    {sectionQuizzes.length || sectionAssignments.length ? (
+                      <>
+                        {sectionQuizzes.map((quiz) => (
+                          <div key={quiz.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                              <div>
+                                <p className="text-lg font-semibold text-slate-950">{quiz.title}</p>
+                                {quiz.description ? <p className="mt-2 text-sm text-slate-600">{quiz.description}</p> : null}
+                                <p className="mt-2 text-xs uppercase tracking-[0.2em] text-slate-500">{quiz.scopeLabel}</p>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {quiz.submission ? <span className="rounded-full bg-emerald-100 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-800">Submitted</span> : null}
+                                {quiz.isLocked ? <span className="rounded-full bg-slate-200 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-700">Locked</span> : null}
+                              </div>
+                            </div>
+                            {quiz.isLocked && quiz.lockReason ? <p className="mt-3 text-sm text-slate-500">{quiz.lockReason}</p> : null}
+                            <div className="mt-4 space-y-3">
+                              {quiz.questions.map((question, index) => (
+                                <div key={question.id} className="rounded-2xl border border-slate-200 bg-white p-4">
+                                  <p className="text-sm font-semibold text-slate-900">{question.order}. {question.question}</p>
+                                  <div className="mt-3 space-y-2">
+                                    {question.options.map((option) => (
+                                      <label key={option} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700">
+                                        <input type="radio" name={`${quiz.id}-${question.id}`} value={option} checked={(quizAnswers[quiz.id] ?? quiz.submission?.answers ?? [])[index] === option} onChange={(event) => setQuizAnswer(quiz.id, index, event.target.value)} disabled={Boolean(quiz.submission) || Boolean(quiz.isLocked)} />
+                                        {option}
+                                      </label>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            {quiz.submission ? <p className="mt-4 text-sm font-medium text-emerald-700">Submitted. Score: {quiz.submission.score}/{quiz.submission.totalQuestions}</p> : isStudent ? <div className="mt-4 flex flex-wrap items-center gap-3"><PillButton onClick={() => void onSubmitQuiz(quiz.id, quiz.questions.length)} disabled={submitQuizMutation.isPending || Boolean(quiz.isLocked)}>{submitQuizMutation.isPending ? "Submitting..." : "Submit quiz"}</PillButton>{quizFormErrors[quiz.id] ? <p className="text-sm text-red-600">{quizFormErrors[quiz.id]}</p> : null}</div> : null}
+                          </div>
+                        ))}
+                        {sectionAssignments.map((assignment) => (
+                          <div key={assignment.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                            <p className="text-lg font-semibold text-slate-950">{assignment.title}</p>
+                            {assignment.description ? <p className="mt-2 text-sm text-slate-600">{assignment.description}</p> : null}
+                            <p className="mt-2 text-xs uppercase tracking-[0.2em] text-slate-500">{assignment.scopeLabel}</p>
+                            {assignment.instructions ? <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">{assignment.instructions}</p> : null}
+                            {assignment.isLocked && assignment.lockReason ? <p className="mt-3 text-sm text-slate-500">{assignment.lockReason}</p> : null}
+                            {isStudent ? (
+                              <>
+                                <textarea className="mt-4 min-h-32 w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Write your assignment response" value={assignmentDrafts[assignment.id] ?? assignment.submission?.content ?? ""} onChange={(event) => { setAssignmentDrafts((current) => ({ ...current, [assignment.id]: event.target.value })); setAssignmentFormErrors((current) => ({ ...current, [assignment.id]: "" })); }} disabled={Boolean(assignment.isLocked)} />
+                                <div className="mt-3 flex flex-wrap items-center gap-3">
+                                  <PillButton onClick={() => void onSubmitAssignment(assignment.id)} disabled={submitAssignmentMutation.isPending || Boolean(assignment.isLocked)}>{assignment.submission ? submitAssignmentMutation.isPending ? "Updating..." : "Update submission" : submitAssignmentMutation.isPending ? "Submitting..." : "Submit assignment"}</PillButton>
+                                  {assignmentFormErrors[assignment.id] ? <p className="text-sm text-red-600">{assignmentFormErrors[assignment.id]}</p> : null}
+                                </div>
+                              </>
+                            ) : null}
+                          </div>
+                        ))}
+                      </>
+                    ) : (
+                      <EmptyState title="No section checkpoints yet" description="Section-level quizzes and assignments will appear here once the instructor attaches them to this section." />
+                    )}
+                  </div>
+                </WorkspacePanel>
+
+                <WorkspacePanel title="Course completion checkpoints" description="These are the final course-level assessments. They unlock only after the learner completes the whole course.">
+                  <div className="space-y-4">
+                    {courseQuizzes.length || courseAssignments.length ? (
+                      <>
+                        {courseQuizzes.map((quiz) => (
+                          <div key={quiz.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                              <div>
+                                <p className="text-lg font-semibold text-slate-950">{quiz.title}</p>
+                                {quiz.description ? <p className="mt-2 text-sm text-slate-600">{quiz.description}</p> : null}
+                                <p className="mt-2 text-xs uppercase tracking-[0.2em] text-slate-500">{quiz.scopeLabel}</p>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {quiz.submission ? <span className="rounded-full bg-emerald-100 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-800">Submitted</span> : null}
+                                {quiz.isLocked ? <span className="rounded-full bg-slate-200 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-700">Locked</span> : null}
+                              </div>
+                            </div>
+                            {quiz.isLocked && quiz.lockReason ? <p className="mt-3 text-sm text-slate-500">{quiz.lockReason}</p> : null}
+                            <div className="mt-4 space-y-3">
+                              {quiz.questions.map((question, index) => (
+                                <div key={question.id} className="rounded-2xl border border-slate-200 bg-white p-4">
+                                  <p className="text-sm font-semibold text-slate-900">{question.order}. {question.question}</p>
+                                  <div className="mt-3 space-y-2">
+                                    {question.options.map((option) => (
+                                      <label key={option} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700">
+                                        <input type="radio" name={`${quiz.id}-${question.id}`} value={option} checked={(quizAnswers[quiz.id] ?? quiz.submission?.answers ?? [])[index] === option} onChange={(event) => setQuizAnswer(quiz.id, index, event.target.value)} disabled={Boolean(quiz.submission) || Boolean(quiz.isLocked)} />
+                                        {option}
+                                      </label>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            {quiz.submission ? <p className="mt-4 text-sm font-medium text-emerald-700">Submitted. Score: {quiz.submission.score}/{quiz.submission.totalQuestions}</p> : isStudent ? <div className="mt-4 flex flex-wrap items-center gap-3"><PillButton onClick={() => void onSubmitQuiz(quiz.id, quiz.questions.length)} disabled={submitQuizMutation.isPending || Boolean(quiz.isLocked)}>{submitQuizMutation.isPending ? "Submitting..." : "Submit quiz"}</PillButton>{quizFormErrors[quiz.id] ? <p className="text-sm text-red-600">{quizFormErrors[quiz.id]}</p> : null}</div> : null}
+                          </div>
+                        ))}
+                        {courseAssignments.map((assignment) => (
+                          <div key={assignment.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                            <p className="text-lg font-semibold text-slate-950">{assignment.title}</p>
+                            {assignment.description ? <p className="mt-2 text-sm text-slate-600">{assignment.description}</p> : null}
+                            <p className="mt-2 text-xs uppercase tracking-[0.2em] text-slate-500">{assignment.scopeLabel}</p>
+                            {assignment.instructions ? <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">{assignment.instructions}</p> : null}
+                            {assignment.isLocked && assignment.lockReason ? <p className="mt-3 text-sm text-slate-500">{assignment.lockReason}</p> : null}
+                            {isStudent ? (
+                              <>
+                                <textarea className="mt-4 min-h-32 w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Write your assignment response" value={assignmentDrafts[assignment.id] ?? assignment.submission?.content ?? ""} onChange={(event) => { setAssignmentDrafts((current) => ({ ...current, [assignment.id]: event.target.value })); setAssignmentFormErrors((current) => ({ ...current, [assignment.id]: "" })); }} disabled={Boolean(assignment.isLocked)} />
+                                <div className="mt-3 flex flex-wrap items-center gap-3">
+                                  <PillButton onClick={() => void onSubmitAssignment(assignment.id)} disabled={submitAssignmentMutation.isPending || Boolean(assignment.isLocked)}>{assignment.submission ? submitAssignmentMutation.isPending ? "Updating..." : "Update submission" : submitAssignmentMutation.isPending ? "Submitting..." : "Submit assignment"}</PillButton>
+                                  {assignmentFormErrors[assignment.id] ? <p className="text-sm text-red-600">{assignmentFormErrors[assignment.id]}</p> : null}
+                                </div>
+                              </>
+                            ) : null}
+                          </div>
+                        ))}
+                      </>
+                    ) : (
+                      <EmptyState title="No final checkpoints yet" description="Course-level quizzes and assignments will appear here once the instructor adds them." />
+                    )}
+                  </div>
+                </WorkspacePanel>
+
               </>
             }
             utility={
               <>
                 {isStudent && completionStatusQuery.data ? (
-                  <WorkspacePanel title="Completion status" description="Track what�s done and unlock the certificate at the right time.">
+                  <WorkspacePanel title="Completion status" description="Track what is done and unlock the certificate at the right time.">
                     <div className="grid gap-3">
                       <StatPill label="Lessons" value={`${completionStatusQuery.data.lessons.completed}/${completionStatusQuery.data.lessons.total}`} tone={completionStatusQuery.data.lessons.done ? "success" : "default"} />
                       <StatPill label="Quizzes" value={`${completionStatusQuery.data.quizzes.completed}/${completionStatusQuery.data.quizzes.total}`} tone={completionStatusQuery.data.quizzes.done ? "success" : "default"} />
                       <StatPill label="Assignments" value={`${completionStatusQuery.data.assignments.completed}/${completionStatusQuery.data.assignments.total}`} tone={completionStatusQuery.data.assignments.done ? "success" : "default"} />
+                    </div>
+                    <div className={`mt-4 rounded-2xl border p-4 text-sm ${
+                      completionStatusQuery.data.status === "CERTIFICATE_READY"
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                        : completionStatusQuery.data.status === "ELIGIBLE"
+                          ? "border-sky-200 bg-sky-50 text-sky-800"
+                          : "border-amber-200 bg-amber-50 text-amber-800"
+                    }`}>
+                      <p className="font-semibold">
+                        {completionStatusQuery.data.status === "CERTIFICATE_READY"
+                          ? "Certificate already issued"
+                          : completionStatusQuery.data.status === "ELIGIBLE"
+                            ? "Ready to issue"
+                            : completionStatusQuery.data.lockReason ?? "Course completion still locked"}
+                      </p>
+                      <p className="mt-2 leading-6">{completionStatusQuery.data.nextAction}</p>
                     </div>
                     {completionStatusQuery.data.certificate ? (
                       <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
@@ -644,7 +793,6 @@ export default function CourseDetailsPage() {
                         <PillButton onClick={() => issueCertificateMutation.mutate()} disabled={!completionStatusQuery.data.isEligible || issueCertificateMutation.isPending}>
                           {issueCertificateMutation.isPending ? "Issuing..." : "Issue certificate"}
                         </PillButton>
-                        {!completionStatusQuery.data.isEligible ? <p className="mt-2 text-xs text-slate-500">Complete lessons, quizzes, and assignments first.</p> : null}
                       </div>
                     )}
                   </WorkspacePanel>
@@ -656,20 +804,25 @@ export default function CourseDetailsPage() {
                       <div>
                         <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Rating</p>
                         <div className="mt-2 flex flex-wrap gap-2">
-                          {[1, 2, 3, 4, 5].map((value) => (
-                            <button
-                              key={value}
-                              type="button"
-                              onClick={() => setReviewRating(value)}
-                              className={`rounded-full px-3 py-2 text-sm font-medium transition ${
-                                reviewRating === value
-                                  ? "bg-amber-100 text-amber-800"
-                                  : "border border-slate-300 bg-white text-slate-600 hover:border-slate-400"
-                              }`}
-                            >
-                              <span className="tracking-[0.2em] text-amber-500">{"★".repeat(value)}</span>
-                            </button>
-                          ))}
+                          {[1, 2, 3, 4, 5].map((value) => {
+                            const isActiveRating = (hoveredReviewRating ?? reviewRating) === value;
+                            return (
+                              <button
+                                key={value}
+                                type="button"
+                                onClick={() => setReviewRating(value)}
+                                onMouseEnter={() => setHoveredReviewRating(value)}
+                                onMouseLeave={() => setHoveredReviewRating(null)}
+                                className={`rounded-full px-3 py-2 text-sm font-medium transition ${
+                                  isActiveRating
+                                    ? "bg-amber-100 text-amber-800"
+                                    : "border border-slate-300 bg-white text-slate-600 hover:border-slate-400"
+                                }`}
+                              >
+                                <span className="tracking-[0.2em] text-amber-500">{"★".repeat(value)}</span>
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
                       <textarea
@@ -689,7 +842,7 @@ export default function CourseDetailsPage() {
                 ) : null}
 
                 {selectedCourse.instructor ? (
-                  <WorkspacePanel title="Instructor" description="Visit the instructor�s public profile and course storefront.">
+                  <WorkspacePanel title="Instructor" description="Visit the instructor's public profile and course storefront.">
                     <p className="text-sm font-semibold text-slate-900">{selectedCourse.instructor.fullName}</p>
                   <div className="mt-4 flex flex-wrap gap-2">
                       <Link href={`/instructors/${selectedCourse.instructor.id}`} className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">Open instructor profile</Link>
@@ -712,14 +865,14 @@ export default function CourseDetailsPage() {
 
       {activeInterviewId && activeInterview ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-slate-950/60 p-2 sm:p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/60 p-2 sm:p-4"
           onClick={(event) => {
             if (event.target === event.currentTarget) {
               setActiveInterviewId(null);
             }
           }}
         >
-          <div className="flex max-h-[calc(100vh-1rem)] w-full max-w-2xl flex-col overflow-hidden rounded-[24px] border border-emerald-200 bg-white shadow-2xl">
+          <div className="my-auto flex max-h-[calc(100dvh-1rem)] w-full max-w-2xl flex-col overflow-hidden rounded-[20px] border border-emerald-200 bg-white shadow-2xl sm:rounded-[24px]">
             <div className="flex flex-col gap-4 border-b border-emerald-100 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.16),transparent_28%),linear-gradient(145deg,#f8fffc_0%,#ecfdf5_52%,#f0fdfa_100%)] px-4 py-4 sm:px-5">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
@@ -760,7 +913,7 @@ export default function CourseDetailsPage() {
             </div>
             <div className="overflow-y-auto p-3 sm:p-4">
               <div className="grid gap-3">
-                <div className="rounded-[20px] border border-emerald-200 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.22),transparent_34%),linear-gradient(160deg,#052e2b_0%,#0f3d36_45%,#115e59_100%)] p-4 text-white sm:p-5">
+                <div className="rounded-[18px] border border-emerald-200 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.22),transparent_34%),linear-gradient(160deg,#052e2b_0%,#0f3d36_45%,#115e59_100%)] p-4 text-white sm:rounded-[20px] sm:p-5">
                   <div className="grid gap-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="rounded-full bg-white/12 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-50">
@@ -781,28 +934,28 @@ export default function CourseDetailsPage() {
                     </div>
 
                     <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="rounded-[18px] border border-white/10 bg-white/10 p-3.5">
+                      <div className="rounded-[16px] border border-white/10 bg-white/10 p-3 sm:rounded-[18px] sm:p-3.5">
                         <p className="text-xs uppercase tracking-[0.18em] text-white/55">Starts</p>
                         <p className="mt-2 break-words text-sm font-semibold sm:text-base">{formatCourseDate(activeInterview.scheduledAt)}</p>
                       </div>
-                      <div className="rounded-[18px] border border-white/10 bg-white/10 p-3.5">
+                      <div className="rounded-[16px] border border-white/10 bg-white/10 p-3 sm:rounded-[18px] sm:p-3.5">
                         <p className="text-xs uppercase tracking-[0.18em] text-white/55">Countdown</p>
                         <p className="mt-2 text-sm font-semibold sm:text-base">
                           {activeInterview.isJoinReady ? "Live now" : formatInterviewCountdown(activeInterview.scheduledAt, countdownNow)}
                         </p>
                       </div>
-                      <div className="rounded-[18px] border border-white/10 bg-white/10 p-3.5">
+                      <div className="rounded-[16px] border border-white/10 bg-white/10 p-3 sm:rounded-[18px] sm:p-3.5">
                         <p className="text-xs uppercase tracking-[0.18em] text-white/55">Course</p>
                         <p className="mt-2 break-words text-sm font-semibold sm:text-base">{activeInterview.course.title}</p>
                       </div>
-                      <div className="rounded-[18px] border border-white/10 bg-white/10 p-3.5">
+                      <div className="rounded-[16px] border border-white/10 bg-white/10 p-3 sm:rounded-[18px] sm:p-3.5">
                         <p className="text-xs uppercase tracking-[0.18em] text-white/55">Instructor</p>
                         <p className="mt-2 break-words text-sm font-semibold sm:text-base">{activeInterview.course.instructor.fullName}</p>
                       </div>
                     </div>
 
                     {activeInterview.description ? (
-                      <div className="rounded-[18px] border border-white/10 bg-white/10 p-3.5">
+                      <div className="rounded-[16px] border border-white/10 bg-white/10 p-3 sm:rounded-[18px] sm:p-3.5">
                         <p className="text-xs uppercase tracking-[0.18em] text-white/55">Notes</p>
                         <p className="mt-2 text-sm leading-6 text-white/80">
                           {activeInterview.description.length > 140
@@ -841,7 +994,7 @@ export default function CourseDetailsPage() {
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-[18px] border border-emerald-100 bg-emerald-50/70 p-3.5">
+                  <div className="rounded-[16px] border border-emerald-100 bg-emerald-50/70 p-3 sm:rounded-[18px] sm:p-3.5">
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Status</p>
                     <p className="mt-2 text-base font-semibold text-slate-950">
                       {activeInterview.isJoinReady ? "Ready to join" : "Waiting to start"}
@@ -852,7 +1005,7 @@ export default function CourseDetailsPage() {
                         : `Starts in ${formatInterviewCountdown(activeInterview.scheduledAt, countdownNow)}.`}
                     </p>
                   </div>
-                  <div className="rounded-[18px] border border-slate-200 bg-white p-3.5">
+                  <div className="rounded-[16px] border border-slate-200 bg-white p-3 sm:rounded-[18px] sm:p-3.5">
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Attendance</p>
                     <div className="mt-3 grid gap-2">
                       <div className="rounded-2xl bg-slate-50 p-3">
@@ -881,6 +1034,9 @@ export default function CourseDetailsPage() {
     </main>
   );
 }
+
+
+
 
 
 

@@ -9,8 +9,13 @@ export class CreateLessonDto {
   @MinLength(2)
   title!: string;
 
+  @IsOptional()
   @IsString()
-  content!: string;
+  content?: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
 
   @IsIn(["VIDEO", "TEXT", "FILE"])
   type!: LessonType;
@@ -20,4 +25,3 @@ export class CreateLessonDto {
   @Min(1)
   order?: number;
 }
-

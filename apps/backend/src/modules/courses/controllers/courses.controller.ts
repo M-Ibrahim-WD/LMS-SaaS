@@ -102,6 +102,12 @@ export class CoursesController {
     return this.coursesService.getCourseLearners(user, id);
   }
 
+  @Roles("INSTRUCTOR", "ADMIN")
+  @Get(":id/security-events")
+  getCourseSecurityEvents(@CurrentUser() user: JwtPayload, @Param("id") id: string) {
+    return this.coursesService.getCourseSecurityEvents(user, id);
+  }
+
   @Get(":id")
   getOne(@CurrentUser() user: JwtPayload, @Param("id") id: string) {
     return this.coursesService.getOne(user, id);

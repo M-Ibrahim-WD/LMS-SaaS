@@ -10,6 +10,12 @@ test("submitQuiz scores answers and stores the submission", async () => {
         id: "quiz-1",
         tenantId: "tenant-1",
         courseId: "course-1",
+        scopeType: "COURSE",
+        sectionId: null,
+        lessonId: null,
+        course: {
+          sections: []
+        },
         questions: [
           {
             correctAnswer: "A"
@@ -19,6 +25,9 @@ test("submitQuiz scores answers and stores the submission", async () => {
           }
         ]
       }))
+    },
+    lessonCompletion: {
+      findMany: createAsyncMock(async () => [])
     },
     enrollment: {
       findFirst: createAsyncMock(async () => ({ id: "enrollment-1" }))
@@ -74,4 +83,74 @@ test("submitQuiz scores answers and stores the submission", async () => {
   assert.equal(prisma.quizSubmission.create.calls.length, 1);
   assert.equal(result.score, 1);
   assert.equal(result.totalQuestions, 2);
+});
+
+test("getCourseAssessments marks lesson-scoped quiz as locked until the lesson is completed", async () => {
+  const prisma = {
+    section: {
+      findMany: createAsyncMock(async () => [
+        {
+          id: "section-1",
+          title: "Section 1",
+          lessons: [{ id: "lesson-1", title: "Lesson 1" }]
+        }
+      ])
+    },
+    lessonCompletion: {
+      findMany: createAsyncMock(async () => [])
+    },
+    quiz: {
+      findMany: createAsyncMock(async () => [
+        {
+          id: "quiz-1",
+          title: "Lesson quiz",
+          description: null,
+          createdAt: new Date(),
+          scopeType: "LESSON",
+          sectionId: "section-1",
+          lessonId: "lesson-1",
+          questions: [],
+          submissions: [],
+          section: { id: "section-1", title: "Section 1" },
+          lesson: { id: "lesson-1", title: "Lesson 1" }
+        }
+      ])
+    },
+    assignment: {
+      findMany: createAsyncMock(async () => [])
+    },
+    enrollment: {
+      findFirst: createAsyncMock(async () => ({ id: "enrollment-1" }))
+    }
+  };
+
+  const studentAccessService = {
+    getAccessiblePublishedCourseForStudent: createAsyncMock(async () => ({
+      id: "course-1",
+      tenantId: "tenant-1",
+      isPaid: false
+    }))
+  };
+
+  const service = new AssessmentsService(
+    prisma as never,
+    studentAccessService as never,
+    {} as never,
+    {} as never
+  );
+
+  const result = await service.getCourseAssessments(
+    {
+      sub: "student-1",
+      role: "STUDENT",
+      email: "student@example.com",
+      tenantId: null
+    },
+    "course-1"
+  );
+
+  assert.equal(result.quizzes[0]?.isLocked, true);
+  assert.equal(result.quizzes[0]?.canAccess, false);
+  assert.equal(result.quizzes[0]?.status, "LOCKED");
+  assert.match(result.quizzes[0]?.lockReason ?? "", /Complete this lesson/i);
 });

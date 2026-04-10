@@ -52,6 +52,7 @@ export class SectionsService {
     return this.prisma.section.create({
       data: {
         title: dto.title,
+        description: dto.description?.trim() || null,
         courseId,
         order: dto.order ?? (maxOrder._max.order ?? 0) + 1
       }
@@ -77,7 +78,10 @@ export class SectionsService {
 
     return this.prisma.section.update({
       where: { id: section.id },
-      data: dto
+      data: {
+        ...dto,
+        description: dto.description?.trim() || null
+      }
     });
   }
 

@@ -29,10 +29,12 @@
 html {
   -webkit-text-size-adjust: 100%;
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 body {
   min-height: 100vh;
+  overflow-x: hidden;
   background: var(--app-bg);
   color: var(--text-strong);
   font-family:
@@ -71,6 +73,13 @@ button:disabled {
 img {
   max-width: 100%;
   display: block;
+}
+
+iframe,
+video,
+object,
+embed {
+  max-width: 100%;
 }
 
 .text-balance {

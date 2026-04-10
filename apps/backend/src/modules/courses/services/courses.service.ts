@@ -285,7 +285,7 @@ export class CoursesService {
       }
 
       return {
-        ...this.toPublicCourse(instructorCourse),
+        ...this.toDetailedCourse(instructorCourse),
         progress: await this.courseProgressService.getCourseProgressSummaryForCourse(
           id,
           user.sub
@@ -311,7 +311,7 @@ export class CoursesService {
         throw new NotFoundException("Course not found");
       }
 
-      return this.toPublicCourse(adminCourse);
+      return this.toDetailedCourse(adminCourse);
     }
 
     await this.ensureStudentCanAccessCourse(user, id);
@@ -344,11 +344,17 @@ export class CoursesService {
     const nextLesson = allLessons.find((lesson) => !completedLessonIds.has(lesson.id)) ?? null;
 
     return {
-      ...this.toPublicCourse(course),
+      ...this.toDetailedCourse(course),
       sections: course.sections.map((section) => ({
         ...section,
+        description: section.description,
         lessons: section.lessons.map((lesson) => ({
           ...lesson,
+          description: lesson.description ?? lesson.content,
+          hasProtectedMedia: Boolean(lesson.mediaAsset),
+          mediaKind: lesson.mediaAsset ? lesson.type : null,
+          mediaFileName: lesson.mediaFileName,
+          mediaContentType: lesson.mediaContentType,
           isCompleted: completedLessonIds.has(lesson.id)
         }))
       })),
@@ -440,6 +446,47 @@ export class CoursesService {
         certificate: certificateMap.get(enrollment.userId) ?? null,
         learningState: learnerStateMap.get(enrollment.userId) ?? null
       };
+    });
+  }
+
+  async getCourseSecurityEvents(user: JwtPayload, courseId: string) {
+    if (user.role === "INSTRUCTOR") {
+      await this.assertInstructorOwnsCourse(courseId, user);
+    } else if (user.role === "ADMIN") {
+      const course = await this.prisma.course.findFirst({
+        where: {
+          id: courseId,
+          ...(user.isSuperAdmin ? {} : { tenantId: user.tenantId ?? undefined })
+        },
+        select: { id: true }
+      });
+
+      if (!course) {
+        throw new NotFoundException("Course not found");
+      }
+    } else {
+      throw new ForbiddenException("You do not have access to these security events");
+    }
+
+    return this.prisma.protectedContentEvent.findMany({
+      where: { courseId },
+      orderBy: { createdAt: "desc" },
+      take: 30,
+      include: {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true
+          }
+        },
+        lesson: {
+          select: {
+            id: true,
+            title: true
+          }
+        }
+      }
     });
   }
 
@@ -768,6 +815,46 @@ export class CoursesService {
     return {
       ...course,
       thumbnailImage: this.resolveCourseThumbnailUrl(course.id, course.thumbnailImage ?? null)
+    };
+  }
+
+  private toDetailedCourse<
+    T extends {
+      id: string;
+      thumbnailImage?: string | null;
+      sections?: Array<{
+        id: string;
+        title: string;
+        description?: string | null;
+        order: number;
+        lessons: Array<{
+          id: string;
+          title: string;
+          content: string;
+          description?: string | null;
+          type: string;
+          order: number;
+          mediaAsset?: string | null;
+          mediaFileName?: string | null;
+          mediaContentType?: string | null;
+        }>;
+      }>;
+    }
+  >(course: T) {
+    return {
+      ...this.toPublicCourse(course),
+      sections: course.sections?.map((section) => ({
+        ...section,
+        description: section.description ?? null,
+        lessons: section.lessons.map((lesson) => ({
+          ...lesson,
+          description: lesson.description ?? lesson.content,
+          hasProtectedMedia: Boolean(lesson.mediaAsset),
+          mediaKind: lesson.mediaAsset ? lesson.type : null,
+          mediaFileName: lesson.mediaFileName ?? null,
+          mediaContentType: lesson.mediaContentType ?? null
+        }))
+      }))
     };
   }
 

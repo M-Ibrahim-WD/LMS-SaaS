@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException
 } from "@nestjs/common";
+import { AssessmentScopeType } from "@prisma/client";
 import { randomUUID } from "crypto";
 import { StudentAccessService } from "../../../shared/access/student-access.service";
 import { PrismaService } from "../../../shared/prisma/prisma.service";
@@ -191,27 +192,31 @@ export class CertificatesService {
         }),
         this.prisma.quiz.count({
           where: {
-            courseId
+            courseId,
+            scopeType: AssessmentScopeType.COURSE
           }
         }),
         this.prisma.quizSubmission.count({
           where: {
             studentId: user.sub,
             quiz: {
-              courseId
+              courseId,
+              scopeType: AssessmentScopeType.COURSE
             }
           }
         }),
         this.prisma.assignment.count({
           where: {
-            courseId
+            courseId,
+            scopeType: AssessmentScopeType.COURSE
           }
         }),
         this.prisma.assignmentSubmission.count({
           where: {
             studentId: user.sub,
             assignment: {
-              courseId
+              courseId,
+              scopeType: AssessmentScopeType.COURSE
             }
           }
         })
@@ -306,49 +311,82 @@ export class CertificatesService {
         }),
         this.prisma.quiz.count({
           where: {
-            courseId
+            courseId,
+            scopeType: AssessmentScopeType.COURSE
           }
         }),
         this.prisma.quizSubmission.count({
           where: {
             studentId: user.sub,
             quiz: {
-              courseId
+              courseId,
+              scopeType: AssessmentScopeType.COURSE
             }
           }
         }),
         this.prisma.assignment.count({
           where: {
-            courseId
+            courseId,
+            scopeType: AssessmentScopeType.COURSE
           }
         }),
         this.prisma.assignmentSubmission.count({
           where: {
             studentId: user.sub,
             assignment: {
-              courseId
+              courseId,
+              scopeType: AssessmentScopeType.COURSE
             }
           }
         })
       ]);
 
+    const lessonsDone = totalLessons === 0 || completedLessons >= totalLessons;
+    const quizzesDone = quizSubmissionCount >= quizCount;
+    const assignmentsDone = assignmentSubmissionCount >= assignmentCount;
+
+    const nextAction = !lessonsDone
+      ? "Complete all course lessons to unlock the course-level checkpoints."
+      : !quizzesDone
+        ? "Submit every course-level quiz to unlock certificate eligibility."
+        : !assignmentsDone
+          ? "Submit every course-level assignment to unlock certificate eligibility."
+          : certificate
+            ? "Your certificate is already issued and ready to open."
+            : "All completion requirements are met. You can issue the certificate now.";
+
+    const lockReason = !lessonsDone
+      ? "Lessons incomplete"
+      : !quizzesDone
+        ? "Course-level quizzes incomplete"
+        : !assignmentsDone
+          ? "Course-level assignments incomplete"
+          : null;
+
     return {
       lessons: {
         completed: completedLessons,
         total: totalLessons,
-        done: totalLessons === 0 || completedLessons >= totalLessons
+        done: lessonsDone
       },
       quizzes: {
         completed: quizSubmissionCount,
         total: quizCount,
-        done: quizSubmissionCount >= quizCount
+        done: quizzesDone
       },
       assignments: {
         completed: assignmentSubmissionCount,
         total: assignmentCount,
-        done: assignmentSubmissionCount >= assignmentCount
+        done: assignmentsDone
       },
-      isEligible: (totalLessons === 0 || completedLessons >= totalLessons) && quizSubmissionCount >= quizCount && assignmentSubmissionCount >= assignmentCount,
+      status: certificate
+        ? "CERTIFICATE_READY"
+        : lessonsDone && quizzesDone && assignmentsDone
+          ? "ELIGIBLE"
+          : "LOCKED",
+      isEligible: lessonsDone && quizzesDone && assignmentsDone,
+      lockReason,
+      nextAction,
       certificate
     };
   }

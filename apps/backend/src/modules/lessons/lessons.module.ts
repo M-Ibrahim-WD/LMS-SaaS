@@ -1,12 +1,18 @@
 import { Module } from "@nestjs/common";
+import { NotificationsModule } from "../notifications/notifications.module";
 import { SubscriptionsModule } from "../subscriptions/subscriptions.module";
-import { LessonsController } from "./controllers/lessons.controller";
+import {
+  LessonsAccessController,
+  LessonsController,
+  LessonsPublicController
+} from "./controllers/lessons.controller";
+import { LessonMediaStorageService } from "./services/lesson-media-storage.service";
 import { LessonsService } from "./services/lessons.service";
 
 @Module({
-  imports: [SubscriptionsModule],
-  controllers: [LessonsController],
-  providers: [LessonsService],
+  imports: [SubscriptionsModule, NotificationsModule],
+  controllers: [LessonsController, LessonsAccessController, LessonsPublicController],
+  providers: [LessonsService, LessonMediaStorageService],
   exports: [LessonsService]
 })
 export class LessonsModule {}

@@ -97,6 +97,20 @@ export class AdminController {
     return this.adminService.getActivity(user);
   }
 
+  @Get("content-security-events")
+  listContentSecurityEvents(
+    @CurrentUser() user: JwtPayload,
+    @Query("courseId") courseId?: string,
+    @Query("studentId") studentId?: string,
+    @Query("eventType") eventType?: string
+  ) {
+    return this.adminService.listContentSecurityEvents(user, {
+      courseId,
+      studentId,
+      eventType
+    });
+  }
+
   @Get("admin-users")
   listAdminUsers(@CurrentUser() user: JwtPayload, @Query() query: AdminUsersListQueryDto) {
     return this.adminService.listAdminUsers(user, query);

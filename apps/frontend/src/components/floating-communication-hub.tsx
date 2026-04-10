@@ -98,7 +98,9 @@ function resizeComposer(textarea: HTMLTextAreaElement | null) {
     (Number.parseFloat(computed.paddingTop || "0") || 0) +
     (Number.parseFloat(computed.paddingBottom || "0") || 0);
   const maxHeight = lineHeight * 3 + borderHeight + paddingHeight;
-  textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`;
+  const nextHeight = Math.min(textarea.scrollHeight, maxHeight);
+  textarea.style.height = `${nextHeight}px`;
+  textarea.style.overflowY = textarea.scrollHeight > maxHeight ? "auto" : "hidden";
 }
 
 export function FloatingCommunicationHub() {
@@ -501,12 +503,9 @@ export function FloatingCommunicationHub() {
 
   return (
     <div ref={containerRef} className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3">
+      {open ? (
       <div
-        className={`surface-card-strong w-[min(90vw,21rem)] rounded-[26px] p-3.5 transition duration-200 ${
-          open
-            ? "pointer-events-auto translate-y-0 scale-100 opacity-100"
-            : "pointer-events-none translate-y-3 scale-95 opacity-0"
-        }`}
+        className="surface-card-strong w-[min(90vw,21rem)] rounded-[26px] p-3.5 transition duration-200 translate-y-0 scale-100 opacity-100"
       >
         <div className="space-y-4">
           <div className="relative flex rounded-full border border-slate-200 bg-slate-100/80 p-1">
@@ -922,6 +921,7 @@ export function FloatingCommunicationHub() {
           )}
         </div>
       </div>
+      ) : null}
 
       <button
         type="button"
@@ -944,7 +944,7 @@ export function FloatingCommunicationHub() {
             return !current;
           });
         }}
-        className={`group relative inline-flex h-14 w-14 items-center justify-center rounded-full bg-slate-950 text-white shadow-[0_20px_45px_-18px_rgba(15,23,42,0.7)] transition duration-200 hover:-translate-y-1 hover:bg-slate-900 hover:shadow-[0_24px_55px_-18px_rgba(15,23,42,0.82)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-300 ${
+        className={`group pointer-events-auto relative inline-flex h-14 w-14 items-center justify-center rounded-full bg-slate-950 text-white shadow-[0_20px_45px_-18px_rgba(15,23,42,0.7)] transition duration-200 hover:-translate-y-1 hover:bg-slate-900 hover:shadow-[0_24px_55px_-18px_rgba(15,23,42,0.82)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-300 ${
           totalUnread > 0 ? "hub-launcher-pulse" : ""
         }`}
       >

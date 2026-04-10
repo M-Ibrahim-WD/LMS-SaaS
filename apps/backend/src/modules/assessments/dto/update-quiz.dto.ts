@@ -2,6 +2,7 @@ import { Type } from "class-transformer";
 import {
   ArrayMinSize,
   IsArray,
+  IsIn,
   IsOptional,
   IsString,
   MinLength,
@@ -24,6 +25,17 @@ class UpdateQuizQuestionDto {
 }
 
 export class UpdateQuizDto {
+  @IsIn(["LESSON", "SECTION", "COURSE"])
+  scopeType!: "LESSON" | "SECTION" | "COURSE";
+
+  @IsOptional()
+  @IsString()
+  sectionId?: string;
+
+  @IsOptional()
+  @IsString()
+  lessonId?: string;
+
   @IsString()
   @MinLength(3)
   title!: string;

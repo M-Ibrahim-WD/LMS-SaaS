@@ -9,18 +9,29 @@ import { useRequireAuth } from "../../../../../../hooks/use-require-auth";
 
 import type {
   Assignment,
+  AssignmentDraft,
   AssignmentSubmissionGroup,
+  AssessmentScopeType,
   Course,
   CourseAssessments,
   EditorMode,
   LearnerSummary,
   LessonDraft,
+  ProtectedContentEventSummary,
   Quiz,
   QuizDraft,
-  Section,
+  QuizSubmissionGroup,
   UtilityTab
 } from "../_components/course-builder-types";
 import { moveItem } from "../_components/course-builder-types";
+
+function normalizeScopePayload(scopeType: AssessmentScopeType, sectionId: string, lessonId: string) {
+  return {
+    scopeType,
+    sectionId: scopeType === "SECTION" ? sectionId : scopeType === "LESSON" ? sectionId : undefined,
+    lessonId: scopeType === "LESSON" ? lessonId : undefined
+  };
+}
 
 export function useCourseBuilderWorkspace() {
   const params = useParams<{ id: string }>();
@@ -30,7 +41,6 @@ export function useCourseBuilderWorkspace() {
 
   const [editorMode, setEditorMode] = useState<EditorMode>({ kind: "course" });
   const [utilityTab, setUtilityTab] = useState<UtilityTab>("assessments");
-  const [sectionTitle, setSectionTitle] = useState("");
   const [courseDraft, setCourseDraft] = useState({
     title: "",
     description: "",
@@ -39,27 +49,34 @@ export function useCourseBuilderWorkspace() {
     isPaid: false,
     price: ""
   });
-  const [sectionDraft, setSectionDraft] = useState({ title: "" });
+  const [sectionDraft, setSectionDraft] = useState({ title: "", description: "" });
   const [lessonDraft, setLessonDraft] = useState<LessonDraft>({
     title: "",
     type: "TEXT",
-    content: ""
+    description: ""
   });
   const [quizDraft, setQuizDraft] = useState<QuizDraft>({
     title: "",
     description: "",
-    questions: [{ question: "", options: "", correctAnswer: "" }]
+    scopeType: "COURSE",
+    sectionId: "",
+    lessonId: "",
+    questions: [{ question: "", options: ["", ""], correctOptionIndex: 0 }]
   });
-  const [assignmentDraft, setAssignmentDraft] = useState({
+  const [assignmentDraft, setAssignmentDraft] = useState<AssignmentDraft>({
     title: "",
     description: "",
-    instructions: ""
+    instructions: "",
+    scopeType: "COURSE",
+    sectionId: "",
+    lessonId: ""
   });
   const [reviewState, setReviewState] = useState<
     Record<string, { feedback: string; score: string }>
   >({});
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [thumbnailImage, setThumbnailImage] = useState<string | null>(null);
+  const [lessonMediaFile, setLessonMediaFile] = useState<File | null>(null);
   const [builderError, setBuilderError] = useState<string | null>(null);
   const [builderSuccess, setBuilderSuccess] = useState<string | null>(null);
   const [confirmDeleteKey, setConfirmDeleteKey] = useState<string | null>(null);
@@ -108,6 +125,26 @@ export function useCourseBuilderWorkspace() {
     enabled: Boolean(hasHydrated && accessToken && params.id && isAuthorized)
   });
 
+  const quizSubmissionsQuery = useQuery({
+    queryKey: ["quiz-submissions", params.id],
+    queryFn: () =>
+      apiFetch<QuizSubmissionGroup[]>(
+        `/assessments/courses/${params.id}/quiz-submissions`,
+        {
+          token: accessToken ?? undefined
+        }
+      ),
+    enabled: Boolean(hasHydrated && accessToken && params.id && isAuthorized)
+  });
+
+  const securityEventsQuery = useQuery({
+    queryKey: ["course-security-events", params.id],
+    queryFn: () =>
+      apiFetch<ProtectedContentEventSummary[]>(`/courses/${params.id}/security-events`, {
+        token: accessToken ?? undefined
+      }),
+    enabled: Boolean(hasHydrated && accessToken && params.id && isAuthorized)
+  });
 
   const reviewMutation = useMutation({
     mutationFn: ({
@@ -183,6 +220,33 @@ export function useCourseBuilderWorkspace() {
     }
   });
 
+  const uploadLessonMediaMutation = useMutation({
+    mutationFn: async (lessonId: string) => {
+      if (!lessonMediaFile) {
+        throw new Error("Choose lesson media first.");
+      }
+
+      const formData = new FormData();
+      formData.append("file", lessonMediaFile);
+
+      return apiFetch(`/lessons/${lessonId}/media`, {
+        method: "PATCH",
+        token: accessToken ?? undefined,
+        body: formData
+      });
+    },
+    onSuccess: async () => {
+      setLessonMediaFile(null);
+      setBuilderSuccess("Lesson media uploaded.");
+      await courseQuery.refetch();
+    },
+    onError: (error) => {
+      setBuilderError(
+        error instanceof Error ? error.message : "Could not upload lesson media."
+      );
+    }
+  });
+
   useEffect(() => {
     setThumbnailImage(courseQuery.data?.thumbnailImage ?? null);
   }, [courseQuery.data?.thumbnailImage]);
@@ -252,17 +316,21 @@ export function useCourseBuilderWorkspace() {
     setConfirmDeleteKey(null);
 
     if (editorMode.kind === "new-section") {
-      setSectionDraft({ title: "" });
+      setSectionDraft({ title: "", description: "" });
       return;
     }
 
     if (editorMode.kind === "section" && selectedSection) {
-      setSectionDraft({ title: selectedSection.title });
+      setSectionDraft({
+        title: selectedSection.title,
+        description: selectedSection.description ?? ""
+      });
       return;
     }
 
     if (editorMode.kind === "new-lesson") {
-      setLessonDraft({ title: "", type: "TEXT", content: "" });
+      setLessonDraft({ title: "", type: "TEXT", description: "" });
+      setLessonMediaFile(null);
       return;
     }
 
@@ -270,8 +338,9 @@ export function useCourseBuilderWorkspace() {
       setLessonDraft({
         title: selectedLesson.title,
         type: selectedLesson.type,
-        content: selectedLesson.content
+        description: selectedLesson.description ?? selectedLesson.content ?? ""
       });
+      setLessonMediaFile(null);
       return;
     }
 
@@ -279,7 +348,10 @@ export function useCourseBuilderWorkspace() {
       setQuizDraft({
         title: "",
         description: "",
-        questions: [{ question: "", options: "", correctAnswer: "" }]
+        scopeType: "COURSE",
+        sectionId: "",
+        lessonId: "",
+        questions: [{ question: "", options: ["", ""], correctOptionIndex: 0 }]
       });
       return;
     }
@@ -288,17 +360,30 @@ export function useCourseBuilderWorkspace() {
       setQuizDraft({
         title: selectedQuiz.title,
         description: selectedQuiz.description ?? "",
+        scopeType: selectedQuiz.scopeType,
+        sectionId: selectedQuiz.sectionId ?? "",
+        lessonId: selectedQuiz.lessonId ?? "",
         questions: selectedQuiz.questions.map((question) => ({
           question: question.question,
-          options: question.options.join("`n"),
-          correctAnswer: question.correctAnswer ?? ""
+          options: question.options,
+          correctOptionIndex: Math.max(
+            0,
+            question.options.findIndex((option) => option === question.correctAnswer)
+          )
         }))
       });
       return;
     }
 
     if (editorMode.kind === "new-assignment") {
-      setAssignmentDraft({ title: "", description: "", instructions: "" });
+      setAssignmentDraft({
+        title: "",
+        description: "",
+        instructions: "",
+        scopeType: "COURSE",
+        sectionId: "",
+        lessonId: ""
+      });
       return;
     }
 
@@ -306,7 +391,10 @@ export function useCourseBuilderWorkspace() {
       setAssignmentDraft({
         title: selectedAssignment.title,
         description: selectedAssignment.description ?? "",
-        instructions: selectedAssignment.instructions ?? ""
+        instructions: selectedAssignment.instructions ?? "",
+        scopeType: selectedAssignment.scopeType,
+        sectionId: selectedAssignment.sectionId ?? "",
+        lessonId: selectedAssignment.lessonId ?? ""
       });
     }
   }, [
@@ -322,34 +410,10 @@ export function useCourseBuilderWorkspace() {
       courseQuery.refetch(),
       assessmentsQuery.refetch(),
       learnersQuery.refetch(),
-      assignmentSubmissionsQuery.refetch()
+      assignmentSubmissionsQuery.refetch(),
+      quizSubmissionsQuery.refetch(),
+      securityEventsQuery.refetch()
     ]);
-  }
-
-  async function handleCreateSection(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setBuilderError(null);
-    setBuilderSuccess(null);
-
-    try {
-      await apiFetch("/sections", {
-        method: "POST",
-        token: accessToken ?? undefined,
-        body: JSON.stringify({
-          title: sectionTitle,
-          courseId: params.id
-        })
-      });
-      setSectionTitle("");
-      setBuilderSuccess("Section created.");
-      await courseQuery.refetch();
-    } catch (error) {
-      setBuilderError(
-        error instanceof Error
-          ? error.message
-          : "Could not create the section."
-      );
-    }
   }
 
   async function saveCourse() {
@@ -421,7 +485,8 @@ export function useCourseBuilderWorkspace() {
           token: accessToken ?? undefined,
           body: JSON.stringify({
             courseId: params.id,
-            title: sectionDraft.title
+            title: sectionDraft.title,
+            description: sectionDraft.description || undefined
           })
         });
         setBuilderSuccess("Section created.");
@@ -429,7 +494,10 @@ export function useCourseBuilderWorkspace() {
         await apiFetch(`/sections/${editorMode.sectionId}`, {
           method: "PATCH",
           token: accessToken ?? undefined,
-          body: JSON.stringify({ title: sectionDraft.title })
+          body: JSON.stringify({
+            title: sectionDraft.title,
+            description: sectionDraft.description || undefined
+          })
         });
         setBuilderSuccess("Section updated.");
       }
@@ -471,25 +539,39 @@ export function useCourseBuilderWorkspace() {
     setBuilderSuccess(null);
 
     try {
+      let lessonId: string | null = null;
+
       if (editorMode.kind === "new-lesson") {
-        await apiFetch("/lessons", {
+        const createdLesson = await apiFetch<{ id: string }>("/lessons", {
           method: "POST",
           token: accessToken ?? undefined,
           body: JSON.stringify({
             sectionId: editorMode.sectionId,
             title: lessonDraft.title,
             type: lessonDraft.type,
-            content: lessonDraft.content
+            description: lessonDraft.description,
+            content: lessonDraft.description
           })
         });
+        lessonId = createdLesson.id;
         setBuilderSuccess("Lesson created.");
       } else if (editorMode.kind === "lesson") {
         await apiFetch(`/lessons/${editorMode.lessonId}`, {
           method: "PATCH",
           token: accessToken ?? undefined,
-          body: JSON.stringify(lessonDraft)
+          body: JSON.stringify({
+            title: lessonDraft.title,
+            type: lessonDraft.type,
+            description: lessonDraft.description,
+            content: lessonDraft.description
+          })
         });
+        lessonId = editorMode.lessonId;
         setBuilderSuccess("Lesson updated.");
+      }
+
+      if (lessonId && lessonMediaFile) {
+        await uploadLessonMediaMutation.mutateAsync(lessonId);
       }
 
       await courseQuery.refetch();
@@ -524,7 +606,8 @@ export function useCourseBuilderWorkspace() {
           sectionId: parentSection.id,
           title: `${selectedLesson.title} Copy`,
           type: selectedLesson.type,
-          content: selectedLesson.content
+          description: selectedLesson.description ?? selectedLesson.content ?? "",
+          content: selectedLesson.description ?? selectedLesson.content ?? ""
         })
       });
       setBuilderSuccess("Lesson duplicated.");
@@ -560,15 +643,13 @@ export function useCourseBuilderWorkspace() {
 
   function normaliseQuizQuestions() {
     return quizDraft.questions.map((question) => {
-      const options = question.options
-        .split(/`r?`n/)
-        .map((option) => option.trim())
-        .filter(Boolean);
+      const options = question.options.map((option) => option.trim()).filter(Boolean);
+      const correctAnswer = options[question.correctOptionIndex] ?? "";
 
       return {
         question: question.question,
         options,
-        correctAnswer: question.correctAnswer
+        correctAnswer
       };
     });
   }
@@ -584,16 +665,16 @@ export function useCourseBuilderWorkspace() {
         setBuilderError("Every quiz question needs at least two options.");
         return;
       }
-      if (
-        questions.some(
-          (question) => !question.options.includes(question.correctAnswer)
-        )
-      ) {
-        setBuilderError(
-          "Each correct answer must match one of its options exactly."
-        );
+      if (questions.some((question) => !question.correctAnswer)) {
+        setBuilderError("Mark one correct answer for every question.");
         return;
       }
+
+      const scopePayload = normalizeScopePayload(
+        quizDraft.scopeType,
+        quizDraft.sectionId,
+        quizDraft.lessonId
+      );
 
       if (editorMode.kind === "new-quiz") {
         await apiFetch("/assessments/quizzes", {
@@ -603,7 +684,8 @@ export function useCourseBuilderWorkspace() {
             courseId: params.id,
             title: quizDraft.title,
             description: quizDraft.description || undefined,
-            questions
+            questions,
+            ...scopePayload
           })
         });
         setBuilderSuccess("Quiz created.");
@@ -614,13 +696,15 @@ export function useCourseBuilderWorkspace() {
           body: JSON.stringify({
             title: quizDraft.title,
             description: quizDraft.description || undefined,
-            questions
+            questions,
+            ...scopePayload
           })
         });
         setBuilderSuccess("Quiz updated.");
       }
 
       await assessmentsQuery.refetch();
+      await quizSubmissionsQuery.refetch();
       setEditorMode({ kind: "course" });
     } catch (error) {
       setBuilderError(
@@ -640,6 +724,7 @@ export function useCourseBuilderWorkspace() {
       });
       setBuilderSuccess("Quiz deleted.");
       await assessmentsQuery.refetch();
+      await quizSubmissionsQuery.refetch();
       setEditorMode({ kind: "course" });
       setConfirmDeleteKey(null);
     } catch (error) {
@@ -655,6 +740,12 @@ export function useCourseBuilderWorkspace() {
     setBuilderSuccess(null);
 
     try {
+      const scopePayload = normalizeScopePayload(
+        assignmentDraft.scopeType,
+        assignmentDraft.sectionId,
+        assignmentDraft.lessonId
+      );
+
       if (editorMode.kind === "new-assignment") {
         await apiFetch("/assessments/assignments", {
           method: "POST",
@@ -663,7 +754,8 @@ export function useCourseBuilderWorkspace() {
             courseId: params.id,
             title: assignmentDraft.title,
             description: assignmentDraft.description || undefined,
-            instructions: assignmentDraft.instructions || undefined
+            instructions: assignmentDraft.instructions || undefined,
+            ...scopePayload
           })
         });
         setBuilderSuccess("Assignment created.");
@@ -674,7 +766,8 @@ export function useCourseBuilderWorkspace() {
           body: JSON.stringify({
             title: assignmentDraft.title,
             description: assignmentDraft.description || undefined,
-            instructions: assignmentDraft.instructions || undefined
+            instructions: assignmentDraft.instructions || undefined,
+            ...scopePayload
           })
         });
         setBuilderSuccess("Assignment updated.");
@@ -828,8 +921,6 @@ export function useCourseBuilderWorkspace() {
     setEditorMode,
     utilityTab,
     setUtilityTab,
-    sectionTitle,
-    setSectionTitle,
     courseDraft,
     setCourseDraft,
     sectionDraft,
@@ -845,6 +936,8 @@ export function useCourseBuilderWorkspace() {
     thumbnailFile,
     setThumbnailFile,
     thumbnailPreviewUrl,
+    lessonMediaFile,
+    setLessonMediaFile,
     builderError,
     setBuilderError,
     builderSuccess,
@@ -859,14 +952,16 @@ export function useCourseBuilderWorkspace() {
     assessmentsQuery,
     learnersQuery,
     assignmentSubmissionsQuery,
+    quizSubmissionsQuery,
+    securityEventsQuery,
     reviewMutation,
     uploadThumbnailMutation,
+    uploadLessonMediaMutation,
     selectedSection,
     selectedLesson,
     selectedQuiz,
     selectedAssignment,
     refreshAll,
-    handleCreateSection,
     saveCourse,
     toggleStatus,
     saveSection,

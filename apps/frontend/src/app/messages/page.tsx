@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { PageShell } from "../../components/page-shell";
+import { StatusBanner } from "../../components/status-banner";
 import { useConversationsWorkspace } from "../../hooks/use-conversations-workspace";
 import {
   formatConversationDate,
@@ -51,8 +52,13 @@ export default function MessagesPage() {
         </Link>
       }
     >
-      <div className="grid gap-6 xl:grid-cols-[360px,minmax(0,1fr)]">
+      <div className="grid gap-4 lg:gap-6 xl:grid-cols-[320px,minmax(0,1fr)]">
         <aside className="space-y-4">
+          {workspace.conversationsQuery.isError ? (
+            <StatusBanner variant="error">
+              We could not load your conversations right now. Refresh the page and try again.
+            </StatusBanner>
+          ) : null}
           <section className="rounded-[28px] border border-slate-200 bg-white/90 p-5 shadow-sm">
             <h2 className="text-lg font-semibold text-slate-950">Start a direct chat</h2>
             <p className="mt-2 text-sm text-slate-600">
@@ -203,14 +209,20 @@ export default function MessagesPage() {
           </section>
         </aside>
 
-        <section className="rounded-[32px] border border-slate-200 bg-white/95 shadow-sm">
+        <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white/95 shadow-sm sm:rounded-[32px]">
           {workspace.activeConversationQuery.isLoading ? (
             <div className="p-8 text-sm text-slate-500">Loading conversation...</div>
+          ) : workspace.activeConversationQuery.isError ? (
+            <div className="p-8">
+              <StatusBanner variant="error">
+                We could not load this conversation. Please pick another thread or refresh the page.
+              </StatusBanner>
+            </div>
           ) : !active ? (
             <div className="p-8 text-sm text-slate-500">Select a conversation to start chatting.</div>
           ) : (
-            <div className="flex min-h-[640px] flex-col">
-              <div className="border-b border-slate-200 px-6 py-5">
+            <div className="flex min-h-[70vh] flex-col sm:min-h-[640px]">
+              <div className="border-b border-slate-200 px-4 py-4 sm:px-6 sm:py-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -309,7 +321,7 @@ export default function MessagesPage() {
                 </div>
               </div>
 
-              <div className="flex-1 space-y-4 overflow-y-auto px-6 py-6">
+              <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
                 {active.messages.length === 0 ? (
                   <p className="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-sm text-slate-500">No messages yet. Send the first one.</p>
                 ) : (
@@ -321,7 +333,7 @@ export default function MessagesPage() {
                       {group.items.map((message) => {
                         const isMine = message.sender.id === workspace.user?.id;
                         return (
-                          <div key={message.id} className={`max-w-[85%] rounded-[24px] px-4 py-3 shadow-sm ${isMine ? "ml-auto bg-emerald-600 text-white" : "bg-slate-100 text-slate-900"}`}>
+                          <div key={message.id} className={`max-w-[92%] rounded-[20px] px-4 py-3 shadow-sm sm:max-w-[85%] sm:rounded-[24px] ${isMine ? "ml-auto bg-emerald-600 text-white" : "bg-slate-100 text-slate-900"}`}>
                             <p className="text-xs font-semibold opacity-80">{isMine ? "You" : message.sender.fullName}</p>
                             <p className="mt-2 whitespace-pre-wrap text-sm leading-6">{message.body}</p>
                             <p className={`mt-3 text-xs ${isMine ? "text-emerald-100" : "text-slate-500"}`}>{formatConversationDate(message.createdAt)}</p>
@@ -333,13 +345,13 @@ export default function MessagesPage() {
                 )}
               </div>
 
-              <div className="border-t border-slate-200 px-6 py-5">
+              <div className="border-t border-slate-200 px-4 py-4 sm:px-6 sm:py-5">
                 <div className="flex flex-col gap-3 sm:flex-row">
                   <textarea
                     value={workspace.composerText}
                     onChange={(event) => workspace.setComposerText(event.target.value)}
                     placeholder="Write your message..."
-                    className="min-h-24 flex-1 rounded-[24px] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-emerald-400"
+                    className="min-h-20 flex-1 rounded-[20px] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-emerald-400 sm:min-h-24 sm:rounded-[24px]"
                   />
                   <button
                     type="button"

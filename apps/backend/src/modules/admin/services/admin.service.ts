@@ -1,5 +1,5 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { AdminPermission, PaymentStatus, Prisma, UserRole } from "@prisma/client";
+import { AdminPermission, PaymentStatus, Prisma, ProtectedContentEventType, UserRole } from "@prisma/client";
 import { PrismaService } from "../../../shared/prisma/prisma.service";
 import type { JwtPayload } from "../../../shared/types/auth.types";
 import {
@@ -611,6 +611,62 @@ export class AdminService {
       recentPayments,
       recentNotifications
     };
+  }
+
+  async listContentSecurityEvents(
+    currentUser: JwtPayload,
+    query: {
+      courseId?: string;
+      studentId?: string;
+      eventType?: string;
+    }
+  ) {
+    await this.adminAccessService.assertAdminPermission(
+      currentUser,
+      AdminPermission.REVIEW_COURSES
+    );
+
+    const where: Prisma.ProtectedContentEventWhereInput = {};
+
+    if (!currentUser.isSuperAdmin) {
+      where.tenantId = currentUser.tenantId ?? undefined;
+    }
+    if (query.courseId?.trim()) {
+      where.courseId = query.courseId.trim();
+    }
+    if (query.studentId?.trim()) {
+      where.userId = query.studentId.trim();
+    }
+    if (query.eventType?.trim()) {
+      where.eventType = query.eventType.trim() as ProtectedContentEventType;
+    }
+
+    return this.prisma.protectedContentEvent.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: 100,
+      include: {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true
+          }
+        },
+        course: {
+          select: {
+            id: true,
+            title: true
+          }
+        },
+        lesson: {
+          select: {
+            id: true,
+            title: true
+          }
+        }
+      }
+    });
   }
 
   async listAdminUsers(currentUser: JwtPayload, query: AdminUsersListQueryDto) {

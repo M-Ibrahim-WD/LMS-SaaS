@@ -67,6 +67,12 @@ export class AssessmentsController {
   }
 
   @Roles("INSTRUCTOR")
+  @Get("courses/:courseId/quiz-submissions")
+  getCourseQuizSubmissions(@CurrentUser() user: JwtPayload, @Param("courseId") courseId: string) {
+    return this.assessmentsService.getCourseQuizSubmissions(user, courseId);
+  }
+
+  @Roles("INSTRUCTOR")
   @Get("courses/:courseId/assignment-submissions")
   getCourseAssignmentSubmissions(@CurrentUser() user: JwtPayload, @Param("courseId") courseId: string) {
     return this.assessmentsService.getCourseAssignmentSubmissions(user, courseId);

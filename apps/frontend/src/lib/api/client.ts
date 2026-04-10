@@ -41,11 +41,19 @@ export async function apiFetch<T>(path: string, options: FetchOptions = {}): Pro
     let message = `API request failed: ${response.status}`;
 
     try {
-      const payload = (await response.json()) as { message?: string | string[] };
+      const payload = (await response.json()) as {
+        message?: string | string[];
+        error?: string;
+        errors?: string[];
+      };
       if (Array.isArray(payload.message)) {
         message = payload.message.join(", ");
       } else if (payload.message) {
         message = payload.message;
+      } else if (Array.isArray(payload.errors) && payload.errors.length > 0) {
+        message = payload.errors.join(", ");
+      } else if (payload.error) {
+        message = payload.error;
       }
     } catch {
       try {
@@ -59,6 +67,10 @@ export async function apiFetch<T>(path: string, options: FetchOptions = {}): Pro
     }
 
     throw new Error(message);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
   }
 
   return response.json() as Promise<T>;

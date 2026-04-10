@@ -9,8 +9,11 @@ export class CreateSectionDto {
   title!: string;
 
   @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
   @IsInt()
   @Min(1)
   order?: number;
 }
-

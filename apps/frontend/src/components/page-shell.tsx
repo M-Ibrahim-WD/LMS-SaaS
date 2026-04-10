@@ -19,8 +19,8 @@ export function PageShell({
   children
 }: PageShellProps) {
   return (
-    <main className={`mx-auto w-full ${maxWidthClassName} px-4 py-5 sm:px-6 sm:py-7 lg:px-8 lg:py-10`}>
-      <div className="surface-card-strong rounded-[32px] p-5 sm:p-6 lg:p-8">
+    <main className={`mx-auto w-full ${maxWidthClassName} px-3 py-4 sm:px-6 sm:py-7 lg:px-8 lg:py-10`}>
+      <div className="surface-card-strong overflow-hidden rounded-[26px] p-4 sm:rounded-[32px] sm:p-6 lg:p-8">
         <div className="flex flex-col gap-5 border-b border-slate-200/80 pb-5 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             {backHref ? <BackButton fallbackHref={backHref} /> : null}

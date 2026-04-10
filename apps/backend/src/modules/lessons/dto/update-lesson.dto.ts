@@ -12,6 +12,10 @@ export class UpdateLessonDto {
   content?: string;
 
   @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
   @IsIn(["VIDEO", "TEXT", "FILE"])
   type?: LessonType;
 
@@ -20,4 +24,3 @@ export class UpdateLessonDto {
   @Min(1)
   order?: number;
 }
-
