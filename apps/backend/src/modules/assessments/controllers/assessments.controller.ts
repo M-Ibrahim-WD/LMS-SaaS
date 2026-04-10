@@ -90,6 +90,24 @@ export class AssessmentsController {
   }
 
   @Roles("STUDENT")
+  @Post("quizzes/:quizId/start")
+  startQuizAttempt(
+    @CurrentUser() user: JwtPayload,
+    @Param("quizId") quizId: string
+  ) {
+    return this.assessmentsService.startQuizAttempt(user, quizId);
+  }
+
+  @Roles("STUDENT")
+  @Post("quizzes/:quizId/abandon")
+  abandonQuizAttempt(
+    @CurrentUser() user: JwtPayload,
+    @Param("quizId") quizId: string
+  ) {
+    return this.assessmentsService.abandonQuizAttempt(user, quizId);
+  }
+
+  @Roles("STUDENT")
   @Post("quizzes/:quizId/submit")
   submitQuiz(
     @CurrentUser() user: JwtPayload,

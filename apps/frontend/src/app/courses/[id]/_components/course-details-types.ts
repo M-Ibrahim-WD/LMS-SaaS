@@ -137,8 +137,12 @@ export interface CourseQuiz {
   isLocked: boolean;
   canAccess: boolean;
   canEdit: boolean;
-  status: "LOCKED" | "READY" | "SUBMITTED";
+  status: "LOCKED" | "READY" | "IN_PROGRESS" | "SUBMITTED" | "BLANK";
   lockReason?: string | null;
+  attemptStatus: "NOT_STARTED" | "IN_PROGRESS" | "SUBMITTED" | "BLANK";
+  canEnter: boolean;
+  hasConsumedAttempt: boolean;
+  enteredAt?: string | null;
   questions: QuizQuestion[];
   submission: QuizSubmission | null;
 }

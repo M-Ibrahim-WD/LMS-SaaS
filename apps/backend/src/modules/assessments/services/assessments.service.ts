@@ -1,7 +1,8 @@
 import {
   AssessmentScopeType,
   AssignmentSubmissionStatus,
-  Prisma
+  Prisma,
+  QuizAttemptStatus
 } from "@prisma/client";
 import {
   BadRequestException,
@@ -90,6 +91,19 @@ export class AssessmentsService {
                   }
                 }
               : false,
+          attempts:
+            user.role === "STUDENT"
+              ? {
+                  where: { studentId: user.sub },
+                  select: {
+                    id: true,
+                    status: true,
+                    enteredAt: true,
+                    submittedAt: true,
+                    blankRecordedAt: true
+                  }
+                }
+              : false,
           section: {
             select: { id: true, title: true }
           },
@@ -130,6 +144,8 @@ export class AssessmentsService {
 
     return {
       quizzes: quizzes.map((quiz) => {
+        const studentAttempt = user.role === "STUDENT" ? (quiz.attempts[0] ?? null) : null;
+        const studentSubmission = user.role === "STUDENT" ? (quiz.submissions[0] ?? null) : null;
         const gate = this.resolveAssessmentGate(
           sections,
           completedLessonIds,
@@ -154,10 +170,18 @@ export class AssessmentsService {
           status:
             gate.isLocked
               ? "LOCKED"
-              : user.role === "STUDENT" && quiz.submissions[0]
-                ? "SUBMITTED"
-                : "READY",
+              : studentAttempt?.status === QuizAttemptStatus.BLANK
+                ? "BLANK"
+                : studentSubmission
+                  ? "SUBMITTED"
+                  : studentAttempt?.status === QuizAttemptStatus.IN_PROGRESS
+                    ? "IN_PROGRESS"
+                    : "READY",
           lockReason: gate.lockReason,
+          attemptStatus: studentAttempt?.status ?? "NOT_STARTED",
+          canEnter: user.role === "STUDENT" ? !gate.isLocked && !studentAttempt : !gate.isLocked,
+          hasConsumedAttempt: Boolean(studentAttempt),
+          enteredAt: studentAttempt?.enteredAt ?? null,
           questions: quiz.questions.map((question) => ({
             id: question.id,
             question: question.question,
@@ -166,7 +190,7 @@ export class AssessmentsService {
             order: question.order,
             ...(user.role === "INSTRUCTOR" ? { correctAnswer: question.correctAnswer } : {})
           })),
-          submission: user.role === "STUDENT" ? quiz.submissions[0] ?? null : null
+          submission: studentSubmission
         };
       }),
       assignments: assignments.map((assignment) => {
@@ -532,82 +556,159 @@ export class AssessmentsService {
     return { deleted: true };
   }
 
+  async startQuizAttempt(user: JwtPayload, quizId: string) {
+    if (user.role !== "STUDENT") {
+      throw new ForbiddenException("Only students can start quizzes");
+    }
+
+    const quiz = await this.getStudentQuizAttemptContext(quizId, user);
+
+    const existingAttempt = await this.prisma.quizAttempt.findUnique({
+      where: {
+        quizId_studentId: {
+          quizId,
+          studentId: user.sub
+        }
+      },
+      select: {
+        id: true,
+        status: true,
+        enteredAt: true
+      }
+    });
+
+    if (existingAttempt) {
+      throw new ConflictException("This exam has already been opened. Re-entry is not allowed.");
+    }
+
+    return this.prisma.quizAttempt.create({
+      data: {
+        quizId,
+        studentId: user.sub,
+        tenantId: quiz.tenantId,
+        status: QuizAttemptStatus.IN_PROGRESS
+      },
+      select: {
+        id: true,
+        status: true,
+        enteredAt: true
+      }
+    });
+  }
+
+  async abandonQuizAttempt(user: JwtPayload, quizId: string) {
+    if (user.role !== "STUDENT") {
+      throw new ForbiddenException("Only students can abandon quizzes");
+    }
+
+    const quiz = await this.getStudentQuizAttemptContext(quizId, user);
+    const attempt = await this.prisma.quizAttempt.findUnique({
+      where: {
+        quizId_studentId: {
+          quizId,
+          studentId: user.sub
+        }
+      },
+      select: {
+        id: true,
+        status: true
+      }
+    });
+
+    if (!attempt) {
+      throw new NotFoundException("Quiz attempt not found");
+    }
+
+    if (attempt.status !== QuizAttemptStatus.IN_PROGRESS) {
+      return {
+        id: attempt.id,
+        status: attempt.status
+      };
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const existingSubmission = await tx.quizSubmission.findUnique({
+        where: {
+          quizId_studentId: {
+            quizId,
+            studentId: user.sub
+          }
+        },
+        select: { id: true }
+      });
+
+      if (!existingSubmission) {
+        await tx.quizSubmission.create({
+          data: {
+            quizId,
+            studentId: user.sub,
+            tenantId: quiz.tenantId,
+            answers: [] as Prisma.InputJsonValue,
+            score: 0,
+            totalQuestions: quiz.questions.length
+          }
+        });
+      }
+
+      return tx.quizAttempt.update({
+        where: { id: attempt.id },
+        data: {
+          status: QuizAttemptStatus.BLANK,
+          blankRecordedAt: new Date()
+        },
+        select: {
+          id: true,
+          status: true,
+          blankRecordedAt: true
+        }
+      });
+    });
+  }
+
   async submitQuiz(user: JwtPayload, quizId: string, dto: SubmitQuizDto) {
     if (user.role !== "STUDENT") {
       throw new ForbiddenException("Only students can submit quizzes");
     }
 
-    const quiz = await this.prisma.quiz.findFirst({
-      where: { id: quizId },
-      include: {
-        questions: { orderBy: { order: "asc" } },
-        section: {
-          select: { id: true, title: true }
-        },
-        lesson: {
-          select: { id: true, title: true }
-        },
-        course: {
-          select: {
-            id: true,
-            tenantId: true,
-            sections: {
-              orderBy: { order: "asc" },
-              select: {
-                id: true,
-                title: true,
-                lessons: {
-                  orderBy: { order: "asc" },
-                  select: { id: true, title: true }
-                }
-              }
-            }
-          }
-        }
-      }
-    });
-
-    if (!quiz) {
-      throw new NotFoundException("Quiz not found");
-    }
-
-    await this.assertStudentCanAccessCourse(quiz.courseId, user);
-
-    const completedLessonIds = new Set(
-      (
-        await this.prisma.lessonCompletion.findMany({
-          where: { userId: user.sub, courseId: quiz.courseId },
-          select: { lessonId: true }
-        })
-      ).map((item) => item.lessonId)
-    );
-
-    const gate = this.resolveAssessmentGate(
-      quiz.course.sections,
-      completedLessonIds,
-      quiz.scopeType,
-      quiz.sectionId,
-      quiz.lessonId,
-      user.role
-    );
-
-    if (gate.isLocked) {
-      throw new ForbiddenException(gate.lockReason ?? "Complete the required learning first");
-    }
+    const quiz = await this.getStudentQuizAttemptContext(quizId, user);
 
     if (dto.answers.length !== quiz.questions.length) {
       throw new BadRequestException("All quiz questions must be answered");
     }
 
-    const existing = await this.prisma.quizSubmission.findFirst({
-      where: {
-        quizId,
-        studentId: user.sub
-      },
-      select: { id: true }
-    });
+    const [attempt, existingSubmission] = await Promise.all([
+      this.prisma.quizAttempt.findUnique({
+        where: {
+          quizId_studentId: {
+            quizId,
+            studentId: user.sub
+          }
+        },
+        select: {
+          id: true,
+          status: true
+        }
+      }),
+      this.prisma.quizSubmission.findUnique({
+        where: {
+          quizId_studentId: {
+            quizId,
+            studentId: user.sub
+          }
+        },
+        select: { id: true }
+      })
+    ]);
 
-    if (existing) {
+    if (!attempt) {
+      throw new ConflictException("Open the exam first to start your single allowed attempt.");
+    }
+
+    if (attempt.status !== QuizAttemptStatus.IN_PROGRESS) {
+      throw new ConflictException("This exam attempt has already been consumed.");
+    }
+
+    if (existingSubmission) {
       throw new ConflictException("Quiz already submitted");
     }
 
@@ -615,15 +716,27 @@ export class AssessmentsService {
       return total + (dto.answers[index] === question.correctAnswer ? 1 : 0);
     }, 0);
 
-    return this.prisma.quizSubmission.create({
-      data: {
-        quizId,
-        studentId: user.sub,
-        tenantId: quiz.tenantId,
-        answers: dto.answers as Prisma.InputJsonValue,
-        score,
-        totalQuestions: quiz.questions.length
-      }
+    return this.prisma.$transaction(async (tx) => {
+      const submission = await tx.quizSubmission.create({
+        data: {
+          quizId,
+          studentId: user.sub,
+          tenantId: quiz.tenantId,
+          answers: dto.answers as Prisma.InputJsonValue,
+          score,
+          totalQuestions: quiz.questions.length
+        }
+      });
+
+      await tx.quizAttempt.update({
+        where: { id: attempt.id },
+        data: {
+          status: QuizAttemptStatus.SUBMITTED,
+          submittedAt: new Date()
+        }
+      });
+
+      return submission;
     });
   }
 
@@ -709,6 +822,62 @@ export class AssessmentsService {
         status: AssignmentSubmissionStatus.PENDING_REVIEW
       }
     });
+  }
+
+  private async getStudentQuizAttemptContext(quizId: string, user: JwtPayload) {
+    const quiz = await this.prisma.quiz.findFirst({
+      where: { id: quizId },
+      include: {
+        questions: { orderBy: { order: "asc" } },
+        course: {
+          select: {
+            id: true,
+            tenantId: true,
+            sections: {
+              orderBy: { order: "asc" },
+              select: {
+                id: true,
+                title: true,
+                lessons: {
+                  orderBy: { order: "asc" },
+                  select: { id: true, title: true }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!quiz) {
+      throw new NotFoundException("Quiz not found");
+    }
+
+    await this.assertStudentCanAccessCourse(quiz.courseId, user);
+
+    const completedLessonIds = new Set(
+      (
+        await this.prisma.lessonCompletion.findMany({
+          where: { userId: user.sub, courseId: quiz.courseId },
+          select: { lessonId: true }
+        })
+      ).map((item) => item.lessonId)
+    );
+
+    const gate = this.resolveAssessmentGate(
+      quiz.course.sections,
+      completedLessonIds,
+      quiz.scopeType,
+      quiz.sectionId,
+      quiz.lessonId,
+      user.role
+    );
+
+    if (gate.isLocked) {
+      throw new ForbiddenException(gate.lockReason ?? "Complete the required learning first");
+    }
+
+    return quiz;
   }
 
   private async assertInstructorOwnsCourse(courseId: string, user: JwtPayload) {

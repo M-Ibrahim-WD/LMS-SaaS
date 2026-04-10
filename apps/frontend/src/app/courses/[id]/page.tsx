@@ -14,7 +14,11 @@ import {
 } from "../../../components/course-workspace";
 import { StatusBanner } from "../../../components/status-banner";
 
-import { formatCourseDate } from "./_components/course-details-types";
+import {
+  formatCourseDate,
+  type CourseAssignment,
+  type CourseQuiz
+} from "./_components/course-details-types";
 import { useCourseDetailsWorkspace } from "./_hooks/use-course-details-workspace";
 
 function formatInterviewCountdown(value: string, now = Date.now()) {
@@ -48,6 +52,7 @@ export default function CourseDetailsPage() {
   const {
     activeLesson,
     activeInterviewId,
+    activeQuizId,
     activeInterviewQuery,
     assignmentDrafts,
     assignmentFormErrors,
@@ -70,6 +75,8 @@ export default function CourseDetailsPage() {
     onProofChange,
     onRetryUpload,
     onSelectLesson,
+    onAbandonQuizAttempt,
+    onStartQuizAttempt,
     onSubmitAssignment,
     onSubmitPayment,
     onSubmitQuiz,
@@ -90,6 +97,8 @@ export default function CourseDetailsPage() {
     selectedCourse,
     selectedMethodId,
     setActiveInterviewId,
+    setActiveQuizId,
+    setWarningQuizId,
     setAssignmentDrafts,
     setAssignmentFormErrors,
     setQuizAnswer,
@@ -100,8 +109,10 @@ export default function CourseDetailsPage() {
     submitAssignmentMutation,
     submitPaymentMutation,
     submitQuizMutation,
+    startQuizAttemptMutation,
     submitReviewMutation,
-    upcomingLesson
+    upcomingLesson,
+    warningQuizId
   } = useCourseDetailsWorkspace();
 
   const interviewSessions = interviewSessionsQuery.data ?? [];
@@ -131,6 +142,23 @@ export default function CourseDetailsPage() {
     assessmentsQuery.data?.assignments.filter(
       (assignment) => assignment.scopeType === "COURSE"
     ) ?? [];
+  const visibleLessonQuizzes = lessonQuizzes.filter((quiz) => quiz.canAccess || Boolean(quiz.submission));
+  const visibleSectionQuizzes = sectionQuizzes.filter((quiz) => quiz.canAccess || Boolean(quiz.submission));
+  const visibleCourseQuizzes = courseQuizzes.filter((quiz) => quiz.canAccess || Boolean(quiz.submission));
+  const visibleLessonAssignments = lessonAssignments.filter(
+    (assignment) => assignment.canAccess || Boolean(assignment.submission)
+  );
+  const visibleSectionAssignments = sectionAssignments.filter(
+    (assignment) => assignment.canAccess || Boolean(assignment.submission)
+  );
+  const visibleCourseAssignments = courseAssignments.filter(
+    (assignment) => assignment.canAccess || Boolean(assignment.submission)
+  );
+  const warningQuiz =
+    assessmentsQuery.data?.quizzes.find((quiz) => quiz.id === warningQuizId) ?? null;
+  const activeQuiz =
+    assessmentsQuery.data?.quizzes.find((quiz) => quiz.id === activeQuizId) ?? null;
+  const isQuizPopupClosable = Boolean(activeQuiz?.submission);
 
   const handleLaunchInterview = async () => {
     if (!activeInterview) {
@@ -175,6 +203,176 @@ export default function CourseDetailsPage() {
     window.addEventListener("keydown", handleEscape);
     return () => window.removeEventListener("keydown", handleEscape);
   }, [activeInterviewId, setActiveInterviewId]);
+
+  useEffect(() => {
+    if (!activeQuizId || isQuizPopupClosable) {
+      return;
+    }
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+      }
+    };
+
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [activeQuizId, isQuizPopupClosable]);
+
+  useEffect(() => {
+    if (!activeQuizId || !isStudent || isQuizPopupClosable) {
+      return;
+    }
+
+    const abandonAttempt = () => {
+      void onAbandonQuizAttempt(activeQuizId);
+    };
+
+    const handlePageHide = () => {
+      abandonAttempt();
+    };
+
+    const handleBeforeUnload = () => {
+      abandonAttempt();
+    };
+
+    window.addEventListener("pagehide", handlePageHide);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("pagehide", handlePageHide);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [activeQuizId, isQuizPopupClosable, isStudent, onAbandonQuizAttempt]);
+
+  const openQuizFlow = (quiz: CourseQuiz) => {
+    if (quiz.submission || quiz.attemptStatus === "IN_PROGRESS") {
+      setWarningQuizId(null);
+      setActiveQuizId(quiz.id);
+      return;
+    }
+
+    setWarningQuizId(quiz.id);
+  };
+
+  const closeQuizPopup = () => {
+    if (!isQuizPopupClosable) {
+      return;
+    }
+
+    setActiveQuizId(null);
+  };
+
+  const renderQuizCard = (quiz: CourseQuiz) => (
+    <button
+      key={quiz.id}
+      type="button"
+      onClick={() => openQuizFlow(quiz)}
+      className="w-full rounded-[28px] border border-slate-200 bg-slate-50 p-4 text-left transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-sm"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-lg font-semibold text-slate-950">{quiz.title}</p>
+          {quiz.description ? (
+            <p className="mt-2 text-sm leading-6 text-slate-600">{quiz.description}</p>
+          ) : null}
+          <p className="mt-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+            {quiz.scopeLabel}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {quiz.submission ? (
+            <span className="rounded-full bg-emerald-100 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-800">
+              {quiz.status === "BLANK" ? "Blank recorded" : "Submitted"}
+            </span>
+          ) : null}
+          {!quiz.submission ? (
+            <span className="rounded-full bg-amber-100 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-800">
+              {quiz.attemptStatus === "IN_PROGRESS" ? "Attempt in progress" : "One entry only"}
+            </span>
+          ) : null}
+        </div>
+      </div>
+      {quiz.submission ? (
+        <p className="mt-4 text-sm font-medium text-emerald-700">
+          Result recorded: {quiz.submission.score}/{quiz.submission.totalQuestions}
+        </p>
+      ) : (
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <p className="text-sm text-slate-600">
+            {quiz.attemptStatus === "IN_PROGRESS"
+              ? "Your exam session is already active. Re-open it now to finish and submit."
+              : "Open the exam in a dedicated full-screen window and finish it in one sitting."}
+          </p>
+          <span className="rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700">
+            {quiz.attemptStatus === "IN_PROGRESS" ? "Resume exam" : "Open exam"}
+          </span>
+        </div>
+      )}
+    </button>
+  );
+
+  const renderAssignmentCard = (assignment: CourseAssignment) => (
+    <div key={assignment.id} className="rounded-[28px] border border-slate-200 bg-slate-50 p-4 sm:p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-lg font-semibold text-slate-950">{assignment.title}</p>
+          {assignment.description ? (
+            <p className="mt-2 text-sm leading-6 text-slate-600">{assignment.description}</p>
+          ) : null}
+          <p className="mt-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+            {assignment.scopeLabel}
+          </p>
+        </div>
+        {assignment.submission ? (
+          <span className="rounded-full bg-emerald-100 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-800">
+            {assignment.status === "REVIEWED" ? "Reviewed" : "Submitted"}
+          </span>
+        ) : null}
+      </div>
+      {assignment.instructions ? (
+        <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-slate-700">
+          {assignment.instructions}
+        </p>
+      ) : null}
+      {isStudent ? (
+        <>
+          <textarea
+            className="mt-4 min-h-32 w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm"
+            placeholder="Write your assignment response"
+            value={assignmentDrafts[assignment.id] ?? assignment.submission?.content ?? ""}
+            onChange={(event) => {
+              setAssignmentDrafts((current) => ({ ...current, [assignment.id]: event.target.value }));
+              setAssignmentFormErrors((current) => ({ ...current, [assignment.id]: "" }));
+            }}
+          />
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <PillButton
+              onClick={() => void onSubmitAssignment(assignment.id)}
+              disabled={submitAssignmentMutation.isPending}
+            >
+              {assignment.submission
+                ? submitAssignmentMutation.isPending
+                  ? "Updating..."
+                  : "Update assignment"
+                : submitAssignmentMutation.isPending
+                  ? "Submitting..."
+                  : "Submit assignment"}
+            </PillButton>
+            {assignmentFormErrors[assignment.id] ? (
+              <p className="text-sm text-red-600">{assignmentFormErrors[assignment.id]}</p>
+            ) : null}
+          </div>
+          {assignment.submission?.feedback ? (
+            <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+              <p className="font-semibold">Instructor feedback</p>
+              <p className="mt-2 leading-6">{assignment.submission.feedback}</p>
+            </div>
+          ) : null}
+        </>
+      ) : null}
+    </div>
+  );
 
   if (!selectedCourse) {
     return (
@@ -562,195 +760,41 @@ export default function CourseDetailsPage() {
                     <EmptyState title="Nothing to show yet" description="Once the course has lessons, the active lesson will appear here with progress actions." />
                   </WorkspacePanel>
                 )}
-                <WorkspacePanel title="Lesson checkpoints" description="These lesson-level quizzes and assignments unlock only after the selected lesson is completed.">
-                  <div className="space-y-4">
-                    {lessonQuizzes.length || lessonAssignments.length ? (
-                      <>
-                        {lessonQuizzes.map((quiz) => (
-                          <div key={quiz.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                            <div className="flex flex-wrap items-start justify-between gap-3">
-                              <div>
-                                <p className="text-lg font-semibold text-slate-950">{quiz.title}</p>
-                                {quiz.description ? <p className="mt-2 text-sm text-slate-600">{quiz.description}</p> : null}
-                                <p className="mt-2 text-xs uppercase tracking-[0.2em] text-slate-500">{quiz.scopeLabel}</p>
-                              </div>
-                              <div className="flex flex-wrap gap-2">
-                                {quiz.submission ? <span className="rounded-full bg-emerald-100 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-800">Submitted</span> : null}
-                                {quiz.isLocked ? <span className="rounded-full bg-slate-200 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-700">Locked</span> : null}
-                              </div>
-                            </div>
-                            {quiz.isLocked && quiz.lockReason ? <p className="mt-3 text-sm text-slate-500">{quiz.lockReason}</p> : null}
-                            <div className="mt-4 space-y-3">
-                              {quiz.questions.map((question, index) => (
-                                <div key={question.id} className="rounded-2xl border border-slate-200 bg-white p-4">
-                                  <p className="text-sm font-semibold text-slate-900">{question.order}. {question.question}</p>
-                                  <div className="mt-3 space-y-2">
-                                    {question.options.map((option) => (
-                                      <label key={option} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700">
-                                        <input type="radio" name={`${quiz.id}-${question.id}`} value={option} checked={(quizAnswers[quiz.id] ?? quiz.submission?.answers ?? [])[index] === option} onChange={(event) => setQuizAnswer(quiz.id, index, event.target.value)} disabled={Boolean(quiz.submission) || Boolean(quiz.isLocked)} />
-                                        {option}
-                                      </label>
-                                    ))}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                            {quiz.submission ? (
-                              <p className="mt-4 text-sm font-medium text-emerald-700">Submitted. Score: {quiz.submission.score}/{quiz.submission.totalQuestions}</p>
-                            ) : isStudent ? (
-                              <div className="mt-4 flex flex-wrap items-center gap-3">
-                                <PillButton onClick={() => void onSubmitQuiz(quiz.id, quiz.questions.length)} disabled={submitQuizMutation.isPending || Boolean(quiz.isLocked)}>{submitQuizMutation.isPending ? "Submitting..." : "Submit quiz"}</PillButton>
-                                {quizFormErrors[quiz.id] ? <p className="text-sm text-red-600">{quizFormErrors[quiz.id]}</p> : null}
-                              </div>
-                            ) : null}
-                          </div>
-                        ))}
-                        {lessonAssignments.map((assignment) => (
-                          <div key={assignment.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                            <p className="text-lg font-semibold text-slate-950">{assignment.title}</p>
-                            {assignment.description ? <p className="mt-2 text-sm text-slate-600">{assignment.description}</p> : null}
-                            <p className="mt-2 text-xs uppercase tracking-[0.2em] text-slate-500">{assignment.scopeLabel}</p>
-                            {assignment.instructions ? <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">{assignment.instructions}</p> : null}
-                            {assignment.isLocked && assignment.lockReason ? <p className="mt-3 text-sm text-slate-500">{assignment.lockReason}</p> : null}
-                            {isStudent ? (
-                              <>
-                                <textarea className="mt-4 min-h-32 w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Write your assignment response" value={assignmentDrafts[assignment.id] ?? assignment.submission?.content ?? ""} onChange={(event) => { setAssignmentDrafts((current) => ({ ...current, [assignment.id]: event.target.value })); setAssignmentFormErrors((current) => ({ ...current, [assignment.id]: "" })); }} disabled={Boolean(assignment.isLocked)} />
-                                <div className="mt-3 flex flex-wrap items-center gap-3">
-                                  <PillButton onClick={() => void onSubmitAssignment(assignment.id)} disabled={submitAssignmentMutation.isPending || Boolean(assignment.isLocked)}>{assignment.submission ? submitAssignmentMutation.isPending ? "Updating..." : "Update submission" : submitAssignmentMutation.isPending ? "Submitting..." : "Submit assignment"}</PillButton>
-                                  {assignmentFormErrors[assignment.id] ? <p className="text-sm text-red-600">{assignmentFormErrors[assignment.id]}</p> : null}
-                                </div>
-                              </>
-                            ) : null}
-                          </div>
-                        ))}
-                      </>
-                    ) : (
-                      <EmptyState title="No lesson checkpoints yet" description="Lesson-level quizzes and assignments will appear here once the instructor attaches them to this lesson." />
-                    )}
-                  </div>
-                </WorkspacePanel>
+                {visibleLessonQuizzes.length || visibleLessonAssignments.length ? (
+                  <WorkspacePanel
+                    title="Lesson assessments"
+                    description="These items appear only after you complete the current lesson."
+                  >
+                    <div className="space-y-4">
+                      {visibleLessonQuizzes.map(renderQuizCard)}
+                      {visibleLessonAssignments.map(renderAssignmentCard)}
+                    </div>
+                  </WorkspacePanel>
+                ) : null}
 
-                <WorkspacePanel title="Section checkpoints" description="These section-level assessments unlock after all lessons in this section are complete.">
-                  <div className="space-y-4">
-                    {sectionQuizzes.length || sectionAssignments.length ? (
-                      <>
-                        {sectionQuizzes.map((quiz) => (
-                          <div key={quiz.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                            <div className="flex flex-wrap items-start justify-between gap-3">
-                              <div>
-                                <p className="text-lg font-semibold text-slate-950">{quiz.title}</p>
-                                {quiz.description ? <p className="mt-2 text-sm text-slate-600">{quiz.description}</p> : null}
-                                <p className="mt-2 text-xs uppercase tracking-[0.2em] text-slate-500">{quiz.scopeLabel}</p>
-                              </div>
-                              <div className="flex flex-wrap gap-2">
-                                {quiz.submission ? <span className="rounded-full bg-emerald-100 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-800">Submitted</span> : null}
-                                {quiz.isLocked ? <span className="rounded-full bg-slate-200 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-700">Locked</span> : null}
-                              </div>
-                            </div>
-                            {quiz.isLocked && quiz.lockReason ? <p className="mt-3 text-sm text-slate-500">{quiz.lockReason}</p> : null}
-                            <div className="mt-4 space-y-3">
-                              {quiz.questions.map((question, index) => (
-                                <div key={question.id} className="rounded-2xl border border-slate-200 bg-white p-4">
-                                  <p className="text-sm font-semibold text-slate-900">{question.order}. {question.question}</p>
-                                  <div className="mt-3 space-y-2">
-                                    {question.options.map((option) => (
-                                      <label key={option} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700">
-                                        <input type="radio" name={`${quiz.id}-${question.id}`} value={option} checked={(quizAnswers[quiz.id] ?? quiz.submission?.answers ?? [])[index] === option} onChange={(event) => setQuizAnswer(quiz.id, index, event.target.value)} disabled={Boolean(quiz.submission) || Boolean(quiz.isLocked)} />
-                                        {option}
-                                      </label>
-                                    ))}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                            {quiz.submission ? <p className="mt-4 text-sm font-medium text-emerald-700">Submitted. Score: {quiz.submission.score}/{quiz.submission.totalQuestions}</p> : isStudent ? <div className="mt-4 flex flex-wrap items-center gap-3"><PillButton onClick={() => void onSubmitQuiz(quiz.id, quiz.questions.length)} disabled={submitQuizMutation.isPending || Boolean(quiz.isLocked)}>{submitQuizMutation.isPending ? "Submitting..." : "Submit quiz"}</PillButton>{quizFormErrors[quiz.id] ? <p className="text-sm text-red-600">{quizFormErrors[quiz.id]}</p> : null}</div> : null}
-                          </div>
-                        ))}
-                        {sectionAssignments.map((assignment) => (
-                          <div key={assignment.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                            <p className="text-lg font-semibold text-slate-950">{assignment.title}</p>
-                            {assignment.description ? <p className="mt-2 text-sm text-slate-600">{assignment.description}</p> : null}
-                            <p className="mt-2 text-xs uppercase tracking-[0.2em] text-slate-500">{assignment.scopeLabel}</p>
-                            {assignment.instructions ? <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">{assignment.instructions}</p> : null}
-                            {assignment.isLocked && assignment.lockReason ? <p className="mt-3 text-sm text-slate-500">{assignment.lockReason}</p> : null}
-                            {isStudent ? (
-                              <>
-                                <textarea className="mt-4 min-h-32 w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Write your assignment response" value={assignmentDrafts[assignment.id] ?? assignment.submission?.content ?? ""} onChange={(event) => { setAssignmentDrafts((current) => ({ ...current, [assignment.id]: event.target.value })); setAssignmentFormErrors((current) => ({ ...current, [assignment.id]: "" })); }} disabled={Boolean(assignment.isLocked)} />
-                                <div className="mt-3 flex flex-wrap items-center gap-3">
-                                  <PillButton onClick={() => void onSubmitAssignment(assignment.id)} disabled={submitAssignmentMutation.isPending || Boolean(assignment.isLocked)}>{assignment.submission ? submitAssignmentMutation.isPending ? "Updating..." : "Update submission" : submitAssignmentMutation.isPending ? "Submitting..." : "Submit assignment"}</PillButton>
-                                  {assignmentFormErrors[assignment.id] ? <p className="text-sm text-red-600">{assignmentFormErrors[assignment.id]}</p> : null}
-                                </div>
-                              </>
-                            ) : null}
-                          </div>
-                        ))}
-                      </>
-                    ) : (
-                      <EmptyState title="No section checkpoints yet" description="Section-level quizzes and assignments will appear here once the instructor attaches them to this section." />
-                    )}
-                  </div>
-                </WorkspacePanel>
+                {visibleSectionQuizzes.length || visibleSectionAssignments.length ? (
+                  <WorkspacePanel
+                    title="Section assessments"
+                    description="These items appear only after every lesson in this section is completed."
+                  >
+                    <div className="space-y-4">
+                      {visibleSectionQuizzes.map(renderQuizCard)}
+                      {visibleSectionAssignments.map(renderAssignmentCard)}
+                    </div>
+                  </WorkspacePanel>
+                ) : null}
 
-                <WorkspacePanel title="Course completion checkpoints" description="These are the final course-level assessments. They unlock only after the learner completes the whole course.">
-                  <div className="space-y-4">
-                    {courseQuizzes.length || courseAssignments.length ? (
-                      <>
-                        {courseQuizzes.map((quiz) => (
-                          <div key={quiz.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                            <div className="flex flex-wrap items-start justify-between gap-3">
-                              <div>
-                                <p className="text-lg font-semibold text-slate-950">{quiz.title}</p>
-                                {quiz.description ? <p className="mt-2 text-sm text-slate-600">{quiz.description}</p> : null}
-                                <p className="mt-2 text-xs uppercase tracking-[0.2em] text-slate-500">{quiz.scopeLabel}</p>
-                              </div>
-                              <div className="flex flex-wrap gap-2">
-                                {quiz.submission ? <span className="rounded-full bg-emerald-100 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-800">Submitted</span> : null}
-                                {quiz.isLocked ? <span className="rounded-full bg-slate-200 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-700">Locked</span> : null}
-                              </div>
-                            </div>
-                            {quiz.isLocked && quiz.lockReason ? <p className="mt-3 text-sm text-slate-500">{quiz.lockReason}</p> : null}
-                            <div className="mt-4 space-y-3">
-                              {quiz.questions.map((question, index) => (
-                                <div key={question.id} className="rounded-2xl border border-slate-200 bg-white p-4">
-                                  <p className="text-sm font-semibold text-slate-900">{question.order}. {question.question}</p>
-                                  <div className="mt-3 space-y-2">
-                                    {question.options.map((option) => (
-                                      <label key={option} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700">
-                                        <input type="radio" name={`${quiz.id}-${question.id}`} value={option} checked={(quizAnswers[quiz.id] ?? quiz.submission?.answers ?? [])[index] === option} onChange={(event) => setQuizAnswer(quiz.id, index, event.target.value)} disabled={Boolean(quiz.submission) || Boolean(quiz.isLocked)} />
-                                        {option}
-                                      </label>
-                                    ))}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                            {quiz.submission ? <p className="mt-4 text-sm font-medium text-emerald-700">Submitted. Score: {quiz.submission.score}/{quiz.submission.totalQuestions}</p> : isStudent ? <div className="mt-4 flex flex-wrap items-center gap-3"><PillButton onClick={() => void onSubmitQuiz(quiz.id, quiz.questions.length)} disabled={submitQuizMutation.isPending || Boolean(quiz.isLocked)}>{submitQuizMutation.isPending ? "Submitting..." : "Submit quiz"}</PillButton>{quizFormErrors[quiz.id] ? <p className="text-sm text-red-600">{quizFormErrors[quiz.id]}</p> : null}</div> : null}
-                          </div>
-                        ))}
-                        {courseAssignments.map((assignment) => (
-                          <div key={assignment.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                            <p className="text-lg font-semibold text-slate-950">{assignment.title}</p>
-                            {assignment.description ? <p className="mt-2 text-sm text-slate-600">{assignment.description}</p> : null}
-                            <p className="mt-2 text-xs uppercase tracking-[0.2em] text-slate-500">{assignment.scopeLabel}</p>
-                            {assignment.instructions ? <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">{assignment.instructions}</p> : null}
-                            {assignment.isLocked && assignment.lockReason ? <p className="mt-3 text-sm text-slate-500">{assignment.lockReason}</p> : null}
-                            {isStudent ? (
-                              <>
-                                <textarea className="mt-4 min-h-32 w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Write your assignment response" value={assignmentDrafts[assignment.id] ?? assignment.submission?.content ?? ""} onChange={(event) => { setAssignmentDrafts((current) => ({ ...current, [assignment.id]: event.target.value })); setAssignmentFormErrors((current) => ({ ...current, [assignment.id]: "" })); }} disabled={Boolean(assignment.isLocked)} />
-                                <div className="mt-3 flex flex-wrap items-center gap-3">
-                                  <PillButton onClick={() => void onSubmitAssignment(assignment.id)} disabled={submitAssignmentMutation.isPending || Boolean(assignment.isLocked)}>{assignment.submission ? submitAssignmentMutation.isPending ? "Updating..." : "Update submission" : submitAssignmentMutation.isPending ? "Submitting..." : "Submit assignment"}</PillButton>
-                                  {assignmentFormErrors[assignment.id] ? <p className="text-sm text-red-600">{assignmentFormErrors[assignment.id]}</p> : null}
-                                </div>
-                              </>
-                            ) : null}
-                          </div>
-                        ))}
-                      </>
-                    ) : (
-                      <EmptyState title="No final checkpoints yet" description="Course-level quizzes and assignments will appear here once the instructor adds them." />
-                    )}
-                  </div>
-                </WorkspacePanel>
+                {visibleCourseQuizzes.length || visibleCourseAssignments.length ? (
+                  <WorkspacePanel
+                    title="Course assessments"
+                    description="These are the final course requirements and only appear once the full course is finished."
+                  >
+                    <div className="space-y-4">
+                      {visibleCourseQuizzes.map(renderQuizCard)}
+                      {visibleCourseAssignments.map(renderAssignmentCard)}
+                    </div>
+                  </WorkspacePanel>
+                ) : null}
 
               </>
             }
@@ -860,6 +904,196 @@ export default function CourseDetailsPage() {
               </>
             }
           />
+        </div>
+      ) : null}
+
+      {warningQuiz ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-3 sm:p-6"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              setWarningQuizId(null);
+            }
+          }}
+        >
+          <div className="w-full max-w-2xl rounded-[28px] border border-amber-200 bg-white p-6 shadow-2xl sm:p-8">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-700">
+              Exam warning
+            </p>
+            <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">
+              {warningQuiz.title}
+            </h2>
+            <p className="mt-3 text-sm leading-7 text-slate-600">
+              You are about to open this exam. Once you continue, you must complete it in one
+              sitting. Only one entry is permitted, and leaving before you answer may record this
+              exam as a blank result.
+            </p>
+
+            <div className="mt-6 grid gap-3 rounded-[24px] border border-amber-100 bg-amber-50 p-4 text-sm text-amber-900">
+              <p>1. This exam must be completed in full after you open it.</p>
+              <p>2. You can enter this exam only once.</p>
+              <p>3. If you leave without answering, your score may be recorded as blank.</p>
+            </div>
+
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setWarningQuizId(null)}
+                className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700"
+              >
+                Go back
+              </button>
+              <button
+                type="button"
+                onClick={() => void onStartQuizAttempt(warningQuiz.id)}
+                disabled={startQuizAttemptMutation.isPending}
+                className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white disabled:opacity-60"
+              >
+                {startQuizAttemptMutation.isPending ? "Opening exam..." : "I understand, start exam"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {activeQuiz ? (
+        <div className="fixed inset-0 z-50 bg-slate-950/90">
+          <div className="flex h-full min-h-0 flex-col">
+            <div className="border-b border-white/10 bg-slate-950/95 px-4 py-4 sm:px-6">
+              <div className="mx-auto flex max-w-6xl flex-wrap items-start justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-300">
+                    Secure exam
+                  </p>
+                  <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white">
+                    {activeQuiz.title}
+                  </h2>
+                  <p className="mt-2 text-sm text-slate-300">{activeQuiz.scopeLabel}</p>
+                </div>
+                {isQuizPopupClosable ? (
+                  <button
+                    type="button"
+                    onClick={closeQuizPopup}
+                    className="rounded-full border border-white/20 px-4 py-2 text-sm font-semibold text-white"
+                  >
+                    Close
+                  </button>
+                ) : (
+                  <div className="rounded-full border border-amber-400/30 bg-amber-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-amber-200">
+                    Close disabled until submission
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-6 sm:py-6">
+              <div className="mx-auto flex min-h-full w-full max-w-6xl flex-col gap-4">
+                <div className="rounded-[28px] border border-white/10 bg-white p-4 shadow-2xl sm:p-6">
+                  {activeQuiz.submission ? (
+                    <div className="space-y-4">
+                      <div className="rounded-[24px] border border-emerald-200 bg-emerald-50 p-5">
+                        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700">
+                          Exam result
+                        </p>
+                        <p className="mt-3 text-2xl font-semibold text-slate-950">
+                          {activeQuiz.status === "BLANK"
+                            ? "Blank result recorded"
+                            : `Score ${activeQuiz.submission.score}/${activeQuiz.submission.totalQuestions}`}
+                        </p>
+                        <p className="mt-3 text-sm leading-6 text-slate-600">
+                          {activeQuiz.status === "BLANK"
+                            ? "This exam was consumed without a completed submission, so it has been recorded as blank."
+                            : "Your exam has been submitted successfully. You can now review your answers and close this window."}
+                        </p>
+                      </div>
+
+                      <div className="space-y-4">
+                        {activeQuiz.questions.map((question, index) => (
+                          <div key={question.id} className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+                            <p className="text-sm font-semibold text-slate-900">
+                              {question.order}. {question.question}
+                            </p>
+                            <div className="mt-3 grid gap-2">
+                              {question.options.map((option) => {
+                                const selectedAnswer =
+                                  (activeQuiz.submission?.answers ?? [])[index] === option;
+                                return (
+                                  <div
+                                    key={option}
+                                    className={`rounded-2xl border px-3 py-3 text-sm ${
+                                      selectedAnswer
+                                        ? "border-emerald-300 bg-emerald-50 text-emerald-900"
+                                        : "border-slate-200 bg-white text-slate-600"
+                                    }`}
+                                  >
+                                    {option}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="rounded-[24px] border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                        This exam is now active. Stay in this window until you finish and submit all
+                        answers.
+                      </div>
+                      {activeQuiz.questions.map((question, index) => (
+                        <div key={question.id} className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+                          <p className="text-base font-semibold text-slate-950">
+                            {question.order}. {question.question}
+                          </p>
+                          <div className="mt-4 grid gap-2">
+                            {question.options.map((option) => (
+                              <label
+                                key={option}
+                                className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700"
+                              >
+                                <input
+                                  type="radio"
+                                  name={`${activeQuiz.id}-${question.id}`}
+                                  value={option}
+                                  checked={(quizAnswers[activeQuiz.id] ?? [])[index] === option}
+                                  onChange={(event) =>
+                                    setQuizAnswer(activeQuiz.id, index, event.target.value)
+                                  }
+                                  className="mt-1"
+                                />
+                                <span>{option}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+
+                      <div className="sticky bottom-0 flex flex-col gap-3 rounded-[24px] border border-slate-200 bg-white/95 p-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">One attempt only</p>
+                          <p className="mt-1 text-sm text-slate-600">
+                            Submit all answers now. Leaving this exam can record a blank result.
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3">
+                          {quizFormErrors[activeQuiz.id] ? (
+                            <p className="text-sm text-red-600">{quizFormErrors[activeQuiz.id]}</p>
+                          ) : null}
+                          <PillButton
+                            onClick={() => void onSubmitQuiz(activeQuiz.id, activeQuiz.questions.length)}
+                            disabled={submitQuizMutation.isPending}
+                          >
+                            {submitQuizMutation.isPending ? "Submitting..." : "Submit exam"}
+                          </PillButton>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       ) : null}
 

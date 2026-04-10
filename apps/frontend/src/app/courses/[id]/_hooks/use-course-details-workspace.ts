@@ -51,6 +51,8 @@ export function useCourseDetailsWorkspace() {
   >({});
   const [activeLessonId, setActiveLessonId] = useState<string | null>(null);
   const [activeInterviewId, setActiveInterviewId] = useState<string | null>(null);
+  const [activeQuizId, setActiveQuizId] = useState<string | null>(null);
+  const [warningQuizId, setWarningQuizId] = useState<string | null>(null);
 
   const isInstructor = user?.role === "INSTRUCTOR";
   const isStudent = user?.role === "STUDENT";
@@ -245,6 +247,22 @@ export function useCourseDetailsWorkspace() {
       await Promise.all([
         assessmentsQuery.refetch(),
         completionStatusQuery.refetch(),
+        queryClient.invalidateQueries({
+          queryKey: ["course-assessments", params.id]
+        })
+      ]);
+    }
+  });
+
+  const startQuizAttemptMutation = useMutation({
+    mutationFn: (quizId: string) =>
+      apiFetch(`/assessments/quizzes/${quizId}/start`, {
+        method: "POST",
+        token: accessToken ?? undefined
+      }),
+    onSuccess: async () => {
+      await Promise.all([
+        assessmentsQuery.refetch(),
         queryClient.invalidateQueries({
           queryKey: ["course-assessments", params.id]
         })
@@ -505,6 +523,27 @@ export function useCourseDetailsWorkspace() {
     setQuizFormErrors((current) => ({ ...current, [quizId]: "" }));
   }
 
+  async function onStartQuizAttempt(quizId: string) {
+    await startQuizAttemptMutation.mutateAsync(quizId);
+    setWarningQuizId(null);
+    setActiveQuizId(quizId);
+  }
+
+  async function onAbandonQuizAttempt(quizId: string) {
+    await apiFetch(`/assessments/quizzes/${quizId}/abandon`, {
+      method: "POST",
+      token: accessToken ?? undefined
+    });
+
+    await Promise.all([
+      assessmentsQuery.refetch(),
+      completionStatusQuery.refetch(),
+      queryClient.invalidateQueries({
+        queryKey: ["course-assessments", params.id]
+      })
+    ]);
+  }
+
   async function onSubmitAssignment(assignmentId: string) {
     const content = assignmentDrafts[assignmentId]?.trim() ?? "";
     if (!content) {
@@ -612,6 +651,10 @@ export function useCourseDetailsWorkspace() {
     setActiveLessonId,
     activeInterviewId,
     setActiveInterviewId,
+    activeQuizId,
+    setActiveQuizId,
+    warningQuizId,
+    setWarningQuizId,
     isInstructor,
     isStudent,
     coursesQuery,
@@ -631,6 +674,7 @@ export function useCourseDetailsWorkspace() {
     completeLessonMutation,
     trackLessonViewMutation,
     submitQuizMutation,
+    startQuizAttemptMutation,
     submitAssignmentMutation,
     issueCertificateMutation,
     submitReviewMutation,
@@ -650,6 +694,8 @@ export function useCourseDetailsWorkspace() {
     setQuizAnswer,
     onSelectLesson,
     onSubmitQuiz,
+    onStartQuizAttempt,
+    onAbandonQuizAttempt,
     onSubmitAssignment,
     onProofChange,
     onSubmitPayment,
