@@ -16,6 +16,6 @@ import { CoursesService } from "./services/courses.service";
     CourseProgressService,
     CourseInterviewsService
   ],
-  exports: [CoursesService]
+  exports: [CoursesService, CourseThumbnailStorageService]
 })
 export class CoursesModule {}

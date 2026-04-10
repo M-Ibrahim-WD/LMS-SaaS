@@ -51,8 +51,8 @@ export default function MessagesPage() {
         </Link>
       }
     >
-      <div className="grid gap-4 lg:gap-6 xl:grid-cols-[320px,minmax(0,1fr)]">
-        <aside className="space-y-4">
+      <div className="mobile-split-shell xl:grid-cols-[320px,minmax(0,1fr)]">
+        <aside className="mobile-split-pane min-w-[18rem] space-y-4 xl:min-w-0">
           {workspace.conversationsQuery.isError ? (
             <StatusBanner variant="error">
               Conversations unavailable
@@ -202,7 +202,7 @@ export default function MessagesPage() {
           </section>
         </aside>
 
-        <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white/95 shadow-sm sm:rounded-[32px]">
+        <section className="mobile-split-main min-w-[21rem] overflow-hidden rounded-[24px] border border-slate-200 bg-white/95 shadow-sm sm:rounded-[32px] xl:min-w-0">
           {workspace.activeConversationQuery.isLoading ? (
             <div className="p-8 text-sm text-slate-500">Conversation</div>
           ) : workspace.activeConversationQuery.isError ? (

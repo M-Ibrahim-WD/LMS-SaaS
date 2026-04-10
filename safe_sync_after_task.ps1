@@ -14,12 +14,11 @@ $projectPath = $PSScriptRoot
 $backendPath = Join-Path $projectPath "apps\backend"
 $frontendPath = Join-Path $projectPath "apps\frontend"
 $logFolder = Join-Path $projectPath "project_backups"
+$corepackHome = Join-Path $projectPath ".corepack-cache"
 $timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
 $logFile = Join-Path $logFolder "sync_$timestamp.log"
 $nodePath = "C:\Program Files\nodejs"
-$corepackCmd = Join-Path $nodePath "corepack.cmd"
-$pnpmCmd = Join-Path $nodePath "pnpm.cmd"
-$corepackHome = Join-Path $projectPath ".corepack-cache"
+$nodeExe = Join-Path $nodePath "node.exe"
 
 if (!(Test-Path $logFolder)) {
     New-Item -ItemType Directory -Path $logFolder -Force | Out-Null
@@ -46,80 +45,29 @@ function Invoke-Step {
     Write-Log "DONE:  $label"
 }
 
-function Invoke-FrontendBuildValidation {
-    param(
-        [string]$frontendPath,
-        [string]$timestamp
-    )
-
-    $originalDistDir = $env:NEXT_DIST_DIR
-    $validationDistDir = ".next-build-sync-$timestamp"
-    $tsconfigPath = Join-Path $frontendPath "tsconfig.json"
-    $nextEnvPath = Join-Path $frontendPath "next-env.d.ts"
-    $originalTsconfig = if (Test-Path $tsconfigPath) { Get-Content -Raw $tsconfigPath } else { $null }
-    $originalNextEnv = if (Test-Path $nextEnvPath) { Get-Content -Raw $nextEnvPath } else { $null }
-    $originalPath = $env:PATH
-    $originalCorepackHome = $env:COREPACK_HOME
-
-    try {
-        Set-Location $frontendPath
-        $env:PATH = "$nodePath;$env:PATH"
-        $env:NEXT_DIST_DIR = $validationDistDir
-        if (Test-Path $validationDistDir) {
-            Remove-Item $validationDistDir -Recurse -Force -ErrorAction SilentlyContinue
-        }
-
-        & $corepackCmd pnpm exec next build
-        if ($LASTEXITCODE -ne 0) {
-            throw "Frontend build failed."
-        }
-    } finally {
-        if ($null -ne $originalTsconfig) {
-            Set-Content -Path $tsconfigPath -Value $originalTsconfig -NoNewline
-        }
-
-        if ($null -ne $originalNextEnv) {
-            Set-Content -Path $nextEnvPath -Value $originalNextEnv -NoNewline
-        }
-
-        if ($null -ne $originalDistDir) {
-            $env:NEXT_DIST_DIR = $originalDistDir
-        } else {
-            Remove-Item Env:NEXT_DIST_DIR -ErrorAction SilentlyContinue
-        }
-
-        if ($null -ne $originalPath) {
-            $env:PATH = $originalPath
-        }
-
-        if (Test-Path (Join-Path $frontendPath $validationDistDir)) {
-            Remove-Item (Join-Path $frontendPath $validationDistDir) -Recurse -Force -ErrorAction SilentlyContinue
-        }
-
-        Set-Location $projectPath
-    }
-}
-
-function Invoke-Pnpm {
+function Invoke-ProjectCommand {
     param(
         [Parameter(Mandatory = $true)]
-        [string[]]$Arguments
+        [string]$WorkingDirectory,
+        [Parameter(Mandatory = $true)]
+        [string]$Command,
+        [Parameter(Mandatory = $true)]
+        [string]$FailureMessage
     )
 
-    $originalPath = $env:PATH
-    $originalCorepackHome = $env:COREPACK_HOME
-    try {
-        throw "Invoke-Pnpm should not be called directly after the script hardening update."
-    } finally {
-        if ($null -ne $originalCorepackHome) {
-            $env:COREPACK_HOME = $originalCorepackHome
-        } else {
-            Remove-Item Env:COREPACK_HOME -ErrorAction SilentlyContinue
-        }
+    $commandText = @(
+        '$ErrorActionPreference = ''Stop'''
+        '$env:PATH=''C:\Program Files\nodejs;'' + $env:PATH'
+        '$env:COREPACK_HOME=''' + $corepackHome + ''''
+        "Set-Location '$WorkingDirectory'"
+        $Command
+        'exit $LASTEXITCODE'
+    ) -join '; '
 
-        if ($null -ne $originalPath) {
-            $env:PATH = $originalPath
-        }
+    Write-Log ("CMD: {0}" -f $Command)
+    & powershell -NoProfile -ExecutionPolicy Bypass -Command $commandText
+    if ($LASTEXITCODE -ne 0) {
+        throw $FailureMessage
     }
 }
 
@@ -153,37 +101,34 @@ Invoke-Step "Backup and summary" {
 }
 
 Invoke-Step "Frontend lint" {
-    $env:PATH = "$nodePath;$env:PATH"
-    Set-Location $projectPath
-    & $corepackCmd pnpm --filter "@lms/frontend" lint
-    if ($LASTEXITCODE -ne 0) {
-        throw "Frontend lint failed."
-    }
+    Invoke-ProjectCommand `
+        -WorkingDirectory $frontendPath `
+        -Command "& 'C:\Program Files\nodejs\corepack.cmd' pnpm lint" `
+        -FailureMessage "Frontend lint failed."
 }
 
 Invoke-Step "Backend build" {
-    $env:PATH = "$nodePath;$env:PATH"
-    Set-Location $projectPath
-    & $corepackCmd pnpm --filter "@lms/backend" build
-    if ($LASTEXITCODE -ne 0) {
-        throw "Backend build failed."
-    }
+    Invoke-ProjectCommand `
+        -WorkingDirectory $backendPath `
+        -Command "& '$nodeExe' -e ""const fs=require('fs');['dist','tsconfig.build.tsbuildinfo'].forEach((p)=>fs.rmSync(p,{recursive:true,force:true}));""; & '.\node_modules\.bin\nest.cmd' build" `
+        -FailureMessage "Backend build failed."
 }
 
 if (-not $SkipBackendTests) {
     Invoke-Step "Backend tests" {
-        $env:PATH = "$nodePath;$env:PATH"
-        Set-Location $projectPath
-        & $corepackCmd pnpm --filter "@lms/backend" test
-        if ($LASTEXITCODE -ne 0) {
-            throw "Backend tests failed."
-        }
+        Invoke-ProjectCommand `
+            -WorkingDirectory $backendPath `
+            -Command "& '$nodeExe' --test test/run-specs.cjs" `
+            -FailureMessage "Backend tests failed."
     }
 }
 
 if (-not $SkipFrontendBuild) {
     Invoke-Step "Frontend build" {
-        Invoke-FrontendBuildValidation -frontendPath $frontendPath -timestamp $timestamp
+        Invoke-ProjectCommand `
+            -WorkingDirectory $frontendPath `
+            -Command "& 'C:\Program Files\nodejs\corepack.cmd' pnpm build" `
+            -FailureMessage "Frontend build failed."
     }
 }
 

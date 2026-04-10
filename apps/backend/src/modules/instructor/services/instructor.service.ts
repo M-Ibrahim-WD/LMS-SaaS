@@ -8,13 +8,15 @@ import { PrismaService } from "../../../shared/prisma/prisma.service";
 import type { JwtPayload } from "../../../shared/types/auth.types";
 import { SubscriptionsService } from "../../subscriptions/services/subscriptions.service";
 import { UsersService } from "../../users/services/users.service";
+import { CourseThumbnailStorageService } from "../../courses/services/course-thumbnail-storage.service";
 
 @Injectable()
 export class InstructorService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly usersService: UsersService,
-    private readonly subscriptionsService: SubscriptionsService
+    private readonly subscriptionsService: SubscriptionsService,
+    private readonly thumbnailStorageService: CourseThumbnailStorageService
   ) {}
 
   async getStats(user: JwtPayload) {
@@ -333,10 +335,9 @@ export class InstructorService {
   }
 
   private resolveCourseThumbnailUrl(courseId: string, thumbnailImage?: string | null) {
-    if (!thumbnailImage?.startsWith("local:")) {
-      return thumbnailImage ?? null;
-    }
-
-    return `/courses/${courseId}/thumbnail`;
+    return this.thumbnailStorageService.getPublicCourseThumbnailUrl(
+      courseId,
+      thumbnailImage
+    );
   }
 }

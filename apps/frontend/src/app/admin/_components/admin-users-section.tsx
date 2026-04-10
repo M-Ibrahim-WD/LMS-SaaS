@@ -40,9 +40,6 @@ export function AdminUsersSection({
     <div className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
       <ContentCard className="p-6">
         <h2 className="text-lg font-semibold text-slate-950">Users</h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Platform admins are kept separate, so this list focuses on instructor and student accounts.
-        </p>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           <input
             value={userSearch}

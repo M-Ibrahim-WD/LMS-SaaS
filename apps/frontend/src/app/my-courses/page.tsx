@@ -91,21 +91,21 @@ export default function MyCoursesPage() {
             <Link key={enrollment.id} href={resumeHref}>
               <ContentCard className="transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="flex flex-col gap-4 sm:flex-row">
-                    <div className="h-36 w-full overflow-hidden rounded-[22px] bg-gradient-to-br from-sky-500 via-cyan-500 to-emerald-400 sm:w-44">
+                  <div className="flex flex-row gap-3 sm:gap-4">
+                    <div className="h-28 w-28 shrink-0 overflow-hidden rounded-[22px] bg-gradient-to-br from-sky-500 via-cyan-500 to-emerald-400 sm:h-36 sm:w-44">
                       {enrollment.course.thumbnailImage ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={enrollment.course.thumbnailImage} alt={`${enrollment.course.title} thumbnail`} className="h-full w-full object-cover" />
                       ) : null}
                     </div>
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-lg font-semibold text-slate-950">{enrollment.course.title}</p>
                         <StatusChip tone={enrollment.progress?.isComplete ? "success" : "trial"}>
                           {enrollment.progress?.isComplete ? "Completed" : "In progress"}
                         </StatusChip>
                       </div>
-                      <p className="mt-2 text-sm leading-6 text-slate-600">{enrollment.course.description}</p>
+                      <p className="mt-2 line-clamp-3 text-sm leading-6 text-slate-600">{enrollment.course.description}</p>
                       <div className="mt-3 flex flex-wrap gap-2">
                         {enrollment.course.category ? <StatusChip>{enrollment.course.category}</StatusChip> : null}
                         {enrollment.course.level ? <StatusChip tone="info">{enrollment.course.level.toLowerCase()}</StatusChip> : null}

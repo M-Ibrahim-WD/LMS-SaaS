@@ -1,4 +1,7 @@
-﻿import type { ReactNode } from "react";
+"use client";
+
+import type { CSSProperties, ReactNode } from "react";
+import { useMemo, useState } from "react";
 
 interface WorkspaceShellProps {
   sidebar: ReactNode;
@@ -7,11 +10,79 @@ interface WorkspaceShellProps {
 }
 
 export function WorkspaceShell({ sidebar, main, utility }: WorkspaceShellProps) {
+  const [sidebarWidth, setSidebarWidth] = useState(36);
+  const [utilityWidth, setUtilityWidth] = useState(32);
+
+  const sidebarStyle = useMemo<CSSProperties>(
+    () => ({
+      flex: `0 0 clamp(16rem, ${sidebarWidth}vw, 24rem)`,
+      width: `clamp(16rem, ${sidebarWidth}vw, 24rem)`
+    }),
+    [sidebarWidth]
+  );
+
+  const mainStyle = useMemo<CSSProperties>(
+    () => ({
+      flex: utility ? "1 0 clamp(20rem, 70vw, 48rem)" : "1 0 min(100%, 48rem)",
+      width: utility ? "clamp(20rem, 70vw, 48rem)" : "min(100%, 48rem)"
+    }),
+    [utility]
+  );
+
+  const utilityStyle = useMemo<CSSProperties>(
+    () => ({
+      flex: `0 0 clamp(15rem, ${utilityWidth}vw, 22rem)`,
+      width: `clamp(15rem, ${utilityWidth}vw, 22rem)`
+    }),
+    [utilityWidth]
+  );
+
   return (
-    <div className="grid gap-4 lg:gap-5 xl:grid-cols-[280px_minmax(0,1fr)_300px] 2xl:grid-cols-[320px_minmax(0,1fr)_340px]">
-      <aside className="space-y-5 xl:sticky xl:top-6 xl:self-start">{sidebar}</aside>
-      <section className="space-y-5">{main}</section>
-      {utility ? <aside className="space-y-5 xl:sticky xl:top-6 xl:self-start">{utility}</aside> : null}
+    <div>
+      <div className="mobile-split-resizer xl:hidden">
+        <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Navigation</label>
+        <input
+          aria-label="Adjust navigation panel width"
+          type="range"
+          min={28}
+          max={44}
+          value={sidebarWidth}
+          onChange={(event) => setSidebarWidth(Number(event.target.value))}
+        />
+        {utility ? (
+          <>
+            <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Details</label>
+            <input
+              aria-label="Adjust details panel width"
+              type="range"
+              min={26}
+              max={40}
+              value={utilityWidth}
+              onChange={(event) => setUtilityWidth(Number(event.target.value))}
+            />
+          </>
+        ) : null}
+      </div>
+
+      <div
+        className={`mobile-split-shell ${
+          utility
+            ? "xl:grid-cols-[280px_minmax(0,1fr)_300px] 2xl:grid-cols-[320px_minmax(0,1fr)_340px]"
+            : "xl:grid-cols-[280px_minmax(0,1fr)] 2xl:grid-cols-[320px_minmax(0,1fr)]"
+        }`}
+      >
+        <aside className="mobile-split-pane space-y-5 xl:sticky xl:top-6 xl:self-start" style={sidebarStyle}>
+          {sidebar}
+        </aside>
+        <section className="mobile-split-main space-y-5" style={mainStyle}>
+          {main}
+        </section>
+        {utility ? (
+          <aside className="mobile-split-utility space-y-5 xl:sticky xl:top-6 xl:self-start" style={utilityStyle}>
+            {utility}
+          </aside>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -101,4 +172,3 @@ export function StatPill({ label, value, tone = "default" }: StatPillProps) {
     </div>
   );
 }
-

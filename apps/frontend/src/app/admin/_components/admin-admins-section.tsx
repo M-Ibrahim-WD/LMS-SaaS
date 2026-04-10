@@ -67,9 +67,6 @@ export function AdminAdminsSection({
     <div className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
       <ContentCard className="p-6">
         <h2 className="text-lg font-semibold text-slate-950">Super Admin Controls</h2>
-        <p className="mt-2 text-sm text-slate-600">
-          This account has full platform authority. Other admins can be created here with only the permissions you explicitly assign.
-        </p>
         <form
           className="mt-5 space-y-4"
           onSubmit={(event) => {
@@ -139,7 +136,7 @@ export function AdminAdminsSection({
               <span className="mt-2 block text-xs text-slate-500">
                 {selectedAdminPreset
                   ? adminPermissionPresets.find((preset) => preset.key === selectedAdminPreset)?.description
-                  : "Pick a preset to prefill permissions quickly, then adjust any permission below."}
+                  : ""}
               </span>
             </label>
             <label className="block">
@@ -166,9 +163,6 @@ export function AdminAdminsSection({
                   </option>
                 ))}
               </select>
-              <span className="mt-2 block text-xs text-slate-500">
-                Useful when you want to duplicate a proven permission mix instead of rebuilding it manually.
-              </span>
             </label>
           </div>
           <div>
@@ -214,7 +208,6 @@ export function AdminAdminsSection({
         <div className="flex items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold text-slate-950">Managed Admin Accounts</h2>
-            <p className="mt-1 text-sm text-slate-600">The super admin account itself is not listed, visible, or editable here.</p>
           </div>
           <input
             value={adminSearch}

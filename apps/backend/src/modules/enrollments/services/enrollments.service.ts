@@ -10,6 +10,7 @@ import { StudentAccessService } from "../../../shared/access/student-access.serv
 import { PrismaService } from "../../../shared/prisma/prisma.service";
 import type { JwtPayload } from "../../../shared/types/auth.types";
 import { NotificationsService } from "../../notifications/services/notifications.service";
+import { CourseThumbnailStorageService } from "../../courses/services/course-thumbnail-storage.service";
 import { CreateEnrollmentDto } from "../dto/create-enrollment.dto";
 
 @Injectable()
@@ -17,7 +18,8 @@ export class EnrollmentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly studentAccessService: StudentAccessService,
-    private readonly notificationsService: NotificationsService
+    private readonly notificationsService: NotificationsService,
+    private readonly thumbnailStorageService: CourseThumbnailStorageService
   ) {}
 
   async create(user: JwtPayload, dto: CreateEnrollmentDto) {
@@ -207,6 +209,13 @@ export class EnrollmentsService {
 
           return {
             ...enrollment,
+            course: {
+              ...enrollment.course,
+              thumbnailImage: this.thumbnailStorageService.getPublicCourseThumbnailUrl(
+                enrollment.course.id,
+                enrollment.course.thumbnailImage ?? null
+              )
+            },
             progress: {
               totalLessons,
               completedLessons,

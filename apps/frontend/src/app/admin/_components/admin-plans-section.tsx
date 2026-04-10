@@ -92,9 +92,6 @@ export function AdminPlansSection({
       <ContentCard className="p-6">
         <div className="flex flex-col gap-2 border-b border-slate-200 pb-4">
           <h2 className="text-lg font-semibold text-slate-950">{selectedPlanId ? "Edit Subscription Plan" : "Create Subscription Plan"}</h2>
-          <p className="text-sm text-slate-600">
-            Only one step appears at a time. Finish the current step to move to the next one, then review the final summary before saving.
-          </p>
         </div>
 
         <div className="mt-5 flex flex-wrap gap-2">
@@ -135,17 +132,14 @@ export function AdminPlansSection({
                 <label className="block">
                   <span className="mb-2 block text-sm font-medium text-slate-800">Plan code</span>
                   <input value={planForm.code} onChange={(event) => setPlanForm((c) => ({ ...c, code: event.target.value }))} placeholder="STUDIO" className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm" required />
-                  <span className="mt-2 block text-xs text-slate-500">Internal unique key used by the platform.</span>
                 </label>
                 <label className="block">
                   <span className="mb-2 block text-sm font-medium text-slate-800">Plan name</span>
                   <input value={planForm.name} onChange={(event) => setPlanForm((c) => ({ ...c, name: event.target.value }))} placeholder="Studio" className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm" required />
-                  <span className="mt-2 block text-xs text-slate-500">Customer-facing plan name shown in the UI.</span>
                 </label>
                 <label className="block md:col-span-2">
                   <span className="mb-2 block text-sm font-medium text-slate-800">Description</span>
                   <textarea value={planForm.description} onChange={(event) => setPlanForm((c) => ({ ...c, description: event.target.value }))} placeholder="Balanced workspace for serious independent instructors." className="min-h-24 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm" />
-                  <span className="mt-2 block text-xs text-slate-500">Short positioning text that explains who the plan is for.</span>
                 </label>
               </div>
             )
@@ -238,7 +232,7 @@ export function AdminPlansSection({
                       <span className={`rounded-full px-3 py-1 text-xs font-semibold ${planForm.isActive ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>{planForm.isActive ? "Active for assignment" : "Inactive"}</span>
                     </div>
                     <h3 className="mt-4 text-3xl font-semibold text-slate-950">{planForm.name || "Untitled Plan"}</h3>
-                    <p className="mt-3 text-sm leading-6 text-slate-600">{planForm.description?.trim() || "No plan description yet. Add a short positioning line so instructors understand who this plan is for."}</p>
+                    <p className="mt-3 text-sm leading-6 text-slate-600">{planForm.description?.trim() || "No description yet."}</p>
                     <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                       <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs uppercase tracking-[0.18em] text-slate-400">Monthly</p><p className="mt-2 text-2xl font-semibold text-slate-950">{money.format(Number(planForm.monthlyPrice || 0))}</p></div>
                       <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs uppercase tracking-[0.18em] text-slate-400">Yearly</p><p className="mt-2 text-2xl font-semibold text-slate-950">{money.format(Number(planForm.yearlyPrice || 0))}</p></div>
@@ -246,7 +240,7 @@ export function AdminPlansSection({
                     </div>
                   </div>
                   <div className="w-full max-w-sm rounded-[24px] bg-slate-950 p-5 text-white">
-                    <p className="text-xs uppercase tracking-[0.18em] text-slate-300">Instructor-Facing Preview</p>
+                    <p className="text-xs uppercase tracking-[0.18em] text-slate-300">Preview</p>
                     <p className="mt-3 text-2xl font-semibold">{planForm.name || "Untitled Plan"}</p>
                     <p className="mt-2 text-sm text-slate-300">{planForm.canCreatePaidCourses ? "Built for instructors who want to sell and scale their academy." : "Best for free-course academies and lightweight teaching."}</p>
                     <div className="mt-5 space-y-3 text-sm text-slate-100">

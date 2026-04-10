@@ -105,7 +105,7 @@ export function AdminOverviewSection({
 
         <ContentCard className="p-6">
           <p className="section-kicker">Quick links</p>
-          <h3 className="mt-2 text-xl font-semibold text-slate-950">Jump into the right management area</h3>
+          <h3 className="mt-2 text-xl font-semibold text-slate-950">Management areas</h3>
           <div className="mt-5 space-y-3">
             {navItems
               .filter((item) => item.visible && item.key !== "overview")
@@ -116,7 +116,6 @@ export function AdminOverviewSection({
                   className="block rounded-[24px] border border-slate-200 bg-white/90 p-4 transition hover:border-slate-300"
                 >
                   <p className="font-semibold text-slate-900">{item.label}</p>
-                  <p className="mt-1 text-sm text-slate-500">{item.description}</p>
                 </a>
               ))}
           </div>

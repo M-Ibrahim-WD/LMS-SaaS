@@ -51,8 +51,8 @@ export default function SupportPage() {
       backHref="/dashboard"
       maxWidthClassName="max-w-7xl"
     >
-      <div className="grid gap-6 xl:grid-cols-[320px,minmax(0,1fr)]">
-        <aside className="space-y-4">
+      <div className="mobile-split-shell xl:grid-cols-[320px,minmax(0,1fr)]">
+        <aside className="mobile-split-pane min-w-[18rem] space-y-4 xl:min-w-0">
           {!isSupportAdmin ? (
             <section ref={composeRef} className="rounded-[28px] border border-slate-200 bg-white/90 p-5 shadow-sm">
               <h2 className="text-lg font-semibold text-slate-950">Create support request</h2>
@@ -198,7 +198,7 @@ export default function SupportPage() {
           </section>
         </aside>
 
-        <section className="rounded-[32px] border border-slate-200 bg-white/95 shadow-sm">
+        <section className="mobile-split-main min-w-[21rem] rounded-[32px] border border-slate-200 bg-white/95 shadow-sm xl:min-w-0">
           {workspace.activeConversationQuery.isLoading ? (
             <div className="p-8 text-sm text-slate-500">Support</div>
           ) : !active ? (
