@@ -27,9 +27,6 @@ export function PageShell({
             <h1 className="mt-3 text-balance text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl lg:text-[2.15rem]">
               {title}
             </h1>
-            {description ? (
-              <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-600 sm:text-[0.96rem]">{description}</p>
-            ) : null}
           </div>
           {actions ? <div className="flex flex-wrap gap-2 sm:justify-end">{actions}</div> : null}
         </div>

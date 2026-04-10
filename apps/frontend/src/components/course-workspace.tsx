@@ -31,7 +31,6 @@ export function WorkspacePanel({ title, description, actions, children, classNam
         <div className="mb-4 flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             {title ? <h2 className="text-lg font-semibold tracking-tight text-slate-950 sm:text-[1.1rem]">{title}</h2> : null}
-            {description ? <p className="mt-1 text-sm leading-6 text-slate-600">{description}</p> : null}
           </div>
           {actions ? <div className="flex flex-wrap gap-2">{actions}</div> : null}
         </div>
@@ -76,7 +75,6 @@ export function EmptyState({ title, description, action }: EmptyStateProps) {
   return (
     <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50/90 p-6 text-center sm:p-8">
       <p className="text-sm font-semibold text-slate-900">{title}</p>
-      <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
       {action ? <div className="mt-4 flex justify-center">{action}</div> : null}
     </div>
   );

@@ -36,9 +36,6 @@ export function AdminShell({ title, description, active, navItems, headerActions
         <aside className="surface-card-strong rounded-[30px] p-5 xl:sticky xl:top-6 xl:self-start">
           <p className="section-kicker">Admin Control</p>
           <h1 className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">Platform Operations</h1>
-          <p className="mt-3 text-sm leading-7 text-slate-600">
-            Navigate the platform through focused operational areas instead of one crowded management page.
-          </p>
           <div className="mt-5">
             <BackButton fallbackHref="/dashboard" label="Back to dashboard" />
           </div>
@@ -56,9 +53,6 @@ export function AdminShell({ title, description, active, navItems, headerActions
                   }`}
                 >
                   <p className="text-sm font-semibold">{item.label}</p>
-                  <p className={`mt-1 text-xs leading-5 ${isActive ? "text-slate-300" : "text-slate-500"}`}>
-                    {item.description}
-                  </p>
                 </Link>
               );
             })}
@@ -73,7 +67,6 @@ export function AdminShell({ title, description, active, navItems, headerActions
                 <h2 className="mt-3 text-balance text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
                   {title}
                 </h2>
-                <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600">{description}</p>
               </div>
               {headerActions ? <div className="flex flex-wrap gap-2">{headerActions}</div> : null}
             </div>
