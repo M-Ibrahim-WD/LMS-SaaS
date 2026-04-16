@@ -829,16 +829,6 @@ export default function CourseDetailsPage() {
           ) : null}
 
           <div className="space-y-4 lg:hidden">
-            {isStudent && courseProgress ? (
-              <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
-                <div className="grid grid-cols-3 gap-3">
-                  <StatPill label="Progress" value={`${courseProgress.percentage}%`} tone="info" />
-                  <StatPill label="Lessons" value={`${courseProgress.completedLessons}/${courseProgress.totalLessons}`} tone="default" />
-                  <StatPill label="Next" value={upcomingLesson?.title ?? "Assessments"} tone="success" />
-                </div>
-              </div>
-            ) : null}
-
             {activeLesson ? (
               <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex flex-wrap items-center gap-2">
