@@ -72,6 +72,7 @@ function MobileSection({
 export default function CourseDetailsPage() {
   const [countdownNow, setCountdownNow] = useState(() => Date.now());
   const [hoveredReviewRating, setHoveredReviewRating] = useState<number | null>(null);
+  const [activeSupportTab, setActiveSupportTab] = useState<"lesson" | "section" | "course" | "review">("lesson");
 
   const {
     activeLesson,
@@ -505,7 +506,7 @@ export default function CourseDetailsPage() {
                       : "border border-slate-300 bg-white text-slate-600 hover:border-slate-400"
                   }`}
                 >
-                  <span className="tracking-[0.2em] text-amber-500">{"?".repeat(value)}</span>
+                  <span className="tracking-[0.2em] text-amber-500">{"★".repeat(value)}</span>
                 </button>
               );
             })}
@@ -550,6 +551,57 @@ export default function CourseDetailsPage() {
       {assignments.map(renderAssignmentCard)}
     </div>
   );
+
+  const supportTabs: Array<{
+    id: "lesson" | "section" | "course" | "review";
+    label: string;
+    content: React.ReactNode;
+  }> = [];
+
+  if (visibleLessonQuizzes.length || visibleLessonAssignments.length) {
+    supportTabs.push({
+      id: "lesson",
+      label: "Lesson",
+      content: renderAssessmentCollection(visibleLessonQuizzes, visibleLessonAssignments)
+    });
+  }
+
+  if (visibleSectionQuizzes.length || visibleSectionAssignments.length) {
+    supportTabs.push({
+      id: "section",
+      label: "Section",
+      content: renderAssessmentCollection(visibleSectionQuizzes, visibleSectionAssignments)
+    });
+  }
+
+  if (visibleCourseQuizzes.length || visibleCourseAssignments.length) {
+    supportTabs.push({
+      id: "course",
+      label: "Course",
+      content: renderAssessmentCollection(visibleCourseQuizzes, visibleCourseAssignments)
+    });
+  }
+
+  const reviewTabContent = renderReviewContent();
+  if (reviewTabContent) {
+    supportTabs.push({
+      id: "review",
+      label: "Review",
+      content: reviewTabContent
+    });
+  }
+
+  useEffect(() => {
+    if (!supportTabs.length) {
+      return;
+    }
+
+    if (!supportTabs.some((tab) => tab.id === activeSupportTab)) {
+      setActiveSupportTab(supportTabs[0].id);
+    }
+  }, [activeSupportTab, supportTabs]);
+
+  const activeSupportTabContent = supportTabs.find((tab) => tab.id === activeSupportTab)?.content ?? supportTabs[0]?.content;
   if (!selectedCourse) {
     return (
       <main className="mx-auto max-w-6xl p-8">
@@ -863,11 +915,29 @@ export default function CourseDetailsPage() {
               </div>
             ) : null}
 
+            {supportTabs.length ? (
+              <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="flex flex-wrap gap-2">
+                  {supportTabs.map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setActiveSupportTab(tab.id)}
+                      className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                        activeSupportTab === tab.id
+                          ? "bg-slate-950 text-white"
+                          : "border border-slate-200 bg-slate-50 text-slate-700"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-4">{activeSupportTabContent}</div>
+              </div>
+            ) : null}
+
             <MobileSection title="Course navigation">{renderNavigationContent()}</MobileSection>
-            {visibleLessonQuizzes.length || visibleLessonAssignments.length ? <MobileSection title="Lesson assessments">{renderAssessmentCollection(visibleLessonQuizzes, visibleLessonAssignments)}</MobileSection> : null}
-            {visibleSectionQuizzes.length || visibleSectionAssignments.length ? <MobileSection title="Section assessments">{renderAssessmentCollection(visibleSectionQuizzes, visibleSectionAssignments)}</MobileSection> : null}
-            {visibleCourseQuizzes.length || visibleCourseAssignments.length ? <MobileSection title="Course assessments">{renderAssessmentCollection(visibleCourseQuizzes, visibleCourseAssignments)}</MobileSection> : null}
-            {renderReviewContent() ? <MobileSection title="Course review">{renderReviewContent()}</MobileSection> : null}
             {renderInstructorContent() ? <MobileSection title="Instructor">{renderInstructorContent()}</MobileSection> : null}
           </div>
 
@@ -912,14 +982,32 @@ export default function CourseDetailsPage() {
                   <EmptyState title="Nothing to show yet" description="" />
                 </WorkspacePanel>
               )}
+
+              {supportTabs.length ? (
+                <WorkspacePanel title="Assessments and review">
+                  <div className="flex flex-wrap gap-2">
+                    {supportTabs.map((tab) => (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setActiveSupportTab(tab.id)}
+                        className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                          activeSupportTab === tab.id
+                            ? "bg-slate-950 text-white"
+                            : "border border-slate-200 bg-slate-50 text-slate-700"
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-5">{activeSupportTabContent}</div>
+                </WorkspacePanel>
+              ) : null}
             </section>
 
             <aside className="space-y-5">
               {renderCompletionContent() ? <WorkspacePanel title="Completion">{renderCompletionContent()}</WorkspacePanel> : null}
-              {visibleLessonQuizzes.length || visibleLessonAssignments.length ? <WorkspacePanel title="Lesson assessments">{renderAssessmentCollection(visibleLessonQuizzes, visibleLessonAssignments)}</WorkspacePanel> : null}
-              {visibleSectionQuizzes.length || visibleSectionAssignments.length ? <WorkspacePanel title="Section assessments">{renderAssessmentCollection(visibleSectionQuizzes, visibleSectionAssignments)}</WorkspacePanel> : null}
-              {visibleCourseQuizzes.length || visibleCourseAssignments.length ? <WorkspacePanel title="Course assessments">{renderAssessmentCollection(visibleCourseQuizzes, visibleCourseAssignments)}</WorkspacePanel> : null}
-              {renderReviewContent() ? <WorkspacePanel title="Course review">{renderReviewContent()}</WorkspacePanel> : null}
               {renderInstructorContent() ? <WorkspacePanel title="Instructor">{renderInstructorContent()}</WorkspacePanel> : null}
             </aside>
           </div>
