@@ -911,6 +911,7 @@ export default function CourseDetailsPage() {
           ) : null}
 
           <div className="space-y-4 lg:hidden">
+            <MobileSection title="Course navigation">{renderNavigationContent()}</MobileSection>
             {activeLesson ? (
               <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex flex-wrap items-center gap-2">
@@ -992,7 +993,6 @@ export default function CourseDetailsPage() {
                 <div className="mt-4">{activeSupportTabContent}</div>
               </MobileSection>
             ) : null}
-            <MobileSection title="Course navigation">{renderNavigationContent()}</MobileSection>
             {hasReviewCard ? <MobileSection title="Course review">{reviewTabContent}</MobileSection> : null}
             {renderInstructorContent() ? <MobileSection title="Instructor">{renderInstructorContent()}</MobileSection> : null}
           </div>
