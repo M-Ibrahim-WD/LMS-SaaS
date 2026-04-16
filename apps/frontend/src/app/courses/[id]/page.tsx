@@ -491,9 +491,10 @@ export default function CourseDetailsPage() {
       <form onSubmit={(event) => void onSubmitReview(event)} className="space-y-4">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Rating</p>
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className="mt-3 flex items-center gap-1">
             {[1, 2, 3, 4, 5].map((value) => {
-              const isActiveRating = (hoveredReviewRating ?? reviewRating) === value;
+              const previewRating = hoveredReviewRating ?? reviewRating;
+              const isFilled = value <= previewRating;
               return (
                 <button
                   key={value}
@@ -501,13 +502,10 @@ export default function CourseDetailsPage() {
                   onClick={() => setReviewRating(value)}
                   onMouseEnter={() => setHoveredReviewRating(value)}
                   onMouseLeave={() => setHoveredReviewRating(null)}
-                  className={`rounded-full px-3 py-2 text-sm font-medium transition ${
-                    isActiveRating
-                      ? "bg-amber-100 text-amber-800"
-                      : "border border-slate-300 bg-white text-slate-600 hover:border-slate-400"
-                  }`}
+                  aria-label={`Rate ${value} star${value > 1 ? "s" : ""}`}
+                  className="text-3xl leading-none transition hover:scale-105"
                 >
-                  <span className="tracking-[0.2em] text-amber-500">{"★".repeat(value)}</span>
+                  <span className={isFilled ? "text-amber-400" : "text-slate-300"}>{isFilled ? "?" : "?"}</span>
                 </button>
               );
             })}
@@ -937,7 +935,7 @@ export default function CourseDetailsPage() {
             ) : null}
 
             {supportTabs.length ? (
-              <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+              <MobileSection title="Assessments & Exams" defaultOpen>
                 <div className="flex flex-wrap gap-2">
                   {supportTabs.map((tab) => (
                     <button
@@ -981,9 +979,8 @@ export default function CourseDetailsPage() {
                   </div>
                 ) : null}
                 <div className="mt-4">{activeSupportTabContent}</div>
-              </div>
+              </MobileSection>
             ) : null}
-
             <MobileSection title="Course navigation">{renderNavigationContent()}</MobileSection>
             {hasReviewCard ? <MobileSection title="Course review">{reviewTabContent}</MobileSection> : null}
             {renderInstructorContent() ? <MobileSection title="Instructor">{renderInstructorContent()}</MobileSection> : null}
@@ -1034,7 +1031,7 @@ export default function CourseDetailsPage() {
               )}
 
               {supportTabs.length ? (
-                <WorkspacePanel title="Assessments">
+                <WorkspacePanel title="Assessments & Exams">
                   <div className="flex flex-wrap gap-2">
                     {supportTabs.map((tab) => (
                       <button
@@ -1447,6 +1444,7 @@ export default function CourseDetailsPage() {
     </main>
   );
 }
+
 
 
 
