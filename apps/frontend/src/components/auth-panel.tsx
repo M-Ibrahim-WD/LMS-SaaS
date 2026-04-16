@@ -15,6 +15,12 @@ export function AuthPanel({ title, description, footer, children }: AuthPanelPro
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/75">ATHAR LMS</p>
             <h2 className="mt-6 max-w-sm text-4xl font-semibold tracking-tight text-balance">ATHAR</h2>
+            <div className="mt-8 max-w-md space-y-4">
+              <p className="text-lg font-medium text-white/95">Welcome back.</p>
+              <p className="text-sm leading-7 text-white/78">
+                A simple learning space for courses, lessons, assignments, and live sessions in one organized platform.
+              </p>
+            </div>
           </div>
           <div />
         </div>
