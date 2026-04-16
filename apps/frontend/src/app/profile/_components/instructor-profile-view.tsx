@@ -161,7 +161,7 @@ export function InstructorProfileView({
 
         {tab === "analytics" ? (
           <div className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
               {[
                 { label: "Total Revenue", value: money.format(analytics?.totals.totalRevenue ?? 0) },
                 { label: "Students", value: String(analytics?.totals.studentsCount ?? 0) },
