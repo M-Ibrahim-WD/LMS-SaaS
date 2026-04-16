@@ -103,9 +103,6 @@ export default function CoursesPage() {
             <div>
               <p className="section-kicker">Discovery</p>
               <h2 className="mt-2 text-xl font-semibold text-slate-950">Explore by topic, level, and pricing</h2>
-              <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600">
-                Use light filters first, then jump into the course that best fits your current learning goal.
-              </p>
             </div>
             <div className="flex flex-wrap gap-2">
               <StatusChip tone="info">{coursesQuery.data?.length ?? 0} visible courses</StatusChip>
@@ -114,7 +111,7 @@ export default function CoursesPage() {
           </div>
         </ContentCard>
 
-        <div className="grid gap-3 rounded-[28px] border border-slate-200 bg-white/95 p-4 shadow-sm lg:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]">
+        <div className="rounded-[28px] border border-slate-200 bg-white/95 p-4 shadow-sm">
           <input
             className="field-input"
             placeholder="Search by title, description, or category"
@@ -124,46 +121,48 @@ export default function CoursesPage() {
               setPage(1);
             }}
           />
-          <select
-            className="field-select"
-            value={pricing}
-            onChange={(event) => {
-              setPricing(event.target.value as "ALL" | "FREE" | "PAID");
-              setPage(1);
-            }}
-          >
-            <option value="ALL">All Pricing</option>
-            <option value="FREE">Free</option>
-            <option value="PAID">Paid</option>
-          </select>
-          <select
-            className="field-select"
-            value={category}
-            onChange={(event) => {
-              setCategory(event.target.value);
-              setPage(1);
-            }}
-          >
-            <option value="">All Categories</option>
-            {availableCategories.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
-          <select
-            className="field-select"
-            value={level}
-            onChange={(event) => {
-              setLevel(event.target.value as "ALL" | Course["level"]);
-              setPage(1);
-            }}
-          >
-            <option value="ALL">All Levels</option>
-            <option value="BEGINNER">Beginner</option>
-            <option value="INTERMEDIATE">Intermediate</option>
-            <option value="ADVANCED">Advanced</option>
-          </select>
+          <div className="mt-3 grid grid-cols-3 gap-3">
+            <select
+              className="field-select min-w-0 px-3 text-sm"
+              value={pricing}
+              onChange={(event) => {
+                setPricing(event.target.value as "ALL" | "FREE" | "PAID");
+                setPage(1);
+              }}
+            >
+              <option value="ALL">All Pricing</option>
+              <option value="FREE">Free</option>
+              <option value="PAID">Paid</option>
+            </select>
+            <select
+              className="field-select min-w-0 px-3 text-sm"
+              value={category}
+              onChange={(event) => {
+                setCategory(event.target.value);
+                setPage(1);
+              }}
+            >
+              <option value="">All Categories</option>
+              {availableCategories.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+            <select
+              className="field-select min-w-0 px-3 text-sm"
+              value={level}
+              onChange={(event) => {
+                setLevel(event.target.value as "ALL" | Course["level"]);
+                setPage(1);
+              }}
+            >
+              <option value="ALL">All Levels</option>
+              <option value="BEGINNER">Beginner</option>
+              <option value="INTERMEDIATE">Intermediate</option>
+              <option value="ADVANCED">Advanced</option>
+            </select>
+          </div>
         </div>
 
         {coursesQuery.isLoading ? <StatusBanner>Loading courses...</StatusBanner> : null}
@@ -180,34 +179,32 @@ export default function CoursesPage() {
             {user?.role === "STUDENT" ? (
               <h2 className="mb-3 text-lg font-semibold text-slate-800">{instructorName}</h2>
             ) : null}
-            <div className="grid gap-3">
+            <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
               {courses.map((course) => (
                 <Link key={course.id} href={`/courses/${course.id}`}>
-                  <ContentCard className="overflow-hidden transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
-                    <div className="flex flex-col gap-4 sm:flex-row">
-                      <div className="h-36 w-full overflow-hidden rounded-[22px] bg-gradient-to-br from-sky-500 via-cyan-500 to-emerald-400 sm:w-48">
+                  <ContentCard className="h-full overflow-hidden p-3 transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md sm:p-4">
+                    <div className="flex h-full flex-col">
+                      <div className="h-28 w-full overflow-hidden rounded-[18px] bg-gradient-to-br from-sky-500 via-cyan-500 to-emerald-400 sm:h-36">
                         {course.thumbnailImage ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={course.thumbnailImage} alt={`${course.title} thumbnail`} className="h-full w-full object-cover" />
                         ) : null}
                       </div>
-                      <div className="flex-1">
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div>
-                            <p className="text-lg font-semibold text-slate-950">{course.title}</p>
-                            <p className="mt-2 text-sm leading-6 text-slate-600">{course.description}</p>
-                          </div>
+                      <div className="flex flex-1 flex-col pt-3">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <p className="line-clamp-2 text-base font-semibold text-slate-950 sm:text-lg">{course.title}</p>
                           <StatusChip tone={course.isPaid ? "warning" : "success"}>
                             {course.isPaid ? `Paid ${course.price?.toFixed(2) ?? "0.00"}` : "Free"}
                           </StatusChip>
                         </div>
-                        <div className="mt-2 flex flex-wrap gap-2">
+                        <p className="mt-2 line-clamp-3 text-sm leading-6 text-slate-600">{course.description}</p>
+                        <div className="mt-3 flex flex-wrap gap-2">
                           {course.category ? (
                             <StatusChip>{course.category}</StatusChip>
                           ) : null}
                           <StatusChip tone="info">{course.level.toLowerCase()}</StatusChip>
                         </div>
-                        <p className="mt-3 text-xs uppercase tracking-[0.18em] text-slate-400">
+                        <p className="mt-auto pt-3 text-xs uppercase tracking-[0.18em] text-slate-400">
                           {course.instructor?.fullName ?? "Instructor"}
                         </p>
                       </div>
