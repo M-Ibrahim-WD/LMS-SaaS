@@ -73,6 +73,7 @@ export default function CourseDetailsPage() {
   const [countdownNow, setCountdownNow] = useState(() => Date.now());
   const [hoveredReviewRating, setHoveredReviewRating] = useState<number | null>(null);
   const [activeSupportTab, setActiveSupportTab] = useState<"lesson" | "section" | "course" | "review">("lesson");
+  const [activeAssessmentTab, setActiveAssessmentTab] = useState<"exams" | "assignments">("exams");
 
   const {
     activeLesson,
@@ -545,9 +546,14 @@ export default function CourseDetailsPage() {
       </>
     ) : null;
 
-  const renderAssessmentCollection = (quizzes: CourseQuiz[], assignments: CourseAssignment[]) => (
+  const renderQuizCollection = (quizzes: CourseQuiz[]) => (
     <div className="space-y-4">
       {quizzes.map(renderQuizCard)}
+    </div>
+  );
+
+  const renderAssignmentCollection = (assignments: CourseAssignment[]) => (
+    <div className="space-y-4">
       {assignments.map(renderAssignmentCard)}
     </div>
   );
@@ -562,7 +568,7 @@ export default function CourseDetailsPage() {
     supportTabs.push({
       id: "lesson",
       label: "Lesson",
-      content: renderAssessmentCollection(visibleLessonQuizzes, visibleLessonAssignments)
+      content: null
     });
   }
 
@@ -570,7 +576,7 @@ export default function CourseDetailsPage() {
     supportTabs.push({
       id: "section",
       label: "Section",
-      content: renderAssessmentCollection(visibleSectionQuizzes, visibleSectionAssignments)
+      content: null
     });
   }
 
@@ -578,7 +584,7 @@ export default function CourseDetailsPage() {
     supportTabs.push({
       id: "course",
       label: "Course",
-      content: renderAssessmentCollection(visibleCourseQuizzes, visibleCourseAssignments)
+      content: null
     });
   }
 
@@ -601,7 +607,42 @@ export default function CourseDetailsPage() {
     }
   }, [activeSupportTab, supportTabs]);
 
-  const activeSupportTabContent = supportTabs.find((tab) => tab.id === activeSupportTab)?.content ?? supportTabs[0]?.content;
+  const activeAssessmentScope =
+    activeSupportTab === "lesson"
+      ? { quizzes: visibleLessonQuizzes, assignments: visibleLessonAssignments }
+      : activeSupportTab === "section"
+        ? { quizzes: visibleSectionQuizzes, assignments: visibleSectionAssignments }
+        : activeSupportTab === "course"
+          ? { quizzes: visibleCourseQuizzes, assignments: visibleCourseAssignments }
+          : null;
+
+  useEffect(() => {
+    if (!activeAssessmentScope) {
+      return;
+    }
+
+    if (activeAssessmentTab === "exams" && !activeAssessmentScope.quizzes.length && activeAssessmentScope.assignments.length) {
+      setActiveAssessmentTab("assignments");
+      return;
+    }
+
+    if (activeAssessmentTab === "assignments" && !activeAssessmentScope.assignments.length && activeAssessmentScope.quizzes.length) {
+      setActiveAssessmentTab("exams");
+    }
+  }, [activeAssessmentScope, activeAssessmentTab]);
+
+  const activeSupportTabContent =
+    activeSupportTab === "review"
+      ? reviewTabContent
+      : activeAssessmentScope
+        ? activeAssessmentTab === "exams"
+          ? activeAssessmentScope.quizzes.length
+            ? renderQuizCollection(activeAssessmentScope.quizzes)
+            : <EmptyState title="No exams in this tab" description="" />
+          : activeAssessmentScope.assignments.length
+            ? renderAssignmentCollection(activeAssessmentScope.assignments)
+            : <EmptyState title="No assignments in this tab" description="" />
+        : supportTabs[0]?.content;
   if (!selectedCourse) {
     return (
       <main className="mx-auto max-w-6xl p-8">
@@ -933,6 +974,32 @@ export default function CourseDetailsPage() {
                     </button>
                   ))}
                 </div>
+                {activeAssessmentScope ? (
+                  <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setActiveAssessmentTab("exams")}
+                      className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                        activeAssessmentTab === "exams"
+                          ? "bg-emerald-100 text-emerald-800"
+                          : "border border-slate-200 bg-white text-slate-700"
+                      }`}
+                    >
+                      Exams
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveAssessmentTab("assignments")}
+                      className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                        activeAssessmentTab === "assignments"
+                          ? "bg-emerald-100 text-emerald-800"
+                          : "border border-slate-200 bg-white text-slate-700"
+                      }`}
+                    >
+                      Assignments
+                    </button>
+                  </div>
+                ) : null}
                 <div className="mt-4">{activeSupportTabContent}</div>
               </div>
             ) : null}
@@ -1002,6 +1069,32 @@ export default function CourseDetailsPage() {
                       </button>
                     ))}
                   </div>
+                  {activeAssessmentScope ? (
+                    <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
+                      <button
+                        type="button"
+                        onClick={() => setActiveAssessmentTab("exams")}
+                        className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                          activeAssessmentTab === "exams"
+                            ? "bg-emerald-100 text-emerald-800"
+                            : "border border-slate-200 bg-white text-slate-700"
+                        }`}
+                      >
+                        Exams
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveAssessmentTab("assignments")}
+                        className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                          activeAssessmentTab === "assignments"
+                            ? "bg-emerald-100 text-emerald-800"
+                            : "border border-slate-200 bg-white text-slate-700"
+                        }`}
+                      >
+                        Assignments
+                      </button>
+                    </div>
+                  ) : null}
                   <div className="mt-5">{activeSupportTabContent}</div>
                 </WorkspacePanel>
               ) : null}
