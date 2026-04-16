@@ -72,7 +72,7 @@ function MobileSection({
 export default function CourseDetailsPage() {
   const [countdownNow, setCountdownNow] = useState(() => Date.now());
   const [hoveredReviewRating, setHoveredReviewRating] = useState<number | null>(null);
-  const [activeSupportTab, setActiveSupportTab] = useState<"lesson" | "section" | "course" | "review">("lesson");
+  const [activeSupportTab, setActiveSupportTab] = useState<"lesson" | "section" | "course">("lesson");
   const [activeAssessmentTab, setActiveAssessmentTab] = useState<"exams" | "assignments">("exams");
 
   const {
@@ -559,16 +559,14 @@ export default function CourseDetailsPage() {
   );
 
   const supportTabs: Array<{
-    id: "lesson" | "section" | "course" | "review";
+    id: "lesson" | "section" | "course";
     label: string;
-    content: React.ReactNode;
   }> = [];
 
   if (visibleLessonQuizzes.length || visibleLessonAssignments.length) {
     supportTabs.push({
       id: "lesson",
       label: "Lesson",
-      content: null
     });
   }
 
@@ -576,7 +574,6 @@ export default function CourseDetailsPage() {
     supportTabs.push({
       id: "section",
       label: "Section",
-      content: null
     });
   }
 
@@ -584,18 +581,11 @@ export default function CourseDetailsPage() {
     supportTabs.push({
       id: "course",
       label: "Course",
-      content: null
     });
   }
 
   const reviewTabContent = renderReviewContent();
-  if (reviewTabContent) {
-    supportTabs.push({
-      id: "review",
-      label: "Review",
-      content: reviewTabContent
-    });
-  }
+  const hasReviewCard = Boolean(reviewTabContent);
 
   useEffect(() => {
     if (!supportTabs.length) {
@@ -612,15 +602,9 @@ export default function CourseDetailsPage() {
       ? { quizzes: visibleLessonQuizzes, assignments: visibleLessonAssignments }
       : activeSupportTab === "section"
         ? { quizzes: visibleSectionQuizzes, assignments: visibleSectionAssignments }
-        : activeSupportTab === "course"
-          ? { quizzes: visibleCourseQuizzes, assignments: visibleCourseAssignments }
-          : null;
+        : { quizzes: visibleCourseQuizzes, assignments: visibleCourseAssignments };
 
   useEffect(() => {
-    if (!activeAssessmentScope) {
-      return;
-    }
-
     if (activeAssessmentTab === "exams" && !activeAssessmentScope.quizzes.length && activeAssessmentScope.assignments.length) {
       setActiveAssessmentTab("assignments");
       return;
@@ -632,17 +616,13 @@ export default function CourseDetailsPage() {
   }, [activeAssessmentScope, activeAssessmentTab]);
 
   const activeSupportTabContent =
-    activeSupportTab === "review"
-      ? reviewTabContent
-      : activeAssessmentScope
-        ? activeAssessmentTab === "exams"
-          ? activeAssessmentScope.quizzes.length
-            ? renderQuizCollection(activeAssessmentScope.quizzes)
-            : <EmptyState title="No exams in this tab" description="" />
-          : activeAssessmentScope.assignments.length
-            ? renderAssignmentCollection(activeAssessmentScope.assignments)
-            : <EmptyState title="No assignments in this tab" description="" />
-        : supportTabs[0]?.content;
+    activeAssessmentTab === "exams"
+      ? activeAssessmentScope.quizzes.length
+        ? renderQuizCollection(activeAssessmentScope.quizzes)
+        : <EmptyState title="No exams in this tab" description="" />
+      : activeAssessmentScope.assignments.length
+        ? renderAssignmentCollection(activeAssessmentScope.assignments)
+        : <EmptyState title="No assignments in this tab" description="" />;
   if (!selectedCourse) {
     return (
       <main className="mx-auto max-w-6xl p-8">
@@ -1005,6 +985,7 @@ export default function CourseDetailsPage() {
             ) : null}
 
             <MobileSection title="Course navigation">{renderNavigationContent()}</MobileSection>
+            {hasReviewCard ? <MobileSection title="Course review">{reviewTabContent}</MobileSection> : null}
             {renderInstructorContent() ? <MobileSection title="Instructor">{renderInstructorContent()}</MobileSection> : null}
           </div>
 
@@ -1012,6 +993,7 @@ export default function CourseDetailsPage() {
             <aside className="space-y-5">
               <WorkspacePanel title="Course navigation">{renderNavigationContent()}</WorkspacePanel>
               {renderCompletionContent() ? <WorkspacePanel title="Completion">{renderCompletionContent()}</WorkspacePanel> : null}
+              {hasReviewCard ? <WorkspacePanel title="Course review">{reviewTabContent}</WorkspacePanel> : null}
             </aside>
 
             <section className="space-y-5">
@@ -1052,7 +1034,7 @@ export default function CourseDetailsPage() {
               )}
 
               {supportTabs.length ? (
-                <WorkspacePanel title="Assessments and review">
+                <WorkspacePanel title="Assessments">
                   <div className="flex flex-wrap gap-2">
                     {supportTabs.map((tab) => (
                       <button
