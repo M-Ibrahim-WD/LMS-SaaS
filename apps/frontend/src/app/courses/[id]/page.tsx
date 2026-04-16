@@ -836,11 +836,6 @@ export default function CourseDetailsPage() {
                   <StatPill label="Lessons" value={`${courseProgress.completedLessons}/${courseProgress.totalLessons}`} tone="default" />
                   <StatPill label="Next" value={upcomingLesson?.title ?? "Assessments"} tone="success" />
                 </div>
-                {nextLessonId ? (
-                  <div className="mt-4">
-                    <PillButton onClick={() => void onSelectLesson(nextLessonId)}>Continue learning</PillButton>
-                  </div>
-                ) : null}
               </div>
             ) : null}
 
@@ -879,7 +874,6 @@ export default function CourseDetailsPage() {
             ) : null}
 
             <MobileSection title="Course navigation">{renderNavigationContent()}</MobileSection>
-            {renderCompletionContent() ? <MobileSection title="Progress and completion">{renderCompletionContent()}</MobileSection> : null}
             {visibleLessonQuizzes.length || visibleLessonAssignments.length ? <MobileSection title="Lesson assessments">{renderAssessmentCollection(visibleLessonQuizzes, visibleLessonAssignments)}</MobileSection> : null}
             {visibleSectionQuizzes.length || visibleSectionAssignments.length ? <MobileSection title="Section assessments">{renderAssessmentCollection(visibleSectionQuizzes, visibleSectionAssignments)}</MobileSection> : null}
             {visibleCourseQuizzes.length || visibleCourseAssignments.length ? <MobileSection title="Course assessments">{renderAssessmentCollection(visibleCourseQuizzes, visibleCourseAssignments)}</MobileSection> : null}
