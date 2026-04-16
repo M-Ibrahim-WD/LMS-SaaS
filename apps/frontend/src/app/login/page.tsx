@@ -121,6 +121,13 @@ export default function LoginPage() {
         >
           {loading ? "Logging in..." : "Login"}
         </button>
+
+        <p className="text-center text-sm text-slate-600">
+          Forgot your password?{" "}
+          <span className="font-medium text-sky-700 underline underline-offset-4">
+            Click here to recover it.
+          </span>
+        </p>
       </form>
     </AuthPanel>
   );
