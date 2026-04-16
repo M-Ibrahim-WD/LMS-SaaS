@@ -31,7 +31,7 @@ export function BackButton({
         <path strokeLinecap="round" strokeLinejoin="round" d="m15 18-6-6 6-6" />
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h11" />
       </svg>
-      <span className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 -translate-x-1/2 rounded-full bg-slate-950 px-2.5 py-1 text-[11px] font-semibold text-white opacity-0 shadow-lg transition duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
+      <span className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 hidden -translate-x-1/2 rounded-full bg-slate-950 px-2.5 py-1 text-[11px] font-semibold text-white opacity-0 shadow-lg transition duration-200 group-hover:opacity-100 group-focus-visible:opacity-100 sm:block">
         {label}
       </span>
     </button>
