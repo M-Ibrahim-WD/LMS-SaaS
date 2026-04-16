@@ -16,8 +16,8 @@ interface ProfileTabsProps {
 
 export function ProfileTabs({ items, activeKey, onChange }: ProfileTabsProps) {
   return (
-    <div className="sticky top-3 z-10 mt-6 overflow-x-auto rounded-full border border-white/80 bg-white/90 p-2 shadow-sm backdrop-blur">
-      <div className="flex min-w-max items-center gap-2">
+    <div className="sticky top-3 z-10 mt-6 rounded-full border border-white/80 bg-white/90 p-2 shadow-sm backdrop-blur">
+      <div className="grid w-full grid-cols-[repeat(auto-fit,minmax(0,1fr))] gap-2">
         {items.map((item) => {
           const active = item.key === activeKey;
           return (
@@ -27,7 +27,7 @@ export function ProfileTabs({ items, activeKey, onChange }: ProfileTabsProps) {
               onClick={() => onChange(item.key)}
               aria-pressed={active}
               title={item.label}
-              className={`flex h-11 w-11 items-center justify-center rounded-full px-0 py-0 text-sm font-medium transition md:h-auto md:w-auto md:gap-2 md:px-4 md:py-2.5 ${
+              className={`flex min-w-0 items-center justify-center rounded-full px-3 py-2.5 text-sm font-medium transition md:gap-2 ${
                 active
                   ? "bg-slate-950 text-white shadow-[0_12px_30px_-18px_rgba(15,23,42,0.9)]"
                   : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
@@ -36,7 +36,7 @@ export function ProfileTabs({ items, activeKey, onChange }: ProfileTabsProps) {
               <span className="text-[18px] leading-none md:text-base" aria-hidden="true">
                 {item.icon}
               </span>
-              <span className="hidden md:inline">{item.label}</span>
+              <span className="ml-0 hidden truncate md:ml-2 md:inline">{item.label}</span>
             </button>
           );
         })}
