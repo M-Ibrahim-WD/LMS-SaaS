@@ -887,21 +887,6 @@ export default function CourseDetailsPage() {
             </aside>
 
             <section className="space-y-5">
-              {isStudent && courseProgress ? (
-                <WorkspacePanel title="Learning progress">
-                  <div className="grid gap-3 md:grid-cols-3">
-                    <StatPill label="Progress" value={`${courseProgress.percentage}%`} tone="info" />
-                    <StatPill label="Lessons" value={`${courseProgress.completedLessons}/${courseProgress.totalLessons}`} tone="default" />
-                    <StatPill label="Next" value={upcomingLesson?.title ?? "Assessments"} tone="success" />
-                  </div>
-                  {nextLessonId ? (
-                    <div className="mt-4">
-                      <PillButton onClick={() => void onSelectLesson(nextLessonId)}>Continue learning</PillButton>
-                    </div>
-                  ) : null}
-                </WorkspacePanel>
-              ) : null}
-
               {activeLesson ? (
                 <WorkspacePanel title={activeLesson.title} description={activeLesson.sectionTitle}>
                   <div className="flex flex-wrap items-center gap-2">
