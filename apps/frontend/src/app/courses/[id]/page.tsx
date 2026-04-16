@@ -941,9 +941,10 @@ export default function CourseDetailsPage() {
             {renderInstructorContent() ? <MobileSection title="Instructor">{renderInstructorContent()}</MobileSection> : null}
           </div>
 
-          <div className="hidden lg:grid lg:grid-cols-[260px_minmax(0,1fr)_320px] lg:gap-5">
+          <div className="hidden lg:grid lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-5">
             <aside className="space-y-5">
               <WorkspacePanel title="Course navigation">{renderNavigationContent()}</WorkspacePanel>
+              {renderCompletionContent() ? <WorkspacePanel title="Completion">{renderCompletionContent()}</WorkspacePanel> : null}
             </aside>
 
             <section className="space-y-5">
@@ -1004,12 +1005,8 @@ export default function CourseDetailsPage() {
                   <div className="mt-5">{activeSupportTabContent}</div>
                 </WorkspacePanel>
               ) : null}
-            </section>
-
-            <aside className="space-y-5">
-              {renderCompletionContent() ? <WorkspacePanel title="Completion">{renderCompletionContent()}</WorkspacePanel> : null}
               {renderInstructorContent() ? <WorkspacePanel title="Instructor">{renderInstructorContent()}</WorkspacePanel> : null}
-            </aside>
+            </section>
           </div>
         </div>
       ) : null}
