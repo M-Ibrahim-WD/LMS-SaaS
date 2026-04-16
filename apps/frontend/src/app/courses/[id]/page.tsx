@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -9,8 +9,7 @@ import {
   EmptyState,
   PillButton,
   StatPill,
-  WorkspacePanel,
-  WorkspaceShell
+  WorkspacePanel
 } from "../../../components/course-workspace";
 import { StatusBanner } from "../../../components/status-banner";
 
@@ -43,6 +42,31 @@ function formatInterviewCountdown(value: string, now = Date.now()) {
   parts.push(`${minutes}m`);
 
   return parts.join(" ");
+}
+
+function MobileSection({
+  title,
+  defaultOpen = false,
+  children
+}: {
+  title: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <details
+      open={defaultOpen}
+      className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm"
+    >
+      <summary className="cursor-pointer list-none px-4 py-4 text-sm font-semibold text-slate-950">
+        <div className="flex items-center justify-between gap-3">
+          <span>{title}</span>
+          <span className="text-xs uppercase tracking-[0.18em] text-slate-400">Open</span>
+        </div>
+      </summary>
+      <div className="border-t border-slate-100 p-4">{children}</div>
+    </details>
+  );
 }
 
 export default function CourseDetailsPage() {
@@ -268,13 +292,13 @@ export default function CourseDetailsPage() {
       key={quiz.id}
       type="button"
       onClick={() => openQuizFlow(quiz)}
-      className="w-full rounded-[28px] border border-slate-200 bg-slate-50 p-4 text-left transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-sm"
+      className="w-full rounded-[24px] border border-slate-200 bg-white p-4 text-left transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-lg font-semibold text-slate-950">{quiz.title}</p>
+          <p className="text-base font-semibold text-slate-950">{quiz.title}</p>
           {quiz.description ? (
-            <p className="mt-2 text-sm leading-6 text-slate-600">{quiz.description}</p>
+            <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-600">{quiz.description}</p>
           ) : null}
           <p className="mt-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
             {quiz.scopeLabel}
@@ -298,8 +322,8 @@ export default function CourseDetailsPage() {
           Result recorded: {quiz.submission.score}/{quiz.submission.totalQuestions}
         </p>
       ) : (
-        <div className="mt-4 flex items-center justify-between gap-3">
-          <p className="text-sm text-slate-600">
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-slate-600 sm:max-w-[70%]">
             {quiz.attemptStatus === "IN_PROGRESS"
               ? "Your exam session is already active. Re-open it now to finish and submit."
               : "Open the exam in a dedicated full-screen window and finish it in one sitting."}
@@ -313,12 +337,12 @@ export default function CourseDetailsPage() {
   );
 
   const renderAssignmentCard = (assignment: CourseAssignment) => (
-    <div key={assignment.id} className="rounded-[28px] border border-slate-200 bg-slate-50 p-4 sm:p-5">
+    <div key={assignment.id} className="rounded-[24px] border border-slate-200 bg-white p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-lg font-semibold text-slate-950">{assignment.title}</p>
+          <p className="text-base font-semibold text-slate-950">{assignment.title}</p>
           {assignment.description ? (
-            <p className="mt-2 text-sm leading-6 text-slate-600">{assignment.description}</p>
+            <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-600">{assignment.description}</p>
           ) : null}
           <p className="mt-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
             {assignment.scopeLabel}
@@ -374,6 +398,158 @@ export default function CourseDetailsPage() {
     </div>
   );
 
+  const renderNavigationContent = () => (
+    <div className="space-y-4">
+      {courseQuery.data?.sections.map((section) => (
+        <div key={section.id} className="rounded-[24px] border border-slate-200 bg-slate-50/80 p-4">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Section {section.order}</p>
+          <p className="mt-1 text-sm font-semibold text-slate-900">{section.title}</p>
+          <div className="mt-3 space-y-2">
+            {section.lessons.map((lesson) => {
+              const isCurrent = activeLesson?.id === lesson.id;
+              const isNext = nextLessonId === lesson.id;
+              return (
+                <button
+                  key={lesson.id}
+                  type="button"
+                  onClick={() => void onSelectLesson(lesson.id)}
+                  className={`w-full rounded-2xl border px-3 py-3 text-left transition ${
+                    isCurrent
+                      ? "border-slate-950 bg-slate-950 text-white"
+                      : isNext
+                        ? "border-emerald-300 bg-emerald-50 text-emerald-900"
+                        : lesson.isCompleted
+                          ? "border-slate-200 bg-white text-slate-800"
+                          : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{lesson.title}</p>
+                      <p className="mt-1 text-[11px] uppercase tracking-[0.2em] opacity-70">{lesson.type}</p>
+                    </div>
+                    <div className="shrink-0 text-[11px] uppercase tracking-[0.2em] opacity-70">
+                      {lesson.isCompleted ? "Done" : isNext ? "Next" : lesson.order}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderCompletionContent = () =>
+    isStudent && completionStatusQuery.data ? (
+      <>
+        <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+          <StatPill label="Lessons" value={`${completionStatusQuery.data.lessons.completed}/${completionStatusQuery.data.lessons.total}`} tone={completionStatusQuery.data.lessons.done ? "success" : "default"} />
+          <StatPill label="Quizzes" value={`${completionStatusQuery.data.quizzes.completed}/${completionStatusQuery.data.quizzes.total}`} tone={completionStatusQuery.data.quizzes.done ? "success" : "default"} />
+          <StatPill label="Assignments" value={`${completionStatusQuery.data.assignments.completed}/${completionStatusQuery.data.assignments.total}`} tone={completionStatusQuery.data.assignments.done ? "success" : "default"} />
+        </div>
+        <div className={`mt-4 rounded-2xl border p-4 text-sm ${
+          completionStatusQuery.data.status === "CERTIFICATE_READY"
+            ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+            : completionStatusQuery.data.status === "ELIGIBLE"
+              ? "border-sky-200 bg-sky-50 text-sky-800"
+              : "border-amber-200 bg-amber-50 text-amber-800"
+        }`}>
+          <p className="font-semibold">
+            {completionStatusQuery.data.status === "CERTIFICATE_READY"
+              ? "Certificate already issued"
+              : completionStatusQuery.data.status === "ELIGIBLE"
+                ? "Ready to issue"
+                : completionStatusQuery.data.lockReason ?? "Course completion still locked"}
+          </p>
+          <p className="mt-2 leading-6">{completionStatusQuery.data.nextAction}</p>
+        </div>
+        {completionStatusQuery.data.certificate ? (
+          <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+            <p className="text-sm font-semibold text-emerald-800">Certificate ready</p>
+            <p className="mt-2 text-xs text-emerald-700">#{completionStatusQuery.data.certificate.certificateNumber}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Link href={`/certificates/${completionStatusQuery.data.certificate.id}`} className="rounded-full border border-emerald-300 px-3 py-2 text-xs font-medium text-emerald-800">Open certificate</Link>
+              <Link href={`/certificate-verification/${completionStatusQuery.data.certificate.certificateNumber}`} className="rounded-full border border-emerald-300 px-3 py-2 text-xs font-medium text-emerald-800">Verify publicly</Link>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-4">
+            <PillButton onClick={() => issueCertificateMutation.mutate()} disabled={!completionStatusQuery.data.isEligible || issueCertificateMutation.isPending}>
+              {issueCertificateMutation.isPending ? "Issuing..." : "Issue certificate"}
+            </PillButton>
+          </div>
+        )}
+      </>
+    ) : null;
+
+  const renderReviewContent = () =>
+    isStudent ? (
+      <form onSubmit={(event) => void onSubmitReview(event)} className="space-y-4">
+        <div>
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Rating</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {[1, 2, 3, 4, 5].map((value) => {
+              const isActiveRating = (hoveredReviewRating ?? reviewRating) === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setReviewRating(value)}
+                  onMouseEnter={() => setHoveredReviewRating(value)}
+                  onMouseLeave={() => setHoveredReviewRating(null)}
+                  className={`rounded-full px-3 py-2 text-sm font-medium transition ${
+                    isActiveRating
+                      ? "bg-amber-100 text-amber-800"
+                      : "border border-slate-300 bg-white text-slate-600 hover:border-slate-400"
+                  }`}
+                >
+                  <span className="tracking-[0.2em] text-amber-500">{"?".repeat(value)}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <textarea
+          className="min-h-28 w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm"
+          placeholder="What stood out about this course?"
+          value={reviewComment}
+          onChange={(event) => setReviewComment(event.target.value)}
+        />
+        <div className="flex flex-wrap items-center gap-3">
+          <PillButton type="submit" disabled={submitReviewMutation.isPending}>
+            {submitReviewMutation.isPending ? "Saving review..." : myReviewQuery.data ? "Update review" : "Submit review"}
+          </PillButton>
+          {submitReviewMutation.isSuccess ? <p className="text-sm text-emerald-700">Review saved successfully.</p> : null}
+        </div>
+      </form>
+    ) : null;
+
+  const renderInstructorContent = () =>
+    selectedCourse?.instructor ? (
+      <>
+        <p className="text-sm font-semibold text-slate-900">{selectedCourse?.instructor?.fullName}</p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Link href={`/instructors/${selectedCourse?.instructor?.id}` } className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">Open instructor profile</Link>
+          {isStudent ? (
+            <Link
+              href={`/messages?target=${selectedCourse?.instructor?.id}` }
+              className="rounded-full border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700"
+            >
+              Message instructor
+            </Link>
+          ) : null}
+        </div>
+      </>
+    ) : null;
+
+  const renderAssessmentCollection = (quizzes: CourseQuiz[], assignments: CourseAssignment[]) => (
+    <div className="space-y-4">
+      {quizzes.map(renderQuizCard)}
+      {assignments.map(renderAssignmentCard)}
+    </div>
+  );
   if (!selectedCourse) {
     return (
       <main className="mx-auto max-w-6xl p-8">
@@ -422,7 +598,7 @@ export default function CourseDetailsPage() {
             <div className="mt-5 flex flex-wrap gap-2 text-xs text-slate-500">
               {selectedCourse.category ? <span className="rounded-full bg-slate-100 px-3 py-1">{selectedCourse.category}</span> : null}
               <span className="rounded-full bg-slate-100 px-3 py-1">{selectedCourse.level.toLowerCase()}</span>
-              {selectedCourse.instructor ? <span className="rounded-full bg-slate-100 px-3 py-1">Instructor: {selectedCourse.instructor.fullName}</span> : null}
+              {selectedCourse.instructor ? <span className="rounded-full bg-slate-100 px-3 py-1">Instructor: {selectedCourse?.instructor?.fullName}</span> : null}
             </div>
             {isStudent && courseProgress ? (
               <div className="mt-6 grid gap-3 md:grid-cols-3">
@@ -652,256 +828,132 @@ export default function CourseDetailsPage() {
           </div>
           ) : null}
 
-          <WorkspaceShell
-            sidebar={
-              <WorkspacePanel title="Course navigation">
-                <div className="space-y-4">
-                  {courseQuery.data?.sections.map((section) => (
-                    <div key={section.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-3">
-                      <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Section {section.order}</p>
-                      <p className="mt-1 text-sm font-semibold text-slate-900">{section.title}</p>
-                      {section.description ? (
-                        <p className="mt-2 text-sm leading-6 text-slate-600">{section.description}</p>
-                      ) : null}
-                      <div className="mt-3 space-y-2">
-                        {section.lessons.map((lesson) => {
-                          const isCurrent = activeLesson?.id === lesson.id;
-                          const isNext = nextLessonId === lesson.id;
-                          return (
-                            <button
-                              key={lesson.id}
-                              type="button"
-                              onClick={() => void onSelectLesson(lesson.id)}
-                              className={`w-full rounded-2xl border px-3 py-3 text-left transition ${
-                                isCurrent
-                                  ? "border-slate-950 bg-slate-950 text-white"
-                                  : isNext
-                                    ? "border-emerald-300 bg-emerald-50 text-emerald-900"
-                                    : lesson.isCompleted
-                                      ? "border-slate-200 bg-white text-slate-800"
-                                      : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
-                              }`}
-                            >
-                              <div className="flex items-center justify-between gap-3">
-                                <div>
-                                  <p className="text-sm font-medium">{lesson.title}</p>
-                                  <p className="mt-1 text-[11px] uppercase tracking-[0.2em] opacity-70">{lesson.type}</p>
-                                </div>
-                                <div className="text-right text-[11px] uppercase tracking-[0.2em] opacity-70">
-                                  {lesson.isCompleted ? "Done" : isNext ? "Next" : lesson.order}
-                                </div>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
+          <div className="space-y-4 lg:hidden">
+            {isStudent && courseProgress ? (
+              <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="grid grid-cols-3 gap-3">
+                  <StatPill label="Progress" value={`${courseProgress.percentage}%`} tone="info" />
+                  <StatPill label="Lessons" value={`${courseProgress.completedLessons}/${courseProgress.totalLessons}`} tone="default" />
+                  <StatPill label="Next" value={upcomingLesson?.title ?? "Assessments"} tone="success" />
                 </div>
-              </WorkspacePanel>
-            }
-            main={
-              <>
-                {isStudent && courseProgress ? (
-                  <WorkspacePanel title="Progress header" description="See exactly whatï¿½s done, whatï¿½s next, and how close you are to the certificate.">
-                    <div className="grid gap-3 md:grid-cols-4">
-                      <StatPill label="Progress" value={`${courseProgress.percentage}%`} tone="info" />
-                      <StatPill label="Lessons" value={`${courseProgress.completedLessons}/${courseProgress.totalLessons}`} tone="default" />
-                      <StatPill label="Current" value={activeLesson?.title ?? "No lesson selected"} tone="warning" />
-                      <StatPill label="Next" value={upcomingLesson?.title ?? "Assessments / finish"} tone="success" />
-                    </div>
-                    {nextLessonId ? (
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        <PillButton onClick={() => void onSelectLesson(nextLessonId)}>Continue learning</PillButton>
-                      </div>
-                    ) : null}
-                  </WorkspacePanel>
+                {nextLessonId ? (
+                  <div className="mt-4">
+                    <PillButton onClick={() => void onSelectLesson(nextLessonId)}>Continue learning</PillButton>
+                  </div>
                 ) : null}
+              </div>
+            ) : null}
 
-                {activeLesson ? (
-                  <WorkspacePanel title={activeLesson.title} description={`Section: ${activeLesson.sectionTitle}`}>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-700">{activeLesson.type}</span>
-                      {activeLesson.isCompleted ? <span className="rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-800">Completed</span> : null}
-                      {learningState?.lastLessonId === activeLesson.id ? <span className="rounded-full bg-sky-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-sky-800">Current</span> : null}
-                    </div>
-                    <div className="mt-5 grid gap-4">
-                      <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-5">
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                          Lesson description
-                        </p>
-                        <div className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-700">
-                          {activeLesson.description ?? activeLesson.content ?? "No lesson description yet."}
-                        </div>
-                      </div>
-                      {(activeLesson.mediaKind === "VIDEO" || activeLesson.mediaKind === "FILE") &&
-                      activeLesson.hasProtectedMedia ? (
-                        <ProtectedLessonMediaViewer
-                          lessonId={activeLesson.id}
-                          lessonTitle={activeLesson.title}
-                          mediaKind={activeLesson.mediaKind}
-                          mediaContentType={activeLesson.mediaContentType}
-                          mediaFileName={activeLesson.mediaFileName}
-                          courseTitle={selectedCourse.title}
-                          className="mt-1"
-                        />
-                      ) : null}
-                    </div>
-                    <div className="mt-5 flex flex-wrap gap-2">
-                      {previousLesson ? <PillButton onClick={() => void onSelectLesson(previousLesson.id)}>Previous lesson</PillButton> : null}
-                      {upcomingLesson ? <PillButton onClick={() => void onSelectLesson(upcomingLesson.id)}>Next lesson</PillButton> : null}
-                      {isStudent ? <PillButton onClick={() => completeLessonMutation.mutate(activeLesson.id)} disabled={Boolean(activeLesson.isCompleted) || completeLessonMutation.isPending}>{activeLesson.isCompleted ? "Completed" : completeLessonMutation.isPending ? "Saving..." : "Mark complete"}</PillButton> : null}
-                    </div>
-                  </WorkspacePanel>
-                ) : (
-                  <WorkspacePanel title="No lesson selected">
-                    <EmptyState title="Nothing to show yet" description="" />
-                  </WorkspacePanel>
-                )}
-                {visibleLessonQuizzes.length || visibleLessonAssignments.length ? (
-                  <WorkspacePanel
-                    title="Lesson assessments"
-                    description="These items appear only after you complete the current lesson."
-                  >
-                    <div className="space-y-4">
-                      {visibleLessonQuizzes.map(renderQuizCard)}
-                      {visibleLessonAssignments.map(renderAssignmentCard)}
-                    </div>
-                  </WorkspacePanel>
+            {activeLesson ? (
+              <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-700">{activeLesson.type}</span>
+                  {activeLesson.isCompleted ? <span className="rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-800">Completed</span> : null}
+                </div>
+                <p className="mt-4 text-2xl font-semibold tracking-tight text-slate-950">{activeLesson.title}</p>
+                <p className="mt-2 text-sm text-slate-500">{activeLesson.sectionTitle}</p>
+                {(activeLesson.mediaKind === "VIDEO" || activeLesson.mediaKind === "FILE") &&
+                activeLesson.hasProtectedMedia ? (
+                  <ProtectedLessonMediaViewer
+                    lessonId={activeLesson.id}
+                    lessonTitle={activeLesson.title}
+                    mediaKind={activeLesson.mediaKind}
+                    mediaContentType={activeLesson.mediaContentType}
+                    mediaFileName={activeLesson.mediaFileName}
+                    courseTitle={selectedCourse.title}
+                    className="mt-5"
+                  />
                 ) : null}
+                <div className="mt-5 rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Lesson description</p>
+                  <div className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-700">
+                    {activeLesson.description ?? activeLesson.content ?? "No lesson description yet."}
+                  </div>
+                </div>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {previousLesson ? <PillButton onClick={() => void onSelectLesson(previousLesson.id)}>Previous</PillButton> : null}
+                  {upcomingLesson ? <PillButton onClick={() => void onSelectLesson(upcomingLesson.id)}>Next</PillButton> : null}
+                  {isStudent ? <PillButton onClick={() => completeLessonMutation.mutate(activeLesson.id)} disabled={Boolean(activeLesson.isCompleted) || completeLessonMutation.isPending}>{activeLesson.isCompleted ? "Completed" : completeLessonMutation.isPending ? "Saving..." : "Mark complete"}</PillButton> : null}
+                </div>
+              </div>
+            ) : null}
 
-                {visibleSectionQuizzes.length || visibleSectionAssignments.length ? (
-                  <WorkspacePanel
-                    title="Section assessments"
-                    description="These items appear only after every lesson in this section is completed."
-                  >
-                    <div className="space-y-4">
-                      {visibleSectionQuizzes.map(renderQuizCard)}
-                      {visibleSectionAssignments.map(renderAssignmentCard)}
-                    </div>
-                  </WorkspacePanel>
-                ) : null}
+            <MobileSection title="Course navigation">{renderNavigationContent()}</MobileSection>
+            {renderCompletionContent() ? <MobileSection title="Progress and completion">{renderCompletionContent()}</MobileSection> : null}
+            {visibleLessonQuizzes.length || visibleLessonAssignments.length ? <MobileSection title="Lesson assessments">{renderAssessmentCollection(visibleLessonQuizzes, visibleLessonAssignments)}</MobileSection> : null}
+            {visibleSectionQuizzes.length || visibleSectionAssignments.length ? <MobileSection title="Section assessments">{renderAssessmentCollection(visibleSectionQuizzes, visibleSectionAssignments)}</MobileSection> : null}
+            {visibleCourseQuizzes.length || visibleCourseAssignments.length ? <MobileSection title="Course assessments">{renderAssessmentCollection(visibleCourseQuizzes, visibleCourseAssignments)}</MobileSection> : null}
+            {renderReviewContent() ? <MobileSection title="Course review">{renderReviewContent()}</MobileSection> : null}
+            {renderInstructorContent() ? <MobileSection title="Instructor">{renderInstructorContent()}</MobileSection> : null}
+          </div>
 
-                {visibleCourseQuizzes.length || visibleCourseAssignments.length ? (
-                  <WorkspacePanel
-                    title="Course assessments"
-                    description="These are the final course requirements and only appear once the full course is finished."
-                  >
-                    <div className="space-y-4">
-                      {visibleCourseQuizzes.map(renderQuizCard)}
-                      {visibleCourseAssignments.map(renderAssignmentCard)}
-                    </div>
-                  </WorkspacePanel>
-                ) : null}
+          <div className="hidden lg:grid lg:grid-cols-[260px_minmax(0,1fr)_320px] lg:gap-5">
+            <aside className="space-y-5">
+              <WorkspacePanel title="Course navigation">{renderNavigationContent()}</WorkspacePanel>
+            </aside>
 
-              </>
-            }
-            utility={
-              <>
-                {isStudent && completionStatusQuery.data ? (
-                  <WorkspacePanel title="Completion status">
-                    <div className="grid gap-3">
-                      <StatPill label="Lessons" value={`${completionStatusQuery.data.lessons.completed}/${completionStatusQuery.data.lessons.total}`} tone={completionStatusQuery.data.lessons.done ? "success" : "default"} />
-                      <StatPill label="Quizzes" value={`${completionStatusQuery.data.quizzes.completed}/${completionStatusQuery.data.quizzes.total}`} tone={completionStatusQuery.data.quizzes.done ? "success" : "default"} />
-                      <StatPill label="Assignments" value={`${completionStatusQuery.data.assignments.completed}/${completionStatusQuery.data.assignments.total}`} tone={completionStatusQuery.data.assignments.done ? "success" : "default"} />
+            <section className="space-y-5">
+              {isStudent && courseProgress ? (
+                <WorkspacePanel title="Learning progress">
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <StatPill label="Progress" value={`${courseProgress.percentage}%`} tone="info" />
+                    <StatPill label="Lessons" value={`${courseProgress.completedLessons}/${courseProgress.totalLessons}`} tone="default" />
+                    <StatPill label="Next" value={upcomingLesson?.title ?? "Assessments"} tone="success" />
+                  </div>
+                  {nextLessonId ? (
+                    <div className="mt-4">
+                      <PillButton onClick={() => void onSelectLesson(nextLessonId)}>Continue learning</PillButton>
                     </div>
-                    <div className={`mt-4 rounded-2xl border p-4 text-sm ${
-                      completionStatusQuery.data.status === "CERTIFICATE_READY"
-                        ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                        : completionStatusQuery.data.status === "ELIGIBLE"
-                          ? "border-sky-200 bg-sky-50 text-sky-800"
-                          : "border-amber-200 bg-amber-50 text-amber-800"
-                    }`}>
-                      <p className="font-semibold">
-                        {completionStatusQuery.data.status === "CERTIFICATE_READY"
-                          ? "Certificate already issued"
-                          : completionStatusQuery.data.status === "ELIGIBLE"
-                            ? "Ready to issue"
-                            : completionStatusQuery.data.lockReason ?? "Course completion still locked"}
-                      </p>
-                      <p className="mt-2 leading-6">{completionStatusQuery.data.nextAction}</p>
-                    </div>
-                    {completionStatusQuery.data.certificate ? (
-                      <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-                        <p className="text-sm font-semibold text-emerald-800">Certificate ready</p>
-                        <p className="mt-2 text-xs text-emerald-700">#{completionStatusQuery.data.certificate.certificateNumber}</p>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          <Link href={`/certificates/${completionStatusQuery.data.certificate.id}`} className="rounded-full border border-emerald-300 px-3 py-2 text-xs font-medium text-emerald-800">Open certificate</Link>
-                          <Link href={`/certificate-verification/${completionStatusQuery.data.certificate.certificateNumber}`} className="rounded-full border border-emerald-300 px-3 py-2 text-xs font-medium text-emerald-800">Verify publicly</Link>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="mt-4">
-                        <PillButton onClick={() => issueCertificateMutation.mutate()} disabled={!completionStatusQuery.data.isEligible || issueCertificateMutation.isPending}>
-                          {issueCertificateMutation.isPending ? "Issuing..." : "Issue certificate"}
-                        </PillButton>
-                      </div>
-                    )}
-                  </WorkspacePanel>
-                ) : null}
+                  ) : null}
+                </WorkspacePanel>
+              ) : null}
 
-                {isStudent ? (
-                  <WorkspacePanel title="Course review">
-                    <form onSubmit={(event) => void onSubmitReview(event)} className="space-y-4">
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Rating</p>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {[1, 2, 3, 4, 5].map((value) => {
-                            const isActiveRating = (hoveredReviewRating ?? reviewRating) === value;
-                            return (
-                              <button
-                                key={value}
-                                type="button"
-                                onClick={() => setReviewRating(value)}
-                                onMouseEnter={() => setHoveredReviewRating(value)}
-                                onMouseLeave={() => setHoveredReviewRating(null)}
-                                className={`rounded-full px-3 py-2 text-sm font-medium transition ${
-                                  isActiveRating
-                                    ? "bg-amber-100 text-amber-800"
-                                    : "border border-slate-300 bg-white text-slate-600 hover:border-slate-400"
-                                }`}
-                              >
-                                <span className="tracking-[0.2em] text-amber-500">{"â˜…".repeat(value)}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                      <textarea
-                        className="min-h-28 w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm"
-                        placeholder="What stood out about this course?"
-                        value={reviewComment}
-                        onChange={(event) => setReviewComment(event.target.value)}
-                      />
-                      <div className="flex flex-wrap items-center gap-3">
-                        <PillButton type="submit" disabled={submitReviewMutation.isPending}>
-                          {submitReviewMutation.isPending ? "Saving review..." : myReviewQuery.data ? "Update review" : "Submit review"}
-                        </PillButton>
-                        {submitReviewMutation.isSuccess ? <p className="text-sm text-emerald-700">Review saved successfully.</p> : null}
-                      </div>
-                    </form>
-                  </WorkspacePanel>
-                ) : null}
-
-                {selectedCourse.instructor ? (
-                  <WorkspacePanel title="Instructor">
-                    <p className="text-sm font-semibold text-slate-900">{selectedCourse.instructor.fullName}</p>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                      <Link href={`/instructors/${selectedCourse.instructor.id}`} className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">Open instructor profile</Link>
-                      {isStudent ? (
-                        <Link
-                          href={`/messages?target=${selectedCourse.instructor.id}`}
-                          className="rounded-full border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700"
-                        >
-                          Message instructor
-                        </Link>
-                      ) : null}
+              {activeLesson ? (
+                <WorkspacePanel title={activeLesson.title} description={activeLesson.sectionTitle}>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-700">{activeLesson.type}</span>
+                    {activeLesson.isCompleted ? <span className="rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-800">Completed</span> : null}
+                    {learningState?.lastLessonId === activeLesson.id ? <span className="rounded-full bg-sky-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-sky-800">Current</span> : null}
+                  </div>
+                  {(activeLesson.mediaKind === "VIDEO" || activeLesson.mediaKind === "FILE") && activeLesson.hasProtectedMedia ? (
+                    <ProtectedLessonMediaViewer
+                      lessonId={activeLesson.id}
+                      lessonTitle={activeLesson.title}
+                      mediaKind={activeLesson.mediaKind}
+                      mediaContentType={activeLesson.mediaContentType}
+                      mediaFileName={activeLesson.mediaFileName}
+                      courseTitle={selectedCourse.title}
+                      className="mt-5"
+                    />
+                  ) : null}
+                  <div className="mt-5 rounded-[24px] border border-slate-200 bg-slate-50 p-5">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Lesson description</p>
+                    <div className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-700">
+                      {activeLesson.description ?? activeLesson.content ?? "No lesson description yet."}
                     </div>
-                  </WorkspacePanel>
-                ) : null}
-              </>
-            }
-          />
+                  </div>
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    {previousLesson ? <PillButton onClick={() => void onSelectLesson(previousLesson.id)}>Previous lesson</PillButton> : null}
+                    {upcomingLesson ? <PillButton onClick={() => void onSelectLesson(upcomingLesson.id)}>Next lesson</PillButton> : null}
+                    {isStudent ? <PillButton onClick={() => completeLessonMutation.mutate(activeLesson.id)} disabled={Boolean(activeLesson.isCompleted) || completeLessonMutation.isPending}>{activeLesson.isCompleted ? "Completed" : completeLessonMutation.isPending ? "Saving..." : "Mark complete"}</PillButton> : null}
+                  </div>
+                </WorkspacePanel>
+              ) : (
+                <WorkspacePanel title="No lesson selected">
+                  <EmptyState title="Nothing to show yet" description="" />
+                </WorkspacePanel>
+              )}
+            </section>
+
+            <aside className="space-y-5">
+              {renderCompletionContent() ? <WorkspacePanel title="Completion">{renderCompletionContent()}</WorkspacePanel> : null}
+              {visibleLessonQuizzes.length || visibleLessonAssignments.length ? <WorkspacePanel title="Lesson assessments">{renderAssessmentCollection(visibleLessonQuizzes, visibleLessonAssignments)}</WorkspacePanel> : null}
+              {visibleSectionQuizzes.length || visibleSectionAssignments.length ? <WorkspacePanel title="Section assessments">{renderAssessmentCollection(visibleSectionQuizzes, visibleSectionAssignments)}</WorkspacePanel> : null}
+              {visibleCourseQuizzes.length || visibleCourseAssignments.length ? <WorkspacePanel title="Course assessments">{renderAssessmentCollection(visibleCourseQuizzes, visibleCourseAssignments)}</WorkspacePanel> : null}
+              {renderReviewContent() ? <WorkspacePanel title="Course review">{renderReviewContent()}</WorkspacePanel> : null}
+              {renderInstructorContent() ? <WorkspacePanel title="Instructor">{renderInstructorContent()}</WorkspacePanel> : null}
+            </aside>
+          </div>
         </div>
       ) : null}
 
@@ -1266,6 +1318,10 @@ export default function CourseDetailsPage() {
     </main>
   );
 }
+
+
+
+
 
 
 
