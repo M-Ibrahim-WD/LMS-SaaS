@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { apiFetch } from "../../lib/api/client";
 import { ContentCard } from "../../components/content-card";
 import { EmptyState } from "../../components/empty-state";
@@ -25,6 +25,88 @@ interface Course {
     id: string;
     fullName: string;
   };
+}
+
+interface FilterSelectOption {
+  value: string;
+  label: string;
+}
+
+interface FilterSelectProps {
+  value: string;
+  options: FilterSelectOption[];
+  onChange: (value: string) => void;
+}
+
+function FilterSelect({ value, options, onChange }: FilterSelectProps) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const selectedLabel = options.find((option) => option.value === value)?.label ?? options[0]?.label ?? "";
+
+  useEffect(() => {
+    function handlePointerDown(event: MouseEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
+
+  return (
+    <div ref={rootRef} className="relative min-w-0">
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+        className="field-select flex items-center justify-between gap-2 px-3 text-left text-sm"
+      >
+        <span className="truncate">{selectedLabel}</span>
+        <span className={`text-xs text-slate-500 transition ${open ? "rotate-180" : ""}`}>⌄</span>
+      </button>
+      {open ? (
+        <div className="absolute left-0 right-0 top-[calc(100%+0.45rem)] z-20 overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_18px_45px_-28px_rgba(15,23,42,0.4)]">
+          <div role="listbox" className="py-2">
+            {options.map((option) => {
+              const selected = option.value === value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="option"
+                  aria-selected={selected}
+                  onClick={() => {
+                    onChange(option.value);
+                    setOpen(false);
+                  }}
+                  className={`flex w-full items-center px-4 py-2.5 text-left text-sm transition ${
+                    selected
+                      ? "bg-sky-50 font-medium text-sky-700"
+                      : "text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 export default function CoursesPage() {
@@ -77,6 +159,24 @@ export default function CoursesPage() {
     return groups;
   }, {});
 
+  const pricingOptions: FilterSelectOption[] = [
+    { value: "ALL", label: "All Pricing" },
+    { value: "FREE", label: "Free" },
+    { value: "PAID", label: "Paid" }
+  ];
+
+  const categoryOptions: FilterSelectOption[] = [
+    { value: "", label: "All Categories" },
+    ...availableCategories.map((item) => ({ value: item, label: item }))
+  ];
+
+  const levelOptions: FilterSelectOption[] = [
+    { value: "ALL", label: "All Levels" },
+    { value: "BEGINNER", label: "Beginner" },
+    { value: "INTERMEDIATE", label: "Intermediate" },
+    { value: "ADVANCED", label: "Advanced" }
+  ];
+
   return (
     <PageShell
       title={user?.role === "INSTRUCTOR" ? "My Courses" : "Courses"}
@@ -122,46 +222,30 @@ export default function CoursesPage() {
             }}
           />
           <div className="mt-3 grid grid-cols-3 gap-3">
-            <select
-              className="field-select min-w-0 px-3 text-sm"
+            <FilterSelect
               value={pricing}
-              onChange={(event) => {
-                setPricing(event.target.value as "ALL" | "FREE" | "PAID");
+              options={pricingOptions}
+              onChange={(nextValue) => {
+                setPricing(nextValue as "ALL" | "FREE" | "PAID");
                 setPage(1);
               }}
-            >
-              <option value="ALL">All Pricing</option>
-              <option value="FREE">Free</option>
-              <option value="PAID">Paid</option>
-            </select>
-            <select
-              className="field-select min-w-0 px-3 text-sm"
+            />
+            <FilterSelect
               value={category}
-              onChange={(event) => {
-                setCategory(event.target.value);
+              options={categoryOptions}
+              onChange={(nextValue) => {
+                setCategory(nextValue);
                 setPage(1);
               }}
-            >
-              <option value="">All Categories</option>
-              {availableCategories.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-            <select
-              className="field-select min-w-0 px-3 text-sm"
+            />
+            <FilterSelect
               value={level}
-              onChange={(event) => {
-                setLevel(event.target.value as "ALL" | Course["level"]);
+              options={levelOptions}
+              onChange={(nextValue) => {
+                setLevel(nextValue as "ALL" | Course["level"]);
                 setPage(1);
               }}
-            >
-              <option value="ALL">All Levels</option>
-              <option value="BEGINNER">Beginner</option>
-              <option value="INTERMEDIATE">Intermediate</option>
-              <option value="ADVANCED">Advanced</option>
-            </select>
+            />
           </div>
         </div>
 
