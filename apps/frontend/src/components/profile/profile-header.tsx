@@ -49,7 +49,7 @@ export function ProfileHeader({ name, bio, imageUrl, badge, stats, actions }: Pr
           <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">{bio}</p>
         ) : null}
         {actions ? <div className="mt-5 flex flex-wrap items-center justify-center gap-3">{actions}</div> : null}
-        <div className="mx-auto mt-8 grid max-w-3xl grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="mx-auto mt-8 grid max-w-3xl grid-cols-3 gap-3">
           {stats.map((stat) => (
             <div
               key={stat.label}
