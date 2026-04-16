@@ -505,7 +505,18 @@ export default function CourseDetailsPage() {
                   aria-label={`Rate ${value} star${value > 1 ? "s" : ""}`}
                   className="text-3xl leading-none transition hover:scale-105"
                 >
-                  <span className={isFilled ? "text-amber-400" : "text-slate-300"}>{isFilled ? "?" : "?"}</span>
+                  <svg
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                    className={`h-7 w-7 ${isFilled ? "fill-amber-400 text-amber-400" : "fill-transparent text-slate-300"}`}
+                  >
+                    <path
+                      d="M12 2.75l2.83 5.73 6.32.92-4.57 4.45 1.08 6.3L12 17.17l-5.66 2.98 1.08-6.3-4.57-4.45 6.32-.92L12 2.75z"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
                 </button>
               );
             })}
