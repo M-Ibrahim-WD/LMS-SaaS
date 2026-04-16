@@ -601,7 +601,7 @@ export default function CourseDetailsPage() {
               {selectedCourse.instructor ? <span className="rounded-full bg-slate-100 px-3 py-1">Instructor: {selectedCourse?.instructor?.fullName}</span> : null}
             </div>
             {isStudent && courseProgress ? (
-              <div className="mt-6 grid gap-3 md:grid-cols-3">
+              <div className="mt-6 grid grid-cols-3 gap-3">
                 <StatPill label="Progress" value={`${courseProgress.percentage}%`} tone="info" />
                 <StatPill label="Lessons" value={`${courseProgress.completedLessons}/${courseProgress.totalLessons}`} tone="default" />
                 <StatPill label="Next step" value={nextLessonId ? "Resume lesson" : "Assessments / finish"} tone="success" />
