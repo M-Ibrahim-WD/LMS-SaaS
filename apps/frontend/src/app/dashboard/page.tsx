@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 
 import { NotificationCenter } from "../../components/notification-center";
 import { PageShell } from "../../components/page-shell";
@@ -162,8 +163,20 @@ function AdminShieldIcon() {
   );
 }
 
+function MenuIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+      <path strokeLinecap="round" d="M5 7h14" />
+      <path strokeLinecap="round" d="M5 12h14" />
+      <path strokeLinecap="round" d="M5 17h14" />
+    </svg>
+  );
+}
+
 export default function DashboardPage() {
   const dashboard = useDashboardWorkspace();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const mobileMenuRef = useRef<HTMLDivElement | null>(null);
 
   if (!dashboard.hasHydrated) {
     return <p className="p-6 text-sm text-slate-500">Loading session...</p>;
@@ -177,61 +190,145 @@ export default function DashboardPage() {
   const directUnreadCount = dashboard.directUnreadConversationsQuery.data?.length ?? 0;
   const supportUnreadCount = dashboard.supportUnreadConversationsQuery.data?.length ?? 0;
 
+  useEffect(() => {
+    function handlePointerDown(event: MouseEvent) {
+      if (!mobileMenuRef.current?.contains(event.target as Node)) {
+        setMobileMenuOpen(false);
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setMobileMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
+
   return (
     <PageShell
       title="Dashboard"
       description="Manage your workspace, monitor progress, and keep momentum with the next best actions."
       maxWidthClassName="max-w-7xl"
       actions={
-        <>
-          <NotificationCenter
-            items={dashboard.notificationsQuery.data}
-            unreadCount={dashboard.unreadCountQuery.data?.unreadCount ?? 0}
-            isLoading={dashboard.notificationsQuery.isLoading}
-            isUpdating={
-              dashboard.markNotificationReadMutation.isPending ||
-              dashboard.markAllNotificationsReadMutation.isPending
-            }
-            onMarkRead={(notificationId: string) =>
-              dashboard.markNotificationReadMutation.mutate(notificationId)
-            }
-            onMarkAllRead={() =>
-              dashboard.markAllNotificationsReadMutation.mutate()
-            }
-          />
-          {profile?.role !== "ADMIN" ||
-          profile.isSuperAdmin ||
-          profile.adminPermissions?.includes("HANDLE_SUPPORT") ? (
-            <HeaderIconLink
-              href="/support"
-              label="Support"
-              badgeCount={supportUnreadCount}
-            >
-              <SupportIcon />
+        <div className="flex items-start gap-2">
+          <div className="hidden items-center gap-2 sm:flex">
+            <NotificationCenter
+              items={dashboard.notificationsQuery.data}
+              unreadCount={dashboard.unreadCountQuery.data?.unreadCount ?? 0}
+              isLoading={dashboard.notificationsQuery.isLoading}
+              isUpdating={
+                dashboard.markNotificationReadMutation.isPending ||
+                dashboard.markAllNotificationsReadMutation.isPending
+              }
+              onMarkRead={(notificationId: string) =>
+                dashboard.markNotificationReadMutation.mutate(notificationId)
+              }
+              onMarkAllRead={() =>
+                dashboard.markAllNotificationsReadMutation.mutate()
+              }
+            />
+            {profile?.role !== "ADMIN" ||
+            profile.isSuperAdmin ||
+            profile.adminPermissions?.includes("HANDLE_SUPPORT") ? (
+              <HeaderIconLink
+                href="/support"
+                label="Support"
+                badgeCount={supportUnreadCount}
+              >
+                <SupportIcon />
+              </HeaderIconLink>
+            ) : null}
+            {profile?.role !== "ADMIN" ? (
+              <HeaderIconLink
+                href="/messages"
+                label="Messages"
+                badgeCount={directUnreadCount}
+              >
+                {directUnreadCount > 0 ? <MessageClosedIcon /> : <MessageOpenIcon />}
+              </HeaderIconLink>
+            ) : null}
+            <HeaderIconLink href="/profile" label="Profile">
+              <ProfileIcon />
             </HeaderIconLink>
-          ) : null}
-          {profile?.role !== "ADMIN" ? (
-            <HeaderIconLink
-              href="/messages"
-              label="Messages"
-              badgeCount={directUnreadCount}
+            {profile?.role === "ADMIN" ? (
+              <HeaderActionLink href="/admin" label="Admin">
+                <AdminShieldIcon />
+                Admin
+              </HeaderActionLink>
+            ) : null}
+            <HeaderIconButton onClick={dashboard.onLogout} label="Logout" tone="danger">
+              <LogoutIcon />
+            </HeaderIconButton>
+          </div>
+
+          <div ref={mobileMenuRef} className="relative sm:hidden">
+            <HeaderIconButton
+              onClick={() => setMobileMenuOpen((current) => !current)}
+              label="Menu"
             >
-              {directUnreadCount > 0 ? <MessageClosedIcon /> : <MessageOpenIcon />}
-            </HeaderIconLink>
-          ) : null}
-          <HeaderIconLink href="/profile" label="Profile">
-            <ProfileIcon />
-          </HeaderIconLink>
-          {profile?.role === "ADMIN" ? (
-            <HeaderActionLink href="/admin" label="Admin">
-              <AdminShieldIcon />
-              Admin
-            </HeaderActionLink>
-          ) : null}
-          <HeaderIconButton onClick={dashboard.onLogout} label="Logout" tone="danger">
-            <LogoutIcon />
-          </HeaderIconButton>
-        </>
+              <MenuIcon />
+            </HeaderIconButton>
+
+            {mobileMenuOpen ? (
+              <div className="absolute right-0 top-[calc(100%+0.55rem)] z-30 flex w-[3.75rem] flex-col items-center gap-2 rounded-[28px] border border-slate-200 bg-white/98 p-2 shadow-[0_20px_45px_-26px_rgba(15,23,42,0.45)]">
+                <NotificationCenter
+                  items={dashboard.notificationsQuery.data}
+                  unreadCount={dashboard.unreadCountQuery.data?.unreadCount ?? 0}
+                  isLoading={dashboard.notificationsQuery.isLoading}
+                  isUpdating={
+                    dashboard.markNotificationReadMutation.isPending ||
+                    dashboard.markAllNotificationsReadMutation.isPending
+                  }
+                  onMarkRead={(notificationId: string) =>
+                    dashboard.markNotificationReadMutation.mutate(notificationId)
+                  }
+                  onMarkAllRead={() =>
+                    dashboard.markAllNotificationsReadMutation.mutate()
+                  }
+                />
+                {profile?.role !== "ADMIN" ||
+                profile.isSuperAdmin ||
+                profile.adminPermissions?.includes("HANDLE_SUPPORT") ? (
+                  <HeaderIconLink
+                    href="/support"
+                    label="Support"
+                    badgeCount={supportUnreadCount}
+                  >
+                    <SupportIcon />
+                  </HeaderIconLink>
+                ) : null}
+                {profile?.role !== "ADMIN" ? (
+                  <HeaderIconLink
+                    href="/messages"
+                    label="Messages"
+                    badgeCount={directUnreadCount}
+                  >
+                    {directUnreadCount > 0 ? <MessageClosedIcon /> : <MessageOpenIcon />}
+                  </HeaderIconLink>
+                ) : null}
+                <HeaderIconLink href="/profile" label="Profile">
+                  <ProfileIcon />
+                </HeaderIconLink>
+                {profile?.role === "ADMIN" ? (
+                  <HeaderIconLink href="/admin" label="Admin">
+                    <AdminShieldIcon />
+                  </HeaderIconLink>
+                ) : null}
+                <HeaderIconButton onClick={dashboard.onLogout} label="Logout" tone="danger">
+                  <LogoutIcon />
+                </HeaderIconButton>
+              </div>
+            ) : null}
+          </div>
+        </div>
       }
     >
       {dashboard.profileQuery.isLoading ? (
