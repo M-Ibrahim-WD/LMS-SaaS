@@ -1,12 +1,58 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
+const DEFAULT_API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
+const LOCAL_HOST_NAMES = new Set(["localhost", "127.0.0.1", "::1"]);
+const TRANSIENT_RETRY_DELAY_MS = 350;
+const TRANSIENT_RETRY_ATTEMPTS = 2;
 
 interface FetchOptions extends RequestInit {
   token?: string;
 }
 
+function wait(delayMs: number) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, delayMs);
+  });
+}
+
+function resolveApiUrl() {
+  if (typeof window === "undefined") {
+    return DEFAULT_API_URL;
+  }
+
+  try {
+    const configuredUrl = new URL(DEFAULT_API_URL);
+    if (!LOCAL_HOST_NAMES.has(configuredUrl.hostname) || LOCAL_HOST_NAMES.has(window.location.hostname)) {
+      return configuredUrl.toString().replace(/\/$/, "");
+    }
+
+    configuredUrl.hostname = window.location.hostname;
+    configuredUrl.protocol = window.location.protocol === "https:" ? "https:" : configuredUrl.protocol;
+
+    return configuredUrl.toString().replace(/\/$/, "");
+  } catch {
+    return DEFAULT_API_URL.replace(/\/$/, "");
+  }
+}
+
+function isLikelyTransientFetchError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const message = error.message.toLowerCase();
+  return (
+    message.includes("failed to fetch") ||
+    message.includes("load failed") ||
+    message.includes("networkerror") ||
+    message.includes("network request failed")
+  );
+}
+
 export async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T> {
   const headers = new Headers(options.headers);
   const isFormDataBody = typeof FormData !== "undefined" && options.body instanceof FormData;
+  const apiUrl = resolveApiUrl();
+  const method = (options.method ?? "GET").toUpperCase();
+  const canRetry = method === "GET" || method === "HEAD";
 
   if (!isFormDataBody) {
     headers.set("Content-Type", "application/json");
@@ -19,22 +65,30 @@ export async function apiFetch<T>(path: string, options: FetchOptions = {}): Pro
 
   let response: Response;
 
-  try {
-    response = await fetch(`${API_URL}${path}`, {
-      ...options,
-      headers
-    });
-  } catch (error) {
-    const message =
-      error instanceof Error && error.message
-        ? error.message
-        : "Network request failed.";
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      response = await fetch(`${apiUrl}${path}`, {
+        ...options,
+        headers
+      });
+      break;
+    } catch (error) {
+      if (canRetry && attempt < TRANSIENT_RETRY_ATTEMPTS && isLikelyTransientFetchError(error)) {
+        await wait(TRANSIENT_RETRY_DELAY_MS * (attempt + 1));
+        continue;
+      }
 
-    if (message.toLowerCase().includes("failed to fetch")) {
-      throw new Error("Cannot reach the LMS server right now. Please make sure the backend is running on port 4000 and try again.");
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : "Network request failed.";
+
+      if (isLikelyTransientFetchError(error)) {
+        throw new Error(`Cannot reach the LMS server right now. Please make sure the backend is running and that the API URL (${apiUrl}) is reachable.`);
+      }
+
+      throw new Error(message);
     }
-
-    throw new Error(message);
   }
 
   if (!response.ok) {
