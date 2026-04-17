@@ -225,7 +225,7 @@ export function StudentDashboardSection({
 
             <div className="mt-5 space-y-6">
               {isLoadingCourses ? (
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid grid-cols-2 gap-4">
                   {Array.from({ length: 4 }).map((_, index) => (
                     <div key={index} className="h-72 animate-pulse rounded-[26px] border border-slate-200 bg-slate-100" />
                   ))}
@@ -239,7 +239,7 @@ export function StudentDashboardSection({
                         <p className="text-xs text-slate-500">{courses.length} course{courses.length === 1 ? "" : "s"}</p>
                       </div>
                     </div>
-                    <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid grid-cols-2 gap-4">
                       {courses.map((course) => renderCourseCard(course))}
                     </div>
                   </div>
