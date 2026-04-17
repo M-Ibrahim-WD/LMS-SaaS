@@ -269,7 +269,7 @@ export default function DashboardPage() {
             </HeaderIconButton>
           </div>
 
-          <div ref={mobileMenuRef} className="relative sm:hidden">
+          <div ref={mobileMenuRef} className="relative self-start sm:hidden">
             <HeaderIconButton
               onClick={() => setMobileMenuOpen((current) => !current)}
               label="Menu"
@@ -278,7 +278,7 @@ export default function DashboardPage() {
             </HeaderIconButton>
 
             {mobileMenuOpen ? (
-              <div className="absolute right-0 top-[calc(100%+0.55rem)] z-30 flex w-[3.75rem] flex-col items-center gap-2 rounded-[28px] border border-slate-200 bg-white/98 p-2 shadow-[0_20px_45px_-26px_rgba(15,23,42,0.45)]">
+              <div className="absolute left-0 top-[calc(100%+0.55rem)] z-30 flex w-[3.75rem] flex-col items-center gap-2 rounded-[28px] border border-slate-200 bg-white/55 p-2 shadow-[0_20px_45px_-26px_rgba(15,23,42,0.45)] backdrop-blur-2xl">
                 <NotificationCenter
                   items={dashboard.notificationsQuery.data}
                   unreadCount={dashboard.unreadCountQuery.data?.unreadCount ?? 0}
