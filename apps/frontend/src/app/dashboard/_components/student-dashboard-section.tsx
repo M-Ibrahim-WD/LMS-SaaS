@@ -200,9 +200,9 @@ export function StudentDashboardSection({
               </div>
             </div>
 
-            <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_repeat(2,minmax(0,0.4fr))]">
+            <div className="mt-5 grid gap-3 grid-cols-2 lg:grid-cols-[minmax(0,1.2fr)_repeat(2,minmax(0,0.4fr))]">
               <input
-                className="field-input"
+                className="field-input col-span-2 lg:col-span-1"
                 placeholder="Search by course title or description"
                 value={searchQuery}
                 onChange={(event) => onSearchQueryChange(event.target.value)}
