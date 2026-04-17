@@ -303,6 +303,7 @@ export default function DashboardPage() {
                   onMarkAllRead={() =>
                     dashboard.markAllNotificationsReadMutation.mutate()
                   }
+                  showTooltip={false}
                 />
                 {profile?.role !== "ADMIN" ||
                 profile.isSuperAdmin ||

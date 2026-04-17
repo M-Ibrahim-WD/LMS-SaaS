@@ -38,6 +38,7 @@ interface NotificationCenterProps {
   isUpdating?: boolean;
   onMarkRead: (notificationId: string) => void;
   onMarkAllRead: () => void;
+  showTooltip?: boolean;
 }
 
 function BellSilentIcon() {
@@ -178,7 +179,8 @@ export function NotificationCenter({
   isLoading = false,
   isUpdating = false,
   onMarkRead,
-  onMarkAllRead
+  onMarkAllRead,
+  showTooltip = true
 }: NotificationCenterProps) {
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState<NotificationFilter>("ALL");
@@ -222,12 +224,14 @@ export function NotificationCenter({
         }`}
         aria-expanded={open}
         aria-label="Open notifications"
-        title="Notifications"
+        title={showTooltip ? "Notifications" : undefined}
       >
         {hasUnread ? <BellRingingIcon /> : <BellSilentIcon />}
-        <span className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 -translate-x-1/2 rounded-full bg-slate-950 px-2.5 py-1 text-[11px] font-semibold text-white opacity-0 shadow-lg transition duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
-          Notifications
-        </span>
+        {showTooltip ? (
+          <span className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 -translate-x-1/2 rounded-full bg-slate-950 px-2.5 py-1 text-[11px] font-semibold text-white opacity-0 shadow-lg transition duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
+            Notifications
+          </span>
+        ) : null}
         {hasUnread ? (
           <span className="absolute -right-1 -top-1 inline-flex min-w-6 items-center justify-center rounded-full bg-slate-950 px-2 py-0.5 text-[11px] font-semibold text-white">
             {unreadCount}
