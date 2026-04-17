@@ -216,6 +216,7 @@ export default function DashboardPage() {
     <PageShell
       title="Dashboard"
       description="Manage your workspace, monitor progress, and keep momentum with the next best actions."
+      actionsInlineOnMobile
       maxWidthClassName="max-w-7xl"
       actions={
         <div className="flex items-start gap-2">
