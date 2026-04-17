@@ -178,18 +178,6 @@ export default function DashboardPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement | null>(null);
 
-  if (!dashboard.hasHydrated) {
-    return <p className="p-6 text-sm text-slate-500">Loading session...</p>;
-  }
-
-  if (!dashboard.accessToken) {
-    return <p className="p-6 text-sm text-slate-500">Redirecting...</p>;
-  }
-
-  const profile = dashboard.profileQuery.data;
-  const directUnreadCount = dashboard.directUnreadConversationsQuery.data?.length ?? 0;
-  const supportUnreadCount = dashboard.supportUnreadConversationsQuery.data?.length ?? 0;
-
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
       if (!mobileMenuRef.current?.contains(event.target as Node)) {
@@ -211,6 +199,18 @@ export default function DashboardPage() {
       document.removeEventListener("keydown", handleEscape);
     };
   }, []);
+
+  if (!dashboard.hasHydrated) {
+    return <p className="p-6 text-sm text-slate-500">Loading session...</p>;
+  }
+
+  if (!dashboard.accessToken) {
+    return <p className="p-6 text-sm text-slate-500">Redirecting...</p>;
+  }
+
+  const profile = dashboard.profileQuery.data;
+  const directUnreadCount = dashboard.directUnreadConversationsQuery.data?.length ?? 0;
+  const supportUnreadCount = dashboard.supportUnreadConversationsQuery.data?.length ?? 0;
 
   return (
     <PageShell
