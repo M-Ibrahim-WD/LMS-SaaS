@@ -17,19 +17,21 @@ function HeaderIconLink({
   label,
   children,
   tone = "default",
-  badgeCount
+  badgeCount,
+  showTooltip = true
 }: {
   href: string;
   label: string;
   children: ReactNode;
   tone?: "default" | "accent";
   badgeCount?: number;
+  showTooltip?: boolean;
 }) {
   return (
     <Link
       href={href}
       aria-label={label}
-      title={label}
+      title={showTooltip ? label : undefined}
       className={`group relative inline-flex h-11 w-11 items-center justify-center rounded-full border bg-white shadow-sm transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200 focus-visible:ring-offset-2 hover:-translate-y-0.5 hover:shadow-md ${
         tone === "accent"
           ? "border-emerald-300 text-emerald-700 hover:border-emerald-400 hover:bg-emerald-50"
@@ -37,9 +39,11 @@ function HeaderIconLink({
       }`}
     >
       {children}
-      <span className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 -translate-x-1/2 rounded-full bg-slate-950 px-2.5 py-1 text-[11px] font-semibold text-white opacity-0 shadow-lg transition duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
-        {label}
-      </span>
+      {showTooltip ? (
+        <span className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 -translate-x-1/2 rounded-full bg-slate-950 px-2.5 py-1 text-[11px] font-semibold text-white opacity-0 shadow-lg transition duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
+          {label}
+        </span>
+      ) : null}
       {badgeCount && badgeCount > 0 ? (
         <span className="absolute -right-1 -top-1 inline-flex min-w-6 items-center justify-center rounded-full bg-emerald-600 px-2 py-0.5 text-[11px] font-semibold text-white">
           {badgeCount}
@@ -80,19 +84,21 @@ function HeaderIconButton({
   onClick,
   label,
   children,
-  tone = "default"
+  tone = "default",
+  showTooltip = true
 }: {
   onClick: () => void;
   label: string;
   children: ReactNode;
   tone?: "default" | "danger";
+  showTooltip?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-label={label}
-      title={label}
+      title={showTooltip ? label : undefined}
       className={`group relative inline-flex h-11 w-11 items-center justify-center rounded-full border bg-white shadow-sm transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 hover:-translate-y-0.5 hover:shadow-md ${
         tone === "danger"
           ? "border-rose-200 text-rose-600 hover:border-rose-300 hover:bg-rose-50 focus-visible:ring-rose-200"
@@ -100,9 +106,11 @@ function HeaderIconButton({
       }`}
     >
       {children}
-      <span className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 -translate-x-1/2 rounded-full bg-slate-950 px-2.5 py-1 text-[11px] font-semibold text-white opacity-0 shadow-lg transition duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
-        {label}
-      </span>
+      {showTooltip ? (
+        <span className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 -translate-x-1/2 rounded-full bg-slate-950 px-2.5 py-1 text-[11px] font-semibold text-white opacity-0 shadow-lg transition duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
+          {label}
+        </span>
+      ) : null}
     </button>
   );
 }
@@ -274,6 +282,7 @@ export default function DashboardPage() {
             <HeaderIconButton
               onClick={() => setMobileMenuOpen((current) => !current)}
               label="Menu"
+              showTooltip={false}
             >
               <MenuIcon />
             </HeaderIconButton>
@@ -302,6 +311,7 @@ export default function DashboardPage() {
                     href="/support"
                     label="Support"
                     badgeCount={supportUnreadCount}
+                    showTooltip={false}
                   >
                     <SupportIcon />
                   </HeaderIconLink>
@@ -311,19 +321,20 @@ export default function DashboardPage() {
                     href="/messages"
                     label="Messages"
                     badgeCount={directUnreadCount}
+                    showTooltip={false}
                   >
                     {directUnreadCount > 0 ? <MessageClosedIcon /> : <MessageOpenIcon />}
                   </HeaderIconLink>
                 ) : null}
-                <HeaderIconLink href="/profile" label="Profile">
+                <HeaderIconLink href="/profile" label="Profile" showTooltip={false}>
                   <ProfileIcon />
                 </HeaderIconLink>
                 {profile?.role === "ADMIN" ? (
-                  <HeaderIconLink href="/admin" label="Admin">
+                  <HeaderIconLink href="/admin" label="Admin" showTooltip={false}>
                     <AdminShieldIcon />
                   </HeaderIconLink>
                 ) : null}
-                <HeaderIconButton onClick={dashboard.onLogout} label="Logout" tone="danger">
+                <HeaderIconButton onClick={dashboard.onLogout} label="Logout" tone="danger" showTooltip={false}>
                   <LogoutIcon />
                 </HeaderIconButton>
               </div>
