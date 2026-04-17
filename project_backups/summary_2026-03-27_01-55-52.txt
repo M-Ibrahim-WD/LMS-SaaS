@@ -1,5 +1,0 @@
-﻿Preparing destructive cleanup requested by the user.
-Goal:
-- preserve only the admin account
-- preserve plan definitions
-- delete all other users and all tenant/course/payment/enrollment/review/certificate/subscription/notification content tied to non-admin workspaces

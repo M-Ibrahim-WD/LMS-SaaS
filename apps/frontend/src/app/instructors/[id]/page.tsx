@@ -126,7 +126,7 @@ export default function PublicInstructorProfilePage() {
               <ProfilePanel>
                 <SectionHeader eyebrow="Courses" title="Published courses" description="A storefront view of this instructor's available learning catalog." />
                 {profileQuery.data.courses.length ? (
-                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  <div className="grid grid-cols-2 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-3">
                     {profileQuery.data.courses.map((course) => (
                       <ProfileCourseCard
                         key={course.id}

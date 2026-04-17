@@ -2,11 +2,37 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$summaryText,
 
-    [string]$branch = "main",
+    [string]$branch = "",
 
     [switch]$SkipBackendTests,
     [switch]$SkipFrontendBuild
 )
+
+$currentPolicy = Get-ExecutionPolicy
+if ($currentPolicy -eq "Restricted" -or $currentPolicy -eq "AllSigned") {
+    $argList = @(
+        "-NoProfile"
+        "-ExecutionPolicy"
+        "Bypass"
+        "-File"
+        $PSCommandPath
+        "-summaryText"
+        $summaryText
+    )
+
+    if ($branch) {
+        $argList += @("-branch", $branch)
+    }
+    if ($SkipBackendTests) {
+        $argList += "-SkipBackendTests"
+    }
+    if ($SkipFrontendBuild) {
+        $argList += "-SkipFrontendBuild"
+    }
+
+    & powershell @argList
+    exit $LASTEXITCODE
+}
 
 $ErrorActionPreference = "Stop"
 
@@ -14,18 +40,13 @@ $projectPath = $PSScriptRoot
 $backendPath = Join-Path $projectPath "apps\backend"
 $frontendPath = Join-Path $projectPath "apps\frontend"
 $logFolder = Join-Path $projectPath "project_backups"
-$corepackHome = Join-Path $projectPath ".corepack-cache"
+$pnpmStorePath = Join-Path $projectPath "node_modules\.pnpm"
 $timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
 $logFile = Join-Path $logFolder "sync_$timestamp.log"
-$nodePath = "C:\Program Files\nodejs"
-$nodeExe = Join-Path $nodePath "node.exe"
+$nodeExe = Join-Path "C:\Program Files\nodejs" "node.exe"
 
 if (!(Test-Path $logFolder)) {
     New-Item -ItemType Directory -Path $logFolder -Force | Out-Null
-}
-
-if (!(Test-Path $corepackHome)) {
-    New-Item -ItemType Directory -Path $corepackHome -Force | Out-Null
 }
 
 function Write-Log {
@@ -57,8 +78,6 @@ function Invoke-ProjectCommand {
 
     $commandText = @(
         '$ErrorActionPreference = ''Stop'''
-        '$env:PATH=''C:\Program Files\nodejs;'' + $env:PATH'
-        '$env:COREPACK_HOME=''' + $corepackHome + ''''
         "Set-Location '$WorkingDirectory'"
         $Command
         'exit $LASTEXITCODE'
@@ -69,6 +88,30 @@ function Invoke-ProjectCommand {
     if ($LASTEXITCODE -ne 0) {
         throw $FailureMessage
     }
+}
+
+function Resolve-PnpmEntryScript {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$PackagePattern,
+        [Parameter(Mandatory = $true)]
+        [string]$RelativeEntry
+    )
+
+    $packageDir = Get-ChildItem -Path $pnpmStorePath -Directory -Filter $PackagePattern -ErrorAction Stop |
+        Sort-Object Name -Descending |
+        Select-Object -First 1
+
+    if (-not $packageDir) {
+        throw "Unable to find package '$PackagePattern' under $pnpmStorePath."
+    }
+
+    $entryPath = Join-Path $packageDir.FullName $RelativeEntry
+    if (-not (Test-Path $entryPath)) {
+        throw "Unable to find entry script '$RelativeEntry' under $($packageDir.FullName)."
+    }
+
+    return $entryPath
 }
 
 function Get-GhCommand {
@@ -87,30 +130,56 @@ function Get-GhCommand {
             if (Test-Path $candidate) {
                 return $candidate
             }
-        } catch {
+        }
+        catch {
         }
     }
 
     return $null
 }
 
+function Resolve-TargetBranch {
+    param([string]$RequestedBranch)
+
+    if ($RequestedBranch -and $RequestedBranch.Trim()) {
+        return $RequestedBranch.Trim()
+    }
+
+    $currentBranch = git rev-parse --abbrev-ref HEAD
+    if ($LASTEXITCODE -ne 0 -or -not $currentBranch) {
+        throw "Unable to determine the current git branch."
+    }
+
+    return $currentBranch.Trim()
+}
+
 Set-Location $projectPath
+$targetBranch = Resolve-TargetBranch -RequestedBranch $branch
 
 Invoke-Step "Backup and summary" {
-    & (Join-Path $projectPath "backup_and_summary.ps1") -summaryText $summaryText
+    & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $projectPath "backup_and_summary.ps1") -summaryText $summaryText
+    if ($LASTEXITCODE -ne 0) {
+        throw "Backup and summary step failed."
+    }
 }
+
+$frontendTscScript = Resolve-PnpmEntryScript -PackagePattern "typescript@*" -RelativeEntry "node_modules\typescript\bin\tsc"
+$nextBuildScript = Resolve-PnpmEntryScript -PackagePattern "next@*" -RelativeEntry "node_modules\next\dist\bin\next"
+$nestCliScript = Resolve-PnpmEntryScript -PackagePattern "@nestjs+cli@*" -RelativeEntry "node_modules\@nestjs\cli\bin\nest.js"
+$backendBuildCommand = 'Remove-Item -Recurse -Force ''dist'' -ErrorAction SilentlyContinue; Remove-Item -Force ''tsconfig.build.tsbuildinfo'' -ErrorAction SilentlyContinue; & ''{0}'' ''{1}'' build' -f $nodeExe, $nestCliScript
+$frontendBuildCommand = '$env:NEXT_DIST_DIR=''.next-build''; & ''{0}'' ''{1}'' build' -f $nodeExe, $nextBuildScript
 
 Invoke-Step "Frontend lint" {
     Invoke-ProjectCommand `
         -WorkingDirectory $frontendPath `
-        -Command "& 'C:\Program Files\nodejs\corepack.cmd' pnpm lint" `
+        -Command "& '$nodeExe' '$frontendTscScript' --noEmit -p 'tsconfig.lint.json'" `
         -FailureMessage "Frontend lint failed."
 }
 
 Invoke-Step "Backend build" {
     Invoke-ProjectCommand `
         -WorkingDirectory $backendPath `
-        -Command "& '$nodeExe' -e ""const fs=require('fs');['dist','tsconfig.build.tsbuildinfo'].forEach((p)=>fs.rmSync(p,{recursive:true,force:true}));""; & '.\node_modules\.bin\nest.cmd' build" `
+        -Command $backendBuildCommand `
         -FailureMessage "Backend build failed."
 }
 
@@ -127,7 +196,7 @@ if (-not $SkipFrontendBuild) {
     Invoke-Step "Frontend build" {
         Invoke-ProjectCommand `
             -WorkingDirectory $frontendPath `
-            -Command "& 'C:\Program Files\nodejs\corepack.cmd' pnpm build" `
+            -Command $frontendBuildCommand `
             -FailureMessage "Frontend build failed."
     }
 }
@@ -140,7 +209,8 @@ if ($ghCommand) {
             throw "GitHub CLI auth setup failed."
         }
     }
-} else {
+}
+else {
     Write-Log "GitHub CLI not found. Continuing with existing Git credentials."
 }
 
@@ -180,7 +250,7 @@ Invoke-Step "Git commit" {
 }
 
 Invoke-Step "Git push" {
-    git push origin $branch
+    git push origin $targetBranch
     if ($LASTEXITCODE -ne 0) {
         throw "Git push failed."
     }

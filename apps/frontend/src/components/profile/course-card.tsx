@@ -64,9 +64,9 @@ export function ProfileCourseCard({
   return (
     <Link
       href={targetHref}
-      className="group overflow-hidden rounded-[24px] border border-white/70 bg-white shadow-[0_24px_70px_-48px_rgba(15,23,42,0.65)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_28px_80px_-44px_rgba(15,23,42,0.75)]"
+      className="group min-w-0 overflow-hidden rounded-[24px] border border-white/70 bg-white shadow-[0_24px_70px_-48px_rgba(15,23,42,0.65)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_28px_80px_-44px_rgba(15,23,42,0.75)]"
     >
-      <div className={`relative h-36 overflow-hidden bg-gradient-to-br ${gradientForTitle(title)} p-5 text-white`}>
+      <div className={`relative h-28 overflow-hidden bg-gradient-to-br ${gradientForTitle(title)} p-3 text-white sm:h-36 sm:p-5`}>
         {imageUrl ? (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -83,13 +83,13 @@ export function ProfileCourseCard({
           </span>
         </div>
       </div>
-      <div className="p-4">
-        <h3 className="text-base font-semibold text-slate-950 transition group-hover:text-sky-700">{title}</h3>
-        <p className="mt-2 text-sm leading-6 text-slate-600">
+      <div className="p-3 sm:p-4">
+        <h3 className="line-clamp-2 text-sm font-semibold text-slate-950 transition group-hover:text-sky-700 sm:text-base">{title}</h3>
+        <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-600 sm:text-sm sm:leading-6">
           {description?.trim() ? description : ""}
         </p>
-        <div className="mt-4 flex items-center justify-between gap-3 text-xs text-slate-500">
-          <div className="flex flex-wrap items-center gap-3">
+        <div className="mt-3 flex items-center justify-between gap-2 text-[11px] text-slate-500 sm:mt-4 sm:gap-3 sm:text-xs">
+          <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
             <span>{studentsCount ?? 0} students</span>
             {reviewsCount ? (
               <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700">
@@ -106,7 +106,7 @@ export function ProfileCourseCard({
               </span>
             ) : null}
           </div>
-          <span className="font-medium text-slate-700">Open course</span>
+          <span className="shrink-0 font-medium text-slate-700">Open course</span>
         </div>
       </div>
     </Link>
