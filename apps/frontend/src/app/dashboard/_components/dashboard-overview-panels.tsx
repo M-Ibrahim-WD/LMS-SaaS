@@ -31,7 +31,7 @@ export function DashboardOverviewPanels({
                   <StatusChip>{profile.tenant?.name ?? "No workspace assigned"}</StatusChip>
                 </div>
               </div>
-              <div className="grid gap-3 sm:grid-cols-2 lg:w-[18rem]">
+              <div className="grid grid-cols-2 gap-3 lg:w-[18rem]">
                 <div className="rounded-[28px] border border-slate-200 bg-white/85 p-4">
                   <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Unread</p>
                   <p className="mt-2 text-2xl font-semibold text-slate-950">{unreadCount}</p>
