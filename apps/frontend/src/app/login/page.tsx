@@ -56,6 +56,7 @@ export default function LoginPage() {
     try {
       const response = await apiFetch<AuthResponse>("/auth/login", {
         method: "POST",
+        retryOnNetworkFailure: true,
         body: JSON.stringify({ email: email.trim().toLowerCase(), password })
       });
 

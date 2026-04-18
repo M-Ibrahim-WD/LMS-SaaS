@@ -5,6 +5,7 @@ const TRANSIENT_RETRY_ATTEMPTS = 2;
 
 interface FetchOptions extends RequestInit {
   token?: string;
+  retryOnNetworkFailure?: boolean;
 }
 
 function wait(delayMs: number) {
@@ -52,7 +53,7 @@ export async function apiFetch<T>(path: string, options: FetchOptions = {}): Pro
   const isFormDataBody = typeof FormData !== "undefined" && options.body instanceof FormData;
   const apiUrl = resolveApiUrl();
   const method = (options.method ?? "GET").toUpperCase();
-  const canRetry = method === "GET" || method === "HEAD";
+  const canRetry = method === "GET" || method === "HEAD" || options.retryOnNetworkFailure === true;
 
   if (!isFormDataBody) {
     headers.set("Content-Type", "application/json");
@@ -84,7 +85,9 @@ export async function apiFetch<T>(path: string, options: FetchOptions = {}): Pro
           : "Network request failed.";
 
       if (isLikelyTransientFetchError(error)) {
-        throw new Error(`Cannot reach the LMS server right now. Please make sure the backend is running and that the API URL (${apiUrl}) is reachable.`);
+        throw new Error(
+          "Cannot reach the LMS server right now. Please try again in a few seconds. If the issue continues, make sure the backend is running and the API URL is configured correctly."
+        );
       }
 
       throw new Error(message);

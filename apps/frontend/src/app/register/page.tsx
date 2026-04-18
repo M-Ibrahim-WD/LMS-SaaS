@@ -46,6 +46,7 @@ export default function RegisterPage() {
     try {
       const response = await apiFetch<AuthResponse>("/auth/register", {
         method: "POST",
+        retryOnNetworkFailure: true,
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
           fullName: fullName.trim(),
