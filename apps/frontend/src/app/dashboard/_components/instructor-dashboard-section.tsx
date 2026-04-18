@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import Link from "next/link";
-import type { FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { ContentCard } from "../../../components/content-card";
 import { StatusChip } from "../../../components/status-chip";
 import { PaymentProofActions } from "../../../components/payment-proof-actions";
@@ -124,6 +124,40 @@ function RatingStars({ rating }: { rating: number }) {
   );
 }
 
+function MobileAccordionCard({
+  title,
+  children
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <ContentCard className="p-0 sm:hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left"
+        aria-expanded={open}
+      >
+        <span className="text-lg font-semibold text-slate-950">{title}</span>
+        <span
+          className={`inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 transition ${
+            open ? "rotate-180" : ""
+          }`}
+          aria-hidden="true"
+        >
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
+            <path strokeLinecap="round" strokeLinejoin="round" d="m5 8 5 5 5-5" />
+          </svg>
+        </span>
+      </button>
+      {open ? <div className="px-6 pb-6">{children}</div> : null}
+    </ContentCard>
+  );
+}
+
 export function InstructorDashboardSection({
   accessToken,
   inviteCode,
@@ -238,7 +272,7 @@ export function InstructorDashboardSection({
           </div>
         </ContentCard>
 
-        <ContentCard className="p-6">
+        <ContentCard className="hidden p-6 sm:block">
           <p className="section-kicker">Workspace access</p>
           <h3 className="mt-2 text-xl font-semibold text-slate-950">Invite learners clearly</h3>
           <p className="mt-3 text-sm leading-7 text-slate-600">
@@ -258,6 +292,26 @@ export function InstructorDashboardSection({
             </button>
           </div>
         </ContentCard>
+        <MobileAccordionCard title="Invite learners clearly">
+          <p className="text-sm leading-7 text-slate-600">
+            Share a single invite code so students can join your workspace and discover your courses.
+          </p>
+          <div className="mt-5 rounded-[24px] border border-slate-200 bg-slate-50/90 p-4">
+            <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Invite code</p>
+            <div className="mt-3 flex items-center gap-3">
+              <code className="min-w-0 flex-1 overflow-x-auto rounded-2xl bg-white px-4 py-3 text-base font-semibold text-slate-900">
+                {inviteCode ?? "Loading..."}
+              </code>
+              <button
+                type="button"
+                onClick={() => void onCopyInviteCode()}
+                className="shrink-0 rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
+              >
+                Copy invite code
+              </button>
+            </div>
+          </div>
+        </MobileAccordionCard>
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
