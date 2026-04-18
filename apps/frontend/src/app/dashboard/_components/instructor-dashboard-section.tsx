@@ -198,7 +198,7 @@ export function InstructorDashboardSection({
                 </Link>
               </div>
             </div>
-            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
               <div className="rounded-[24px] border border-white/12 bg-white/10 p-4">
                 <p className="text-xs uppercase tracking-[0.18em] text-white/60">Pending payments</p>
                 <p className="mt-2 text-2xl font-semibold">{pendingPayments.length}</p>
@@ -211,7 +211,7 @@ export function InstructorDashboardSection({
                 <p className="text-xs uppercase tracking-[0.18em] text-white/60">Payment methods</p>
                 <p className="mt-2 text-2xl font-semibold">{paymentMethods?.length ?? 0}</p>
               </div>
-              <div className="rounded-[24px] border border-white/12 bg-white/10 p-4 sm:col-span-3">
+              <div className="col-span-2 rounded-[24px] border border-white/12 bg-white/10 p-4 sm:col-span-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="text-xs uppercase tracking-[0.18em] text-white/60">Reviews</p>
