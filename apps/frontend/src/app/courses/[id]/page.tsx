@@ -115,6 +115,7 @@ export default function CourseDetailsPage() {
     courseQuery,
     enrollMutation,
     isEnrolled,
+    isInstructor,
     isStudent,
     issueCertificateMutation,
     interviewSessionsQuery,
@@ -193,23 +194,29 @@ export default function CourseDetailsPage() {
     assessmentsQuery.data?.assignments.filter(
       (assignment) => assignment.scopeType === "COURSE"
     ) ?? [];
-  const visibleLessonQuizzes = lessonQuizzes.filter((quiz) => quiz.canAccess || Boolean(quiz.submission));
-  const visibleSectionQuizzes = sectionQuizzes.filter((quiz) => quiz.canAccess || Boolean(quiz.submission));
-  const visibleCourseQuizzes = courseQuizzes.filter((quiz) => quiz.canAccess || Boolean(quiz.submission));
-  const visibleLessonAssignments = lessonAssignments.filter(
-    (assignment) => assignment.canAccess || Boolean(assignment.submission)
-  );
-  const visibleSectionAssignments = sectionAssignments.filter(
-    (assignment) => assignment.canAccess || Boolean(assignment.submission)
-  );
-  const visibleCourseAssignments = courseAssignments.filter(
-    (assignment) => assignment.canAccess || Boolean(assignment.submission)
-  );
+  const visibleLessonQuizzes = isInstructor
+    ? lessonQuizzes
+    : lessonQuizzes.filter((quiz) => quiz.canAccess || Boolean(quiz.submission));
+  const visibleSectionQuizzes = isInstructor
+    ? sectionQuizzes
+    : sectionQuizzes.filter((quiz) => quiz.canAccess || Boolean(quiz.submission));
+  const visibleCourseQuizzes = isInstructor
+    ? courseQuizzes
+    : courseQuizzes.filter((quiz) => quiz.canAccess || Boolean(quiz.submission));
+  const visibleLessonAssignments = isInstructor
+    ? lessonAssignments
+    : lessonAssignments.filter((assignment) => assignment.canAccess || Boolean(assignment.submission));
+  const visibleSectionAssignments = isInstructor
+    ? sectionAssignments
+    : sectionAssignments.filter((assignment) => assignment.canAccess || Boolean(assignment.submission));
+  const visibleCourseAssignments = isInstructor
+    ? courseAssignments
+    : courseAssignments.filter((assignment) => assignment.canAccess || Boolean(assignment.submission));
   const warningQuiz =
     assessmentsQuery.data?.quizzes.find((quiz) => quiz.id === warningQuizId) ?? null;
   const activeQuiz =
     assessmentsQuery.data?.quizzes.find((quiz) => quiz.id === activeQuizId) ?? null;
-  const isQuizPopupClosable = Boolean(activeQuiz?.submission);
+  const isQuizPopupClosable = Boolean(activeQuiz?.submission) || isInstructor;
 
   const handleLaunchInterview = async () => {
     if (!activeInterview) {
@@ -297,6 +304,12 @@ export default function CourseDetailsPage() {
   }, [activeQuizId, isQuizPopupClosable, isStudent, onAbandonQuizAttempt]);
 
   const openQuizFlow = (quiz: CourseQuiz) => {
+    if (isInstructor) {
+      setWarningQuizId(null);
+      setActiveQuizId(quiz.id);
+      return;
+    }
+
     if (quiz.submission || quiz.attemptStatus === "IN_PROGRESS") {
       setWarningQuizId(null);
       setActiveQuizId(quiz.id);
@@ -307,61 +320,102 @@ export default function CourseDetailsPage() {
   };
 
   const closeQuizPopup = () => {
-    if (!isQuizPopupClosable) {
+    if (!isQuizPopupClosable && !isInstructor) {
       return;
     }
 
     setActiveQuizId(null);
   };
 
-  const renderQuizCard = (quiz: CourseQuiz) => (
-    <button
-      key={quiz.id}
-      type="button"
-      onClick={() => openQuizFlow(quiz)}
-      className="w-full rounded-[24px] border border-slate-200 bg-white p-4 text-left transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm"
-    >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-base font-semibold text-slate-950">{quiz.title}</p>
-          {quiz.description ? (
-            <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-600">{quiz.description}</p>
-          ) : null}
-          <p className="mt-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-            {quiz.scopeLabel}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {quiz.submission ? (
-            <span className="rounded-full bg-emerald-100 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-800">
-              {quiz.status === "BLANK" ? "Blank recorded" : "Submitted"}
-            </span>
-          ) : null}
-          {!quiz.submission ? (
-            <span className="rounded-full bg-amber-100 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-800">
-              {quiz.attemptStatus === "IN_PROGRESS" ? "Attempt in progress" : "One entry only"}
-            </span>
-          ) : null}
-        </div>
-      </div>
-      {quiz.submission ? (
-        <p className="mt-4 text-sm font-medium text-emerald-700">
-          Result recorded: {quiz.submission.score}/{quiz.submission.totalQuestions}
-        </p>
-      ) : (
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-slate-600 sm:max-w-[70%]">
-            {quiz.attemptStatus === "IN_PROGRESS"
-              ? "Your exam session is already active. Re-open it now to finish and submit."
-              : "Open the exam in a dedicated full-screen window and finish it in one sitting."}
-          </p>
-          <span className="rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700">
-            {quiz.attemptStatus === "IN_PROGRESS" ? "Resume exam" : "Open exam"}
+  const renderQuizCard = (quiz: CourseQuiz) =>
+    isInstructor ? (
+      <div
+        key={quiz.id}
+        className="w-full rounded-[24px] border border-slate-200 bg-white p-4 text-left"
+      >
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-base font-semibold text-slate-950">{quiz.title}</p>
+            {quiz.description ? (
+              <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-600">{quiz.description}</p>
+            ) : null}
+            <p className="mt-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+              {quiz.scopeLabel}
+            </p>
+          </div>
+          <span className="rounded-full bg-sky-100 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-sky-800">
+            Instructor access
           </span>
         </div>
-      )}
-    </button>
-  );
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-slate-600 sm:max-w-[70%]">
+            Open this exam to review its questions, or jump to the editor to manage its content.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => openQuizFlow(quiz)}
+              className="rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700"
+            >
+              Open exam
+            </button>
+            <Link
+              href={`/instructor/courses/${selectedCourse?.id ?? ""}/builder`}
+              className="rounded-full bg-slate-950 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white"
+            >
+              Manage in editor
+            </Link>
+          </div>
+        </div>
+      </div>
+    ) : (
+      <button
+        key={quiz.id}
+        type="button"
+        onClick={() => openQuizFlow(quiz)}
+        className="w-full rounded-[24px] border border-slate-200 bg-white p-4 text-left transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm"
+      >
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-base font-semibold text-slate-950">{quiz.title}</p>
+            {quiz.description ? (
+              <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-600">{quiz.description}</p>
+            ) : null}
+            <p className="mt-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+              {quiz.scopeLabel}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {quiz.submission ? (
+              <span className="rounded-full bg-emerald-100 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-800">
+                {quiz.status === "BLANK" ? "Blank recorded" : "Submitted"}
+              </span>
+            ) : null}
+            {!quiz.submission ? (
+              <span className="rounded-full bg-amber-100 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-800">
+                {quiz.attemptStatus === "IN_PROGRESS" ? "Attempt in progress" : "One entry only"}
+              </span>
+            ) : null}
+          </div>
+        </div>
+        {quiz.submission ? (
+          <p className="mt-4 text-sm font-medium text-emerald-700">
+            Result recorded: {quiz.submission.score}/{quiz.submission.totalQuestions}
+          </p>
+        ) : (
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-slate-600 sm:max-w-[70%]">
+              {quiz.attemptStatus === "IN_PROGRESS"
+                ? "Your exam session is already active. Re-open it now to finish and submit."
+                : "Open the exam in a dedicated full-screen window and finish it in one sitting."}
+            </p>
+            <span className="rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700">
+              {quiz.attemptStatus === "IN_PROGRESS" ? "Resume exam" : "Open exam"}
+            </span>
+          </div>
+        )}
+      </button>
+    );
 
   const renderAssignmentCard = (assignment: CourseAssignment) => (
     <div key={assignment.id} className="rounded-[24px] border border-slate-200 bg-white p-4 sm:p-5">
@@ -685,20 +739,30 @@ export default function CourseDetailsPage() {
                 <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">{selectedCourse.title}</h1>
                 <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">{selectedCourse.description}</p>
               </div>
-              <div className="flex flex-wrap items-center justify-end gap-2">
-                <span className={`rounded-full px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] ${selectedCourse.isPaid ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}`}>
-                  {selectedCourse.isPaid ? `Paid ${selectedCourse.price?.toFixed(2) ?? "0.00"}` : "Free"}
-                </span>
-                {nextInterview ? (
-                  <span
-                    className={`rounded-full px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] ${
-                      nextInterview.isJoinReady
-                        ? "bg-rose-100 text-rose-800"
-                        : "bg-sky-100 text-sky-800"
-                    }`}
-                  >
-                    {nextInterview.isJoinReady ? "Meeting live" : "Meeting scheduled"}
+              <div className="flex flex-col items-start gap-2 sm:items-end">
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <span className={`rounded-full px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] ${selectedCourse.isPaid ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}`}>
+                    {selectedCourse.isPaid ? `Paid ${selectedCourse.price?.toFixed(2) ?? "0.00"}` : "Free"}
                   </span>
+                  {nextInterview ? (
+                    <span
+                      className={`rounded-full px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] ${
+                        nextInterview.isJoinReady
+                          ? "bg-rose-100 text-rose-800"
+                          : "bg-sky-100 text-sky-800"
+                      }`}
+                    >
+                      {nextInterview.isJoinReady ? "Meeting live" : "Meeting scheduled"}
+                    </span>
+                  ) : null}
+                </div>
+                {isInstructor ? (
+                  <Link
+                    href={`/instructor/courses/${selectedCourse.id}/builder`}
+                    className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-slate-400 hover:bg-slate-50"
+                  >
+                    Edit course
+                  </Link>
                 ) : null}
               </div>
             </div>
@@ -1203,7 +1267,49 @@ export default function CourseDetailsPage() {
             <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-6 sm:py-6">
               <div className="mx-auto flex min-h-full w-full max-w-6xl flex-col gap-4">
                 <div className="rounded-[28px] border border-white/10 bg-white p-4 shadow-2xl sm:p-6">
-                  {activeQuiz.submission ? (
+                  {isInstructor ? (
+                    <div className="space-y-4">
+                      <div className="rounded-[24px] border border-sky-200 bg-sky-50 p-5">
+                        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700">
+                          Instructor exam view
+                        </p>
+                        <p className="mt-3 text-2xl font-semibold text-slate-950">
+                          Review exam structure
+                        </p>
+                        <p className="mt-3 text-sm leading-6 text-slate-600">
+                          This view lets you inspect the exam content from the course page. Use the editor to manage questions, options, and course structure.
+                        </p>
+                        <div className="mt-4">
+                          <Link
+                            href={`/instructor/courses/${selectedCourse.id}/builder`}
+                            className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
+                          >
+                            Open course editor
+                          </Link>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4">
+                        {activeQuiz.questions.map((question) => (
+                          <div key={question.id} className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+                            <p className="text-sm font-semibold text-slate-900">
+                              {question.order}. {question.question}
+                            </p>
+                            <div className="mt-3 grid gap-2">
+                              {question.options.map((option) => (
+                                <div
+                                  key={option}
+                                  className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700"
+                                >
+                                  {option}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : activeQuiz.submission ? (
                     <div className="space-y-4">
                       <div className="rounded-[24px] border border-emerald-200 bg-emerald-50 p-5">
                         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700">
