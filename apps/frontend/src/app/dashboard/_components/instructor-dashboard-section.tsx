@@ -126,15 +126,21 @@ function RatingStars({ rating }: { rating: number }) {
 
 function MobileAccordionCard({
   title,
-  children
+  children,
+  className = "sm:hidden",
+  contentClassName = "px-6 pb-6",
+  defaultOpen = false
 }: {
   title: string;
   children: ReactNode;
+  className?: string;
+  contentClassName?: string;
+  defaultOpen?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <ContentCard className="p-0 sm:hidden">
+    <ContentCard className={`p-0 ${className}`.trim()}>
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
@@ -153,7 +159,7 @@ function MobileAccordionCard({
           </svg>
         </span>
       </button>
-      {open ? <div className="px-6 pb-6">{children}</div> : null}
+      {open ? <div className={contentClassName}>{children}</div> : null}
     </ContentCard>
   );
 }
@@ -317,7 +323,7 @@ export function InstructorDashboardSection({
       </section>
 
       <section>
-        <ContentCard className="p-6">
+        <MobileAccordionCard title="Finance operations" className="" contentClassName="px-6 pb-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p className="section-kicker">Finance operations</p>
@@ -511,11 +517,11 @@ export function InstructorDashboardSection({
               </div>
             </>
           )}
-        </ContentCard>
+        </MobileAccordionCard>
       </section>
 
       <section>
-        <ContentCard className="p-6">
+        <MobileAccordionCard title="Session operations" className="" contentClassName="px-6 pb-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p className="section-kicker">Session operations</p>
@@ -772,7 +778,7 @@ export function InstructorDashboardSection({
               </div>
             </>
           )}
-        </ContentCard>
+        </MobileAccordionCard>
       </section>
     </div>
   );
