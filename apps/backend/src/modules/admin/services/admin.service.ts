@@ -19,6 +19,7 @@ import {
   ResetAdminPasswordDto,
   UpdateAdminPermissionsDto,
 } from "../dto/admin-users.dto";
+import { ReviewCourseDto } from "../dto/review-course.dto";
 import { AdminAccessService } from "./admin-access.service";
 import { AdminAuditService } from "./admin-audit.service";
 
@@ -533,6 +534,67 @@ export class AdminService {
         _count: { select: { enrollments: true, payments: true, reviews: true } }
       }
     });
+  }
+
+  async reviewCourse(currentUser: JwtPayload, courseId: string, dto: ReviewCourseDto) {
+    const actor = await this.adminAccessService.assertAdminPermission(
+      currentUser,
+      AdminPermission.REVIEW_COURSES
+    );
+    const course = await this.prisma.course.findFirst({
+      where: {
+        id: courseId,
+        ...(actor.isSuperAdmin ? {} : { tenantId: currentUser.tenantId ?? undefined })
+      },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        tenantId: true,
+        instructorId: true
+      }
+    });
+
+    if (!course) {
+      throw new NotFoundException("Course not found");
+    }
+
+    const report = dto.report.trim();
+    const stopCourse = Boolean(dto.stopCourse);
+    const updatedCourse = stopCourse
+      ? await this.prisma.course.update({
+          where: { id: course.id },
+          data: { status: "DRAFT" }
+        })
+      : await this.prisma.course.findUniqueOrThrow({
+          where: { id: course.id }
+        });
+
+    await this.adminAuditService.recordAuditLog({
+      actorUserId: actor.id,
+      action: stopCourse ? "COURSE_STOPPED_FOR_REVIEW" : "COURSE_REVIEW_REPORTED",
+      summary: stopCourse
+        ? `Stopped course ${course.title} and submitted a review report.`
+        : `Submitted a review report for course ${course.title}.`,
+      targetTenantId: course.tenantId,
+      targetUserId: course.instructorId,
+      metadata: {
+        courseId: course.id,
+        courseTitle: course.title,
+        previousStatus: course.status,
+        currentStatus: updatedCourse.status,
+        report
+      }
+    });
+
+    return {
+      id: updatedCourse.id,
+      title: updatedCourse.title,
+      status: updatedCourse.status,
+      reviewSubmitted: true,
+      stopCourse,
+      report
+    };
   }
 
   async listPayments(currentUser: JwtPayload, query: AdminPaymentsQueryDto) {

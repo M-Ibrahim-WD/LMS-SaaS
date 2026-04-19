@@ -4,7 +4,12 @@ import { ContentCard } from "../../../components/content-card";
 import { EmptyState } from "../../../components/empty-state";
 import { StatusBanner } from "../../../components/status-banner";
 import { StatusChip } from "../../../components/status-chip";
-import type { AdminActivity, AdminCourseSummary, AdminPaymentSummary, Overview } from "./admin-control-center.shared";
+import type {
+  AdminActivity,
+  AdminCourseSummary,
+  AdminPaymentSummary,
+  Overview
+} from "./admin-control-center.shared";
 import { money } from "./admin-control-center.shared";
 
 interface AdminOverviewSectionProps {
@@ -56,7 +61,7 @@ export function AdminOverviewSection({
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
-        {(canReviewCourses || canReviewPayments) ? (
+        {canReviewCourses || canReviewPayments ? (
           <ContentCard className="p-6">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -77,10 +82,21 @@ export function AdminOverviewSection({
                       <div key={course.id} className="rounded-2xl bg-white p-3 text-sm shadow-sm">
                         <p className="font-medium text-slate-900">{course.title}</p>
                         <p className="mt-1 text-slate-500">
-                          {course.instructor.fullName} • {course.tenant.name}
+                          {course.instructor.fullName} | {course.tenant.name}
                         </p>
+                        <a
+                          href={`/courses/${course.id}`}
+                          className="mt-3 inline-flex rounded-full border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-400"
+                        >
+                          Review course
+                        </a>
                       </div>
-                    )) ?? (coursesLoading ? <p className="text-sm text-slate-500">Loading courses...</p> : <p className="text-sm text-slate-500">No courses yet.</p>)}
+                    )) ??
+                      (coursesLoading ? (
+                        <p className="text-sm text-slate-500">Loading courses...</p>
+                      ) : (
+                        <p className="text-sm text-slate-500">No courses yet.</p>
+                      ))}
                   </div>
                 </div>
               ) : null}
@@ -92,10 +108,15 @@ export function AdminOverviewSection({
                       <div key={payment.id} className="rounded-2xl bg-white p-3 text-sm shadow-sm">
                         <p className="font-medium text-slate-900">{payment.course.title}</p>
                         <p className="mt-1 text-slate-500">
-                          {payment.user.fullName} • {money.format(payment.amount)}
+                          {payment.user.fullName} | {money.format(payment.amount)}
                         </p>
                       </div>
-                    )) ?? (paymentsLoading ? <p className="text-sm text-slate-500">Loading payments...</p> : <p className="text-sm text-slate-500">No payments yet.</p>)}
+                    )) ??
+                      (paymentsLoading ? (
+                        <p className="text-sm text-slate-500">Loading payments...</p>
+                      ) : (
+                        <p className="text-sm text-slate-500">No payments yet.</p>
+                      ))}
                   </div>
                 </div>
               ) : null}
@@ -137,12 +158,21 @@ export function AdminOverviewSection({
                     <p className="mt-2 text-xs text-slate-500">
                       {course._count.enrollments} enrollments | {course._count.reviews} reviews | {course.status}
                     </p>
+                    <a
+                      href={`/courses/${course.id}`}
+                      className="mt-3 inline-flex rounded-full border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-400"
+                    >
+                      Open review page
+                    </a>
                   </div>
                 ))
               ) : coursesLoading ? (
                 <StatusBanner>Loading courses...</StatusBanner>
               ) : (
-                <EmptyState title="No courses yet" description="Course oversight will appear here when courses exist." />
+                <EmptyState
+                  title="No courses yet"
+                  description="Course oversight will appear here when courses exist."
+                />
               )}
             </div>
           </ContentCard>
@@ -167,7 +197,10 @@ export function AdminOverviewSection({
               ) : paymentsLoading ? (
                 <StatusBanner>Loading payments...</StatusBanner>
               ) : (
-                <EmptyState title="No payments yet" description="Payment oversight will appear here when transactions exist." />
+                <EmptyState
+                  title="No payments yet"
+                  description="Payment oversight will appear here when transactions exist."
+                />
               )}
             </div>
           </ContentCard>
@@ -222,7 +255,10 @@ export function AdminOverviewSection({
         ) : activityLoading ? (
           <StatusBanner>Loading activity...</StatusBanner>
         ) : (
-          <EmptyState title="No recent activity" description="Platform activity will populate here as the system is used." />
+          <EmptyState
+            title="No recent activity"
+            description="Platform activity will populate here as the system is used."
+          />
         )}
       </ContentCard>
     </>

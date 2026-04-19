@@ -113,6 +113,7 @@ export default function CourseDetailsPage() {
     completionStatusQuery,
     courseProgress,
     courseQuery,
+    isAdminReviewer,
     enrollMutation,
     isEnrolled,
     isInstructor,
@@ -146,14 +147,17 @@ export default function CourseDetailsPage() {
     recordInterviewAttendanceMutation,
     reviewComment,
     reviewRating,
+    reviewCourseMutation,
     selectedCourse,
     selectedMethodId,
     setActiveInterviewId,
     setActiveQuizId,
+    setAdminReviewReport,
     setWarningQuizId,
     setAssignmentDrafts,
     setAssignmentFormErrors,
     setQuizAnswer,
+    adminReviewReport,
     setReviewComment,
     setReviewRating,
     setSelectedMethodId,
@@ -194,29 +198,30 @@ export default function CourseDetailsPage() {
     assessmentsQuery.data?.assignments.filter(
       (assignment) => assignment.scopeType === "COURSE"
     ) ?? [];
-  const visibleLessonQuizzes = isInstructor
+  const isReviewer = isInstructor || isAdminReviewer;
+  const visibleLessonQuizzes = isReviewer
     ? lessonQuizzes
     : lessonQuizzes.filter((quiz) => quiz.canAccess || Boolean(quiz.submission));
-  const visibleSectionQuizzes = isInstructor
+  const visibleSectionQuizzes = isReviewer
     ? sectionQuizzes
     : sectionQuizzes.filter((quiz) => quiz.canAccess || Boolean(quiz.submission));
-  const visibleCourseQuizzes = isInstructor
+  const visibleCourseQuizzes = isReviewer
     ? courseQuizzes
     : courseQuizzes.filter((quiz) => quiz.canAccess || Boolean(quiz.submission));
-  const visibleLessonAssignments = isInstructor
+  const visibleLessonAssignments = isReviewer
     ? lessonAssignments
     : lessonAssignments.filter((assignment) => assignment.canAccess || Boolean(assignment.submission));
-  const visibleSectionAssignments = isInstructor
+  const visibleSectionAssignments = isReviewer
     ? sectionAssignments
     : sectionAssignments.filter((assignment) => assignment.canAccess || Boolean(assignment.submission));
-  const visibleCourseAssignments = isInstructor
+  const visibleCourseAssignments = isReviewer
     ? courseAssignments
     : courseAssignments.filter((assignment) => assignment.canAccess || Boolean(assignment.submission));
   const warningQuiz =
     assessmentsQuery.data?.quizzes.find((quiz) => quiz.id === warningQuizId) ?? null;
   const activeQuiz =
     assessmentsQuery.data?.quizzes.find((quiz) => quiz.id === activeQuizId) ?? null;
-  const isQuizPopupClosable = Boolean(activeQuiz?.submission) || isInstructor;
+  const isQuizPopupClosable = Boolean(activeQuiz?.submission) || isReviewer;
 
   const handleLaunchInterview = async () => {
     if (!activeInterview) {
@@ -304,7 +309,7 @@ export default function CourseDetailsPage() {
   }, [activeQuizId, isQuizPopupClosable, isStudent, onAbandonQuizAttempt]);
 
   const openQuizFlow = (quiz: CourseQuiz) => {
-    if (isInstructor) {
+    if (isReviewer) {
       setWarningQuizId(null);
       setActiveQuizId(quiz.id);
       return;
@@ -320,7 +325,7 @@ export default function CourseDetailsPage() {
   };
 
   const closeQuizPopup = () => {
-    if (!isQuizPopupClosable && !isInstructor) {
+    if (!isQuizPopupClosable && !isReviewer) {
       return;
     }
 
@@ -328,7 +333,7 @@ export default function CourseDetailsPage() {
   };
 
   const renderQuizCard = (quiz: CourseQuiz) =>
-    isInstructor ? (
+    isReviewer ? (
       <div
         key={quiz.id}
         className="w-full rounded-[24px] border border-slate-200 bg-white p-4 text-left"
@@ -344,12 +349,14 @@ export default function CourseDetailsPage() {
             </p>
           </div>
           <span className="rounded-full bg-sky-100 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-sky-800">
-            Instructor access
+            {isInstructor ? "Instructor access" : "Admin review"}
           </span>
         </div>
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-slate-600 sm:max-w-[70%]">
-            Open this exam to review its questions, or jump to the editor to manage its content.
+            {isInstructor
+              ? "Open this exam to review its questions, or jump to the editor to manage its content."
+              : "Open this exam to inspect its questions, answers, and publishing quality from the admin review flow."}
           </p>
           <div className="flex flex-wrap gap-2">
             <button
@@ -359,12 +366,14 @@ export default function CourseDetailsPage() {
             >
               Open exam
             </button>
-            <Link
-              href={`/instructor/courses/${selectedCourse?.id ?? ""}/builder`}
-              className="rounded-full bg-slate-950 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white"
-            >
-              Manage in editor
-            </Link>
+            {isInstructor ? (
+              <Link
+                href={`/instructor/courses/${selectedCourse?.id ?? ""}/builder`}
+                className="rounded-full bg-slate-950 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white"
+              >
+                Manage in editor
+              </Link>
+            ) : null}
           </div>
         </div>
       </div>
@@ -771,6 +780,70 @@ export default function CourseDetailsPage() {
               <span className="rounded-full bg-slate-100 px-3 py-1">{selectedCourse.level.toLowerCase()}</span>
               {selectedCourse.instructor ? <span className="rounded-full bg-slate-100 px-3 py-1">Instructor: {selectedCourse?.instructor?.fullName}</span> : null}
             </div>
+            {isAdminReviewer ? (
+              <div className="mt-6 rounded-[28px] border border-rose-200 bg-rose-50/80 p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-700">Admin review</p>
+                    <h2 className="mt-2 text-xl font-semibold text-slate-950">Review, stop, and report this course</h2>
+                    <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+                      Use this panel to document errors or terms violations. You can submit a review report on its own or stop the course and file the report in one action.
+                    </p>
+                  </div>
+                  <span className={`rounded-full px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] ${
+                    selectedCourse.status === "PUBLISHED" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
+                  }`}>
+                    {selectedCourse.status === "PUBLISHED" ? "Active course" : "Stopped / draft"}
+                  </span>
+                </div>
+                <div className="mt-4 space-y-3">
+                  <textarea
+                    value={adminReviewReport}
+                    onChange={(event) => setAdminReviewReport(event.target.value)}
+                    placeholder="Write the review report here. Describe the issue, affected area, and any terms or quality violations you found."
+                    className="min-h-36 w-full rounded-[24px] border border-rose-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-rose-300"
+                  />
+                  {reviewCourseMutation.isError ? (
+                    <p className="text-sm text-rose-700">
+                      {(reviewCourseMutation.error as Error)?.message || "The review action could not be completed."}
+                    </p>
+                  ) : null}
+                  {reviewCourseMutation.isSuccess ? (
+                    <p className="text-sm text-emerald-700">
+                      Review report saved. The course record has been refreshed with the latest admin action.
+                    </p>
+                  ) : null}
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        reviewCourseMutation.mutate({
+                          report: adminReviewReport.trim(),
+                          stopCourse: false
+                        })
+                      }
+                      disabled={reviewCourseMutation.isPending || adminReviewReport.trim().length < 10}
+                      className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {reviewCourseMutation.isPending ? "Saving..." : "Submit report"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        reviewCourseMutation.mutate({
+                          report: adminReviewReport.trim(),
+                          stopCourse: true
+                        })
+                      }
+                      disabled={reviewCourseMutation.isPending || adminReviewReport.trim().length < 10}
+                      className="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {reviewCourseMutation.isPending ? "Stopping..." : "Stop course and report"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
             {isStudent && courseProgress ? (
               <div className="mt-6 grid grid-cols-3 gap-3">
                 <StatPill label="Progress" value={`${courseProgress.percentage}%`} tone="info" />
@@ -1267,26 +1340,30 @@ export default function CourseDetailsPage() {
             <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-6 sm:py-6">
               <div className="mx-auto flex min-h-full w-full max-w-6xl flex-col gap-4">
                 <div className="rounded-[28px] border border-white/10 bg-white p-4 shadow-2xl sm:p-6">
-                  {isInstructor ? (
+                  {isReviewer ? (
                     <div className="space-y-4">
-                      <div className="rounded-[24px] border border-sky-200 bg-sky-50 p-5">
-                        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700">
-                          Instructor exam view
+                      <div className={`rounded-[24px] border p-5 ${isInstructor ? "border-sky-200 bg-sky-50" : "border-rose-200 bg-rose-50"}`}>
+                        <p className={`text-xs font-semibold uppercase tracking-[0.24em] ${isInstructor ? "text-sky-700" : "text-rose-700"}`}>
+                          {isInstructor ? "Instructor exam view" : "Admin review view"}
                         </p>
                         <p className="mt-3 text-2xl font-semibold text-slate-950">
                           Review exam structure
                         </p>
                         <p className="mt-3 text-sm leading-6 text-slate-600">
-                          This view lets you inspect the exam content from the course page. Use the editor to manage questions, options, and course structure.
+                          {isInstructor
+                            ? "This view lets you inspect the exam content from the course page. Use the editor to manage questions, options, and course structure."
+                            : "This view lets you inspect the exam content, question quality, and answer key before deciding whether the course should remain active."}
                         </p>
-                        <div className="mt-4">
-                          <Link
-                            href={`/instructor/courses/${selectedCourse.id}/builder`}
-                            className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
-                          >
-                            Open course editor
-                          </Link>
-                        </div>
+                        {isInstructor ? (
+                          <div className="mt-4">
+                            <Link
+                              href={`/instructor/courses/${selectedCourse.id}/builder`}
+                              className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
+                            >
+                              Open course editor
+                            </Link>
+                          </div>
+                        ) : null}
                       </div>
 
                       <div className="space-y-4">
@@ -1299,7 +1376,11 @@ export default function CourseDetailsPage() {
                               {question.options.map((option) => (
                                 <div
                                   key={option}
-                                  className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700"
+                                  className={`rounded-2xl border px-3 py-3 text-sm ${
+                                    question.correctAnswer === option
+                                      ? "border-emerald-300 bg-emerald-50 text-emerald-900"
+                                      : "border-slate-200 bg-white text-slate-700"
+                                  }`}
                                 >
                                   {option}
                                 </div>

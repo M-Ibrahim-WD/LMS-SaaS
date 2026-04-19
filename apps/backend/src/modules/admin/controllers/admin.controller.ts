@@ -20,6 +20,7 @@ import {
   ResetAdminPasswordDto,
   UpdateAdminPermissionsDto
 } from "../dto/admin-users.dto";
+import { ReviewCourseDto } from "../dto/review-course.dto";
 
 @Controller("admin")
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -85,6 +86,15 @@ export class AdminController {
   @Get("courses")
   listCourses(@CurrentUser() user: JwtPayload, @Query() query: AdminCoursesQueryDto) {
     return this.adminService.listCourses(user, query);
+  }
+
+  @Patch("courses/:id/review")
+  reviewCourse(
+    @CurrentUser() user: JwtPayload,
+    @Param("id") id: string,
+    @Body() dto: ReviewCourseDto
+  ) {
+    return this.adminService.reviewCourse(user, id, dto);
   }
 
   @Get("payments")

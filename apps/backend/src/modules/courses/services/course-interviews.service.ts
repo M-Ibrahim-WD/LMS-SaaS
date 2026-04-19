@@ -405,6 +405,18 @@ export class CourseInterviewsService {
       return course;
     }
 
+    if (currentUser.role === UserRole.ADMIN) {
+      const canReviewCourses =
+        currentUser.isSuperAdmin || currentUser.adminPermissions?.includes("REVIEW_COURSES");
+      if (!canReviewCourses) {
+        throw new ForbiddenException("You do not have permission to review course interviews.");
+      }
+      if (!currentUser.isSuperAdmin && course.tenantId !== currentUser.tenantId) {
+        throw new ForbiddenException("This course is outside your admin workspace.");
+      }
+      return course;
+    }
+
     if (requireInstructor) {
       throw new ForbiddenException("Instructor access is required.");
     }

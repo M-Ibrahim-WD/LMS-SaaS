@@ -56,6 +56,11 @@ export function useCourseDetailsWorkspace() {
 
   const isInstructor = user?.role === "INSTRUCTOR";
   const isStudent = user?.role === "STUDENT";
+  const isAdmin = user?.role === "ADMIN";
+  const isAdminReviewer = Boolean(
+    isAdmin && (user?.isSuperAdmin || user?.adminPermissions?.includes("REVIEW_COURSES"))
+  );
+  const [adminReviewReport, setAdminReviewReport] = useState("");
 
   const coursesQuery = useQuery({
     queryKey: ["courses"],
@@ -94,7 +99,7 @@ export function useCourseDetailsWorkspace() {
   const isEnrolled = Boolean(
     myEnrollmentsQuery.data?.some((item) => item.courseId === params.id)
   );
-  const canAccessLessons = isInstructor || (isStudent && isEnrolled);
+  const canAccessLessons = isInstructor || isAdminReviewer || (isStudent && isEnrolled);
 
   const courseQuery = useQuery({
     queryKey: ["course", params.id],
@@ -325,6 +330,29 @@ export function useCourseDetailsWorkspace() {
         queryClient.invalidateQueries({
           queryKey: ["public-instructor-profile"]
         })
+      ]);
+    }
+  });
+
+  const reviewCourseMutation = useMutation({
+    mutationFn: ({
+      report,
+      stopCourse
+    }: {
+      report: string;
+      stopCourse: boolean;
+    }) =>
+      apiFetch(`/admin/courses/${params.id}/review`, {
+        method: "PATCH",
+        token: accessToken ?? undefined,
+        body: JSON.stringify({ report, stopCourse })
+      }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["course", params.id] }),
+        queryClient.invalidateQueries({ queryKey: ["courses"] }),
+        queryClient.invalidateQueries({ queryKey: ["admin", "courses"] }),
+        courseQuery.refetch()
       ]);
     }
   });
@@ -657,6 +685,8 @@ export function useCourseDetailsWorkspace() {
     setWarningQuizId,
     isInstructor,
     isStudent,
+    isAdmin,
+    isAdminReviewer,
     coursesQuery,
     myEnrollmentsQuery,
     paymentMethodsQuery,
@@ -678,7 +708,10 @@ export function useCourseDetailsWorkspace() {
     submitAssignmentMutation,
     issueCertificateMutation,
     submitReviewMutation,
+    reviewCourseMutation,
     submitPaymentMutation,
+    adminReviewReport,
+    setAdminReviewReport,
     selectedCourse,
     manualMethods,
     latestPayment,

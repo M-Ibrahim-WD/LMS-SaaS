@@ -40,10 +40,14 @@ export class AssessmentsService {
   ) {}
 
   async getCourseAssessments(user: JwtPayload, courseId: string) {
+    const canReviewAsAdmin =
+      user.role === "ADMIN" && (user.isSuperAdmin || user.adminPermissions?.includes("REVIEW_COURSES"));
     const course =
       user.role === "INSTRUCTOR"
         ? await this.assertInstructorOwnsCourse(courseId, user)
-        : await this.assertStudentCanAccessCourse(courseId, user);
+        : canReviewAsAdmin
+          ? await this.assertAdminCanReviewCourse(courseId, user)
+          : await this.assertStudentCanAccessCourse(courseId, user);
 
     const sections = await this.prisma.section.findMany({
       where: { courseId: course.id },
@@ -188,7 +192,9 @@ export class AssessmentsService {
             type: question.type,
             options: question.options,
             order: question.order,
-            ...(user.role === "INSTRUCTOR" ? { correctAnswer: question.correctAnswer } : {})
+            ...((user.role === "INSTRUCTOR" || canReviewAsAdmin)
+              ? { correctAnswer: question.correctAnswer }
+              : {})
           })),
           submission: studentSubmission
         };
@@ -284,6 +290,29 @@ export class AssessmentsService {
         student: submission.student
       }))
     }));
+  }
+
+  private async assertAdminCanReviewCourse(courseId: string, user: JwtPayload) {
+    if (!(user.isSuperAdmin || user.adminPermissions?.includes("REVIEW_COURSES"))) {
+      throw new ForbiddenException("You do not have permission to review courses.");
+    }
+
+    const course = await this.prisma.course.findFirst({
+      where: {
+        id: courseId,
+        ...(user.isSuperAdmin ? {} : { tenantId: user.tenantId ?? undefined })
+      },
+      select: {
+        id: true,
+        tenantId: true
+      }
+    });
+
+    if (!course) {
+      throw new NotFoundException("Course not found.");
+    }
+
+    return course;
   }
 
   async getCourseQuizSubmissions(user: JwtPayload, courseId: string) {
