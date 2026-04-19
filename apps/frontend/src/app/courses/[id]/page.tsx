@@ -69,6 +69,31 @@ function MobileSection({
   );
 }
 
+function AccordionWorkspacePanel({
+  title,
+  defaultOpen = false,
+  children
+}: {
+  title: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <details
+      open={defaultOpen}
+      className="surface-card overflow-hidden rounded-[22px] sm:rounded-[28px]"
+    >
+      <summary className="cursor-pointer list-none px-4 py-4 sm:px-5 sm:py-5">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold tracking-tight text-slate-950 sm:text-[1.1rem]">{title}</h2>
+          <span className="text-xs uppercase tracking-[0.18em] text-slate-400">Open</span>
+        </div>
+      </summary>
+      <div className="border-t border-slate-100 px-4 pb-4 pt-4 sm:px-5 sm:pb-5">{children}</div>
+    </details>
+  );
+}
+
 export default function CourseDetailsPage() {
   const [countdownNow, setCountdownNow] = useState(() => Date.now());
   const [hoveredReviewRating, setHoveredReviewRating] = useState<number | null>(null);
@@ -999,7 +1024,9 @@ export default function CourseDetailsPage() {
 
           <div className="hidden lg:grid lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-5">
             <aside className="space-y-5">
-              <WorkspacePanel title="Course navigation">{renderNavigationContent()}</WorkspacePanel>
+              <AccordionWorkspacePanel title="Course navigation" defaultOpen>
+                {renderNavigationContent()}
+              </AccordionWorkspacePanel>
               {renderCompletionContent() ? <WorkspacePanel title="Completion">{renderCompletionContent()}</WorkspacePanel> : null}
               {hasReviewCard ? <WorkspacePanel title="Course review">{reviewTabContent}</WorkspacePanel> : null}
             </aside>
@@ -1042,7 +1069,7 @@ export default function CourseDetailsPage() {
               )}
 
               {supportTabs.length ? (
-                <WorkspacePanel title="Assessments & Exams">
+                <AccordionWorkspacePanel title="Assessments & Exams" defaultOpen>
                   <div className="flex flex-wrap gap-2">
                     {supportTabs.map((tab) => (
                       <button
@@ -1086,7 +1113,7 @@ export default function CourseDetailsPage() {
                     </div>
                   ) : null}
                   <div className="mt-5">{activeSupportTabContent}</div>
-                </WorkspacePanel>
+                </AccordionWorkspacePanel>
               ) : null}
               {renderInstructorContent() ? <WorkspacePanel title="Instructor">{renderInstructorContent()}</WorkspacePanel> : null}
             </section>
