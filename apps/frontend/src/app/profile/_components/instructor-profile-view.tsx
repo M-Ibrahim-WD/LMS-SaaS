@@ -89,7 +89,7 @@ export function InstructorProfileView({
               action={<Link href="/instructor/courses" className="rounded-full bg-slate-950 px-4 py-2 text-sm font-medium text-white">Manage courses</Link>}
             />
             {courses?.length ? (
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-2 gap-4 xl:grid-cols-3">
                 {courses.map((course) => (
                   <ProfileCourseCard
                     key={course.id}

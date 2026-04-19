@@ -77,7 +77,7 @@ export function StudentProfileView({
           <ProfilePanel>
             <SectionHeader eyebrow="Learning" title="Continue where you left off" description="" />
             {courses?.length ? (
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-2 gap-4 xl:grid-cols-3">
                 {courses.map((enrollment) => (
                   <div key={enrollment.id} className="space-y-3">
                     <ProfileCourseCard
