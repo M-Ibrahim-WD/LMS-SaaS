@@ -720,6 +720,30 @@ export default function CourseDetailsPage() {
       : activeAssessmentScope.assignments.length
         ? renderAssignmentCollection(activeAssessmentScope.assignments)
         : <EmptyState title="No assignments in this tab" description="" />;
+  const courseLoadError =
+    (courseQuery.error as Error | null)?.message ?? null;
+
+  if (courseQuery.isLoading || (canAccessLessons && !selectedCourse && !courseLoadError)) {
+    return (
+      <main className="mx-auto max-w-6xl p-8">
+        <BackButton fallbackHref="/courses" />
+        <StatusBanner>Loading course review workspace...</StatusBanner>
+      </main>
+    );
+  }
+
+  if (courseLoadError) {
+    return (
+      <main className="mx-auto max-w-6xl p-8">
+        <BackButton fallbackHref="/courses" />
+        <div className="mt-4 rounded-[24px] border border-rose-200 bg-rose-50 p-5 text-sm text-rose-800">
+          <p className="font-semibold text-rose-900">This course could not be opened.</p>
+          <p className="mt-2">{courseLoadError}</p>
+        </div>
+      </main>
+    );
+  }
+
   if (!selectedCourse) {
     return (
       <main className="mx-auto max-w-6xl p-8">

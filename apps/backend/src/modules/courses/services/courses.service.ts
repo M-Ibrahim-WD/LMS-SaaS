@@ -226,12 +226,15 @@ export class CoursesService {
     }
 
     if (user.role === "ADMIN") {
-      if (!user.tenantId) {
+      if (!user.isSuperAdmin && !user.tenantId) {
         return [];
       }
 
       return this.prisma.course.findMany({
-        where,
+        where: {
+          ...where,
+          ...(user.isSuperAdmin ? {} : { tenantId: user.tenantId ?? undefined })
+        },
         skip: pagination.skip,
         take: pagination.take,
         orderBy: { createdAt: "desc" },
@@ -295,14 +298,14 @@ export class CoursesService {
     }
 
     if (user.role === "ADMIN") {
-      if (!user.tenantId) {
+      if (!user.isSuperAdmin && !user.tenantId) {
         throw new NotFoundException("Course not found");
       }
 
       const adminCourse = await this.prisma.course.findFirst({
         where: {
           id,
-          tenantId: user.tenantId
+          ...(user.isSuperAdmin ? {} : { tenantId: user.tenantId ?? undefined })
         },
         include: this.includeTree
       });
