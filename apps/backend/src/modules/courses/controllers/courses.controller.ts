@@ -103,16 +103,19 @@ export class CoursesController {
   }
 
   @Roles("INSTRUCTOR", "ADMIN")
+  @RequireTenant(false)
   @Get(":id/security-events")
   getCourseSecurityEvents(@CurrentUser() user: JwtPayload, @Param("id") id: string) {
     return this.coursesService.getCourseSecurityEvents(user, id);
   }
 
+  @RequireTenant(false)
   @Get(":id")
   getOne(@CurrentUser() user: JwtPayload, @Param("id") id: string) {
     return this.coursesService.getOne(user, id);
   }
 
+  @RequireTenant(false)
   @Get(":id/interviews")
   listInterviews(@CurrentUser() user: JwtPayload, @Param("id") id: string) {
     return this.courseInterviewsService.listForCourse(user, id);
@@ -124,6 +127,7 @@ export class CoursesController {
     return this.courseInterviewsService.listForInstructorDashboard(user);
   }
 
+  @RequireTenant(false)
   @Get("interviews/:interviewId")
   getInterview(@CurrentUser() user: JwtPayload, @Param("interviewId") interviewId: string) {
     return this.courseInterviewsService.getOne(user, interviewId);

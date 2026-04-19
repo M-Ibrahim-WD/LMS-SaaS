@@ -21,6 +21,7 @@ import { AssessmentsService } from "../services/assessments.service";
 export class AssessmentsController {
   constructor(private readonly assessmentsService: AssessmentsService) {}
 
+  @RequireTenant(false)
   @Get("courses/:courseId")
   getCourseAssessments(@CurrentUser() user: JwtPayload, @Param("courseId") courseId: string) {
     return this.assessmentsService.getCourseAssessments(user, courseId);
