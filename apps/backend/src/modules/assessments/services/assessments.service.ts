@@ -300,7 +300,7 @@ export class AssessmentsService {
     const course = await this.prisma.course.findFirst({
       where: {
         id: courseId,
-        ...(user.isSuperAdmin ? {} : { tenantId: user.tenantId ?? undefined })
+        ...(user.isSuperAdmin || !user.tenantId ? {} : { tenantId: user.tenantId })
       },
       select: {
         id: true,

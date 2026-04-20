@@ -114,7 +114,11 @@ export class LessonsService {
         throw new ForbiddenException("You do not have access to this lesson");
       }
     } else if (user.role === UserRole.ADMIN) {
-      if (!user.isSuperAdmin && course.tenantId !== user.tenantId) {
+      const canReviewCourses = user.isSuperAdmin || user.adminPermissions?.includes("REVIEW_COURSES");
+      if (!canReviewCourses) {
+        throw new ForbiddenException("You do not have access to this lesson");
+      }
+      if (!user.isSuperAdmin && user.tenantId && course.tenantId !== user.tenantId) {
         throw new ForbiddenException("You do not have access to this lesson");
       }
     } else {

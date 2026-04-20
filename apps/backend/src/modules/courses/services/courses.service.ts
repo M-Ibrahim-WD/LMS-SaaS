@@ -298,14 +298,15 @@ export class CoursesService {
     }
 
     if (user.role === "ADMIN") {
-      if (!user.isSuperAdmin && !user.tenantId) {
-        throw new NotFoundException("Course not found");
+      const canReviewCourses = user.isSuperAdmin || user.adminPermissions?.includes("REVIEW_COURSES");
+      if (!canReviewCourses) {
+        throw new ForbiddenException("You do not have permission to review courses.");
       }
 
       const adminCourse = await this.prisma.course.findFirst({
         where: {
           id,
-          ...(user.isSuperAdmin ? {} : { tenantId: user.tenantId ?? undefined })
+          ...(user.isSuperAdmin || !user.tenantId ? {} : { tenantId: user.tenantId })
         },
         include: this.includeTree
       });
@@ -456,10 +457,14 @@ export class CoursesService {
     if (user.role === "INSTRUCTOR") {
       await this.assertInstructorOwnsCourse(courseId, user);
     } else if (user.role === "ADMIN") {
+      const canReviewCourses = user.isSuperAdmin || user.adminPermissions?.includes("REVIEW_COURSES");
+      if (!canReviewCourses) {
+        throw new ForbiddenException("You do not have permission to review courses.");
+      }
       const course = await this.prisma.course.findFirst({
         where: {
           id: courseId,
-          ...(user.isSuperAdmin ? {} : { tenantId: user.tenantId ?? undefined })
+          ...(user.isSuperAdmin || !user.tenantId ? {} : { tenantId: user.tenantId })
         },
         select: { id: true }
       });
