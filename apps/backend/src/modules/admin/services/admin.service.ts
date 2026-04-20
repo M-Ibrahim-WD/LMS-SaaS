@@ -553,8 +553,7 @@ export class AdminService {
     );
     const course = await this.prisma.course.findFirst({
       where: {
-        id: courseId,
-        ...(actor.isSuperAdmin || !currentUser.tenantId ? {} : { tenantId: currentUser.tenantId })
+        id: courseId
       },
       select: {
         id: true,
@@ -700,7 +699,7 @@ export class AdminService {
 
     const where: Prisma.ProtectedContentEventWhereInput = {};
 
-    if (!currentUser.isSuperAdmin) {
+    if (!currentUser.isSuperAdmin && !currentUser.adminPermissions?.includes(AdminPermission.REVIEW_COURSES)) {
       where.tenantId = currentUser.tenantId ?? undefined;
     }
     if (query.courseId?.trim()) {

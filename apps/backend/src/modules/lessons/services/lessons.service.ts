@@ -118,9 +118,6 @@ export class LessonsService {
       if (!canReviewCourses) {
         throw new ForbiddenException("You do not have access to this lesson");
       }
-      if (!user.isSuperAdmin && user.tenantId && course.tenantId !== user.tenantId) {
-        throw new ForbiddenException("You do not have access to this lesson");
-      }
     } else {
       throw new ForbiddenException("Unsupported role for protected media");
     }

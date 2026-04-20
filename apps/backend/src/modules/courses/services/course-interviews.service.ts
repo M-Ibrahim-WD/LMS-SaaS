@@ -411,9 +411,6 @@ export class CourseInterviewsService {
       if (!canReviewCourses) {
         throw new ForbiddenException("You do not have permission to review course interviews.");
       }
-      if (!currentUser.isSuperAdmin && currentUser.tenantId && course.tenantId !== currentUser.tenantId) {
-        throw new ForbiddenException("This course is outside your admin workspace.");
-      }
       return course;
     }
 

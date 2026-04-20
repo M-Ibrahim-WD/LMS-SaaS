@@ -305,8 +305,7 @@ export class CoursesService {
 
       const adminCourse = await this.prisma.course.findFirst({
         where: {
-          id,
-          ...(user.isSuperAdmin || !user.tenantId ? {} : { tenantId: user.tenantId })
+          id
         },
         include: this.includeTree
       });
@@ -463,8 +462,7 @@ export class CoursesService {
       }
       const course = await this.prisma.course.findFirst({
         where: {
-          id: courseId,
-          ...(user.isSuperAdmin || !user.tenantId ? {} : { tenantId: user.tenantId })
+          id: courseId
         },
         select: { id: true }
       });
