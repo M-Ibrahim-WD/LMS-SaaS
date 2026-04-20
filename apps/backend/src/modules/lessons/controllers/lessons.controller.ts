@@ -86,6 +86,7 @@ export class LessonsAccessController {
   constructor(private readonly lessonsService: LessonsService) {}
 
   @Roles("STUDENT", "INSTRUCTOR", "ADMIN")
+  @RequireTenant(false)
   @Post(":id/media-session")
   createMediaSession(
     @CurrentUser() user: JwtPayload,
@@ -96,6 +97,7 @@ export class LessonsAccessController {
   }
 
   @Roles("STUDENT", "INSTRUCTOR", "ADMIN")
+  @RequireTenant(false)
   @Post(":id/security-events")
   logSecurityEvent(
     @CurrentUser() user: JwtPayload,
