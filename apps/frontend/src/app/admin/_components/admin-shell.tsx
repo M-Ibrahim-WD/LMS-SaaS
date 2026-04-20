@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { CSSProperties, ReactNode } from "react";
-import { useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { BackButton } from "../../../components/back-button";
 
 export type AdminSectionKey =
@@ -31,43 +30,16 @@ interface AdminShellProps {
 }
 
 export function AdminShell({ title, description, active, navItems, headerActions, children }: AdminShellProps) {
-  const [navWidth, setNavWidth] = useState(34);
-
-  const navStyle = useMemo<CSSProperties>(
-    () => ({
-      flex: `0 0 clamp(16rem, ${navWidth}vw, 23rem)`,
-      width: `clamp(16rem, ${navWidth}vw, 23rem)`
-    }),
-    [navWidth]
-  );
-
-  const contentStyle = useMemo<CSSProperties>(
-    () => ({
-      flex: "1 0 clamp(21rem, 72vw, 70rem)",
-      width: "clamp(21rem, 72vw, 70rem)"
-    }),
-    []
-  );
-
   return (
     <main className="mx-auto w-full max-w-[96rem] px-4 py-5 sm:px-6 sm:py-7 lg:px-8 lg:py-8">
-      <div className="mobile-split-resizer xl:hidden">
-        <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Navigation</label>
-        <input
-          aria-label="Adjust admin navigation width"
-          type="range"
-          min={28}
-          max={42}
-          value={navWidth}
-          onChange={(event) => setNavWidth(Number(event.target.value))}
-        />
-      </div>
-
-      <div className="mobile-split-shell xl:grid-cols-[280px_minmax(0,1fr)]">
-        <aside className="mobile-split-pane xl:sticky xl:top-6 xl:self-start" style={navStyle}>
-          <div className="surface-card-strong rounded-[30px] p-5">
+      <div className="grid gap-5 xl:grid-cols-[18rem_minmax(0,1fr)] xl:items-start">
+        <aside className="xl:sticky xl:top-6 xl:self-start">
+          <div className="surface-card-strong rounded-[30px] p-5 sm:p-6">
             <p className="section-kicker">Admin</p>
             <h1 className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">Platform</h1>
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              Keep the platform clean, accountable, and easy to operate.
+            </p>
             <div className="mt-5">
               <BackButton fallbackHref="/dashboard" label="Back to dashboard" />
             </div>
@@ -92,7 +64,7 @@ export function AdminShell({ title, description, active, navItems, headerActions
           </div>
         </aside>
 
-        <section className="mobile-split-main space-y-5" style={contentStyle}>
+        <section className="min-w-0 space-y-5">
           <div className="surface-card-strong rounded-[30px] p-5 sm:p-6 lg:p-7">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0">
@@ -100,6 +72,9 @@ export function AdminShell({ title, description, active, navItems, headerActions
                 <h2 className="mt-3 text-balance text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
                   {title}
                 </h2>
+                <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600 sm:text-[0.98rem]">
+                  {description}
+                </p>
               </div>
               {headerActions ? <div className="flex flex-wrap gap-2">{headerActions}</div> : null}
             </div>

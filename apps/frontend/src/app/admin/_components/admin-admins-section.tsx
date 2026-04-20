@@ -66,7 +66,7 @@ export function AdminAdminsSection({
   return (
     <div className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
       <ContentCard className="p-6">
-        <h2 className="text-lg font-semibold text-slate-950">Super Admin Controls</h2>
+        <h2 className="text-lg font-semibold text-slate-950">Admin account controls</h2>
         <form
           className="mt-5 space-y-4"
           onSubmit={(event) => {
@@ -105,7 +105,7 @@ export function AdminAdminsSection({
               required
             />
             <span className="mt-2 block text-xs text-slate-500">
-              This delegated admin will be required to change this password on first login.
+              This admin will be required to change this password on first login.
             </span>
           </label>
           <div className="grid gap-4 md:grid-cols-2">

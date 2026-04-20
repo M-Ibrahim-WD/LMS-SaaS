@@ -741,7 +741,10 @@ export class AdminService {
   }
 
   async listAdminUsers(currentUser: JwtPayload, query: AdminUsersListQueryDto) {
-    await this.adminAccessService.assertSuperAdmin(currentUser);
+    await this.adminAccessService.assertAdminPermission(
+      currentUser,
+      AdminPermission.REVIEW_ADMINS
+    );
     const where: Prisma.UserWhereInput = {
       role: UserRole.ADMIN,
       isSuperAdmin: false
@@ -772,8 +775,12 @@ export class AdminService {
   }
 
   async createAdminUser(currentUser: JwtPayload, dto: CreateAdminUserDto) {
-    const actor = await this.adminAccessService.assertSuperAdmin(currentUser);
+    const actor = await this.adminAccessService.assertAdminPermission(
+      currentUser,
+      AdminPermission.REVIEW_ADMINS
+    );
     this.adminAccessService.ensureValidAdminPermissions(dto.permissions);
+    this.adminAccessService.ensureDelegatableAdminPermissions(actor, dto.permissions);
     const admin = await this.usersService.create({
       email: dto.email.trim().toLowerCase(),
       fullName: dto.fullName.trim(),
@@ -795,8 +802,12 @@ export class AdminService {
   }
 
   async updateAdminPermissions(currentUser: JwtPayload, adminUserId: string, dto: UpdateAdminPermissionsDto) {
-    const actor = await this.adminAccessService.assertSuperAdmin(currentUser);
+    const actor = await this.adminAccessService.assertAdminPermission(
+      currentUser,
+      AdminPermission.REVIEW_ADMINS
+    );
     this.adminAccessService.ensureValidAdminPermissions(dto.permissions);
+    this.adminAccessService.ensureDelegatableAdminPermissions(actor, dto.permissions);
 
     const target = await this.prisma.user.findUnique({
       where: { id: adminUserId },
@@ -835,7 +846,10 @@ export class AdminService {
   }
 
   async setManagedAdminStatus(currentUser: JwtPayload, adminUserId: string, isActive: boolean) {
-    const actor = await this.adminAccessService.assertSuperAdmin(currentUser);
+    const actor = await this.adminAccessService.assertAdminPermission(
+      currentUser,
+      AdminPermission.REVIEW_ADMINS
+    );
     const target = await this.prisma.user.findUnique({
       where: { id: adminUserId },
       select: { id: true, role: true, isSuperAdmin: true, fullName: true }
@@ -859,7 +873,10 @@ export class AdminService {
   }
 
   async resetManagedAdminPassword(currentUser: JwtPayload, adminUserId: string, dto: ResetAdminPasswordDto) {
-    const actor = await this.adminAccessService.assertSuperAdmin(currentUser);
+    const actor = await this.adminAccessService.assertAdminPermission(
+      currentUser,
+      AdminPermission.REVIEW_ADMINS
+    );
     const target = await this.prisma.user.findUnique({
       where: { id: adminUserId },
       select: { id: true, role: true, isSuperAdmin: true, fullName: true }

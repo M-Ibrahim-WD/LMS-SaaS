@@ -515,7 +515,7 @@ export function AdminControlCenter({ section }: AdminControlCenterProps) {
   const canManagePlans = hasAdminPermission("MANAGE_PLANS");
   const canReviewTenants = hasAdminPermission("REVIEW_TENANTS");
   const canReviewUsers = hasAdminPermission("REVIEW_STUDENTS") || hasAdminPermission("REVIEW_INSTRUCTORS");
-  const canReviewAdmins = isSuperAdmin;
+  const canReviewAdmins = hasAdminPermission("REVIEW_ADMINS");
   const canReviewAudit = isSuperAdmin;
   const canReviewOps = hasAdminPermission("REVIEW_COURSES") || hasAdminPermission("REVIEW_PAYMENTS");
 
@@ -1132,9 +1132,6 @@ export function AdminControlCenter({ section }: AdminControlCenterProps) {
           courses={coursesQuery.data}
           payments={paymentsQuery.data}
           activity={activityQuery.data}
-          navItems={navItems}
-          canManagePlans={canManagePlans}
-          canReviewTenants={canReviewTenants}
           canReviewCourses={hasAdminPermission("REVIEW_COURSES")}
           canReviewPayments={hasAdminPermission("REVIEW_PAYMENTS")}
           coursesLoading={coursesQuery.isLoading}
@@ -1143,7 +1140,7 @@ export function AdminControlCenter({ section }: AdminControlCenterProps) {
         />
       ) : null}
 
-      {isSuperAdmin && section === "admins" ? (
+      {canReviewAdmins && section === "admins" ? (
         <AdminAdminsSection
           adminForm={adminForm}
           setAdminForm={setAdminForm}

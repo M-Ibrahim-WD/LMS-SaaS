@@ -51,6 +51,22 @@ export class AdminAccessService {
     return actor;
   }
 
+  ensureDelegatableAdminPermissions(
+    actor: { isSuperAdmin: boolean; adminPermissions: AdminPermission[] },
+    permissions: AdminPermission[]
+  ) {
+    if (actor.isSuperAdmin) {
+      return;
+    }
+
+    const invalid = permissions.find((permission) => !actor.adminPermissions.includes(permission));
+    if (invalid) {
+      throw new ForbiddenException(
+        `You can only assign delegated admin permissions that you already hold yourself.`
+      );
+    }
+  }
+
   ensureValidAdminPermissions(permissions: string[]) {
     const invalid = permissions.find(
       (permission) =>
