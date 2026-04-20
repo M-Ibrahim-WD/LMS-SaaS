@@ -117,8 +117,20 @@ export default function CoursesPage() {
   const [category, setCategory] = useState("");
   const [level, setLevel] = useState<"ALL" | Course["level"]>("ALL");
   const [page, setPage] = useState(1);
+  const isAdmin = user?.role === "ADMIN";
+  const canReviewCourses = Boolean(
+    isAdmin && (user?.isSuperAdmin || user?.adminPermissions?.includes("REVIEW_COURSES"))
+  );
 
   const coursePath = useMemo(() => {
+    if (canReviewCourses) {
+      const params = new URLSearchParams();
+      if (search.trim()) {
+        params.set("search", search.trim());
+      }
+      return `/admin/courses?${params.toString()}`;
+    }
+
     const params = new URLSearchParams();
     if (search.trim()) {
       params.set("search", search.trim());
@@ -136,23 +148,47 @@ export default function CoursesPage() {
     params.set("page", String(page));
     params.set("pageSize", "12");
     return `/courses?${params.toString()}`;
-  }, [category, level, page, pricing, search]);
+  }, [canReviewCourses, category, level, page, pricing, search]);
 
   const coursesQuery = useQuery({
-    queryKey: ["courses", "discover", search, pricing, category, level, page],
+    queryKey: ["courses", canReviewCourses ? "admin-review" : "discover", search, pricing, category, level, page],
     queryFn: () => apiFetch<Course[]>(coursePath, { token: accessToken ?? undefined }),
-    enabled: Boolean(accessToken)
+    enabled: Boolean(accessToken && (!isAdmin || canReviewCourses))
   });
   const coursesErrorMessage =
-    coursesQuery.error instanceof Error ? coursesQuery.error.message : null;
+    isAdmin && !canReviewCourses
+      ? "You do not have permission to review courses."
+      : coursesQuery.error instanceof Error
+        ? coursesQuery.error.message
+        : null;
+
+  const filteredCourses = useMemo(() => {
+    const items = coursesQuery.data ?? [];
+
+    return items.filter((course) => {
+      if (pricing === "FREE" && course.isPaid) {
+        return false;
+      }
+      if (pricing === "PAID" && !course.isPaid) {
+        return false;
+      }
+      if (category.trim() && course.category?.trim().toLowerCase() !== category.trim().toLowerCase()) {
+        return false;
+      }
+      if (level !== "ALL" && course.level !== level) {
+        return false;
+      }
+      return true;
+    });
+  }, [category, coursesQuery.data, level, pricing]);
 
   const availableCategories = useMemo(() => {
     return Array.from(
-      new Set((coursesQuery.data ?? []).map((course) => course.category?.trim()).filter(Boolean) as string[])
+      new Set(filteredCourses.map((course) => course.category?.trim()).filter(Boolean) as string[])
     ).sort((left, right) => left.localeCompare(right));
-  }, [coursesQuery.data]);
+  }, [filteredCourses]);
 
-  const coursesByInstructor = (coursesQuery.data ?? []).reduce<Record<string, Course[]>>((groups, course) => {
+  const coursesByInstructor = filteredCourses.reduce<Record<string, Course[]>>((groups, course) => {
     const key = course.instructor?.fullName ?? "Your Courses";
     if (!groups[key]) {
       groups[key] = [];
@@ -181,8 +217,12 @@ export default function CoursesPage() {
 
   return (
     <PageShell
-      title={user?.role === "INSTRUCTOR" ? "My Courses" : "Courses"}
-      description="Browse the courses available in your current LMS workspace."
+      title={user?.role === "INSTRUCTOR" ? "My Courses" : user?.role === "ADMIN" ? "Courses" : "Courses"}
+      description={
+        canReviewCourses
+          ? "Review every instructor-created course in the LMS without enrolling like a student."
+          : "Browse the courses available in your current LMS workspace."
+      }
       backHref="/dashboard"
       actions={
         <>
@@ -203,11 +243,15 @@ export default function CoursesPage() {
         <ContentCard className="p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="section-kicker">Discovery</p>
-              <h2 className="mt-2 text-xl font-semibold text-slate-950">Explore by topic, level, and pricing</h2>
+              <p className="section-kicker">{canReviewCourses ? "Review Catalog" : "Discovery"}</p>
+              <h2 className="mt-2 text-xl font-semibold text-slate-950">
+                {canReviewCourses
+                  ? "Review all instructor-created courses"
+                  : "Explore by topic, level, and pricing"}
+              </h2>
             </div>
             <div className="flex flex-wrap gap-2">
-              <StatusChip tone="info">{coursesQuery.data?.length ?? 0} visible courses</StatusChip>
+              <StatusChip tone="info">{filteredCourses.length} visible courses</StatusChip>
               <StatusChip>{availableCategories.length} categories</StatusChip>
             </div>
           </div>
@@ -257,10 +301,14 @@ export default function CoursesPage() {
             {coursesErrorMessage ?? "Failed to load courses."}
           </StatusBanner>
         ) : null}
-        {!coursesQuery.isLoading && !coursesQuery.isError && Object.keys(coursesByInstructor).length === 0 ? (
+        {!coursesQuery.isLoading && !coursesQuery.isError && !coursesErrorMessage && Object.keys(coursesByInstructor).length === 0 ? (
           <EmptyState
             title="No courses found"
-            description="Courses will appear here once instructors publish them."
+            description={
+              canReviewCourses
+                ? "Instructor-created courses will appear here for review."
+                : "Courses will appear here once instructors publish them."
+            }
           />
         ) : null}
 
@@ -306,7 +354,7 @@ export default function CoursesPage() {
           </section>
         ))}
 
-        {!coursesQuery.isLoading && !coursesQuery.isError && coursesQuery.data?.length ? (
+        {!coursesQuery.isLoading && !coursesQuery.isError && filteredCourses.length ? (
           <div className="flex items-center justify-center gap-3">
             <button
               type="button"
@@ -320,7 +368,7 @@ export default function CoursesPage() {
             <button
               type="button"
               onClick={() => setPage((current) => current + 1)}
-              disabled={(coursesQuery.data?.length ?? 0) < 12}
+              disabled={canReviewCourses || filteredCourses.length < 12}
               className="rounded-lg border border-slate-300 px-4 py-2 text-sm disabled:opacity-50"
             >
               Next
