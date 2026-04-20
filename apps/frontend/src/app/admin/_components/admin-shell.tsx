@@ -43,7 +43,7 @@ export function AdminShell({ title, description, active, navItems, headerActions
             <div className="mt-5">
               <BackButton fallbackHref="/dashboard" label="Back to dashboard" />
             </div>
-            <nav className="mt-6 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+            <nav className="mt-6 grid grid-cols-2 gap-2 xl:grid-cols-1">
               {navItems.filter((item) => item.visible).map((item) => {
                 const isActive = item.key === active;
                 return (
