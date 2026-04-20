@@ -12,6 +12,7 @@ import { UsersService } from "../../users/services/users.service";
 import { PlansService } from "../../plans/services/plans.service";
 import { CreatePlanDto, UpdatePlanDto } from "../../plans/dto/plan.dto";
 import { SubscriptionsService } from "../../subscriptions/services/subscriptions.service";
+import { CoursesService } from "../../courses/services/courses.service";
 import {
   AdminUsersListQueryDto,
   AdminAuditLogsQueryDto,
@@ -30,6 +31,7 @@ export class AdminService {
     private readonly usersService: UsersService,
     private readonly plansService: PlansService,
     private readonly subscriptionsService: SubscriptionsService,
+    private readonly coursesService: CoursesService,
     private readonly adminAccessService: AdminAccessService,
     private readonly adminAuditService: AdminAuditService
   ) {}
@@ -533,7 +535,15 @@ export class AdminService {
         instructor: { select: { id: true, fullName: true, email: true, isActive: true } },
         _count: { select: { enrollments: true, payments: true, reviews: true } }
       }
-    });
+    }).then((courses) =>
+      courses.map((course) => ({
+        ...course,
+        thumbnailImage: this.coursesService.resolveCourseThumbnailUrl(
+          course.id,
+          course.thumbnailImage ?? null
+        )
+      }))
+    );
   }
 
   async reviewCourse(currentUser: JwtPayload, courseId: string, dto: ReviewCourseDto) {

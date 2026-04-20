@@ -72,6 +72,7 @@ test("getOverview returns aggregated platform totals", async () => {
     {} as never,
     {} as never,
     {} as never,
+    {} as never,
     adminAccessService as never,
     adminAuditService as never
   );
@@ -151,6 +152,7 @@ test("listTenants maps usage counts and filters by active flag", async () => {
 
   const service = new AdminService(
     prisma as never,
+    {} as never,
     {} as never,
     {} as never,
     {} as never,
@@ -263,6 +265,7 @@ test("getUserDetail resolves profile image and recent activity", async () => {
     usersService as never,
     {} as never,
     {} as never,
+    {} as never,
     adminAccessService as never,
     adminAuditService as never
   );
@@ -325,6 +328,7 @@ test("setUserStatus delegates to users service after existence check", async () 
   const service = new AdminService(
     prisma as never,
     usersService as never,
+    {} as never,
     {} as never,
     {} as never,
     adminAccessService as never,
