@@ -85,6 +85,7 @@ export class CoursesController {
     return this.coursesService.updateStatus(user, id, dto);
   }
 
+  @RequireTenant(false)
   @Get()
   getAll(@CurrentUser() user: JwtPayload, @Query() query: CourseQueryDto) {
     return this.coursesService.getAllByTenant(user, query);

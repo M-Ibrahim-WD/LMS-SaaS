@@ -143,6 +143,8 @@ export default function CoursesPage() {
     queryFn: () => apiFetch<Course[]>(coursePath, { token: accessToken ?? undefined }),
     enabled: Boolean(accessToken)
   });
+  const coursesErrorMessage =
+    coursesQuery.error instanceof Error ? coursesQuery.error.message : null;
 
   const availableCategories = useMemo(() => {
     return Array.from(
@@ -250,7 +252,11 @@ export default function CoursesPage() {
         </div>
 
         {coursesQuery.isLoading ? <StatusBanner>Loading courses...</StatusBanner> : null}
-        {coursesQuery.isError ? <StatusBanner variant="error">Failed to load courses.</StatusBanner> : null}
+        {coursesQuery.isError ? (
+          <StatusBanner variant="error">
+            {coursesErrorMessage ?? "Failed to load courses."}
+          </StatusBanner>
+        ) : null}
         {!coursesQuery.isLoading && !coursesQuery.isError && Object.keys(coursesByInstructor).length === 0 ? (
           <EmptyState
             title="No courses found"
