@@ -43,14 +43,14 @@ export function AdminShell({ title, description, active, navItems, headerActions
             <div className="mt-5">
               <BackButton fallbackHref="/dashboard" label="Back to dashboard" />
             </div>
-            <nav className="mt-6 grid grid-cols-2 gap-2 xl:grid-cols-1">
+            <nav className="mt-6 flex gap-2 overflow-x-auto pb-1 xl:grid xl:grid-cols-1 xl:overflow-visible xl:pb-0">
               {navItems.filter((item) => item.visible).map((item) => {
                 const isActive = item.key === active;
                 return (
                   <Link
                     key={item.key}
                     href={item.href}
-                    className={`block rounded-[24px] border px-4 py-3 transition ${
+                    className={`block min-w-[9rem] flex-none rounded-[24px] border px-4 py-3 transition xl:min-w-0 ${
                       isActive
                         ? "border-slate-950 bg-slate-950 text-white shadow-sm"
                         : "border-slate-200 bg-white/75 text-slate-700 hover:border-slate-300 hover:bg-white"
