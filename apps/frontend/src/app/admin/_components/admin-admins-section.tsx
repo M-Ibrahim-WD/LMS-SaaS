@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type { AdminPermission } from "../../../lib/auth/token";
 import { ContentCard } from "../../../components/content-card";
@@ -63,6 +64,12 @@ export function AdminAdminsSection({
   onUpdateAdminPermissions,
   onResetAdminPassword
 }: AdminAdminsSectionProps) {
+  const [openAdminId, setOpenAdminId] = useState<string | null>(null);
+  const visibleAdmins = useMemo(
+    () => (adminUsers ?? []).filter((admin) => !admin.isSuperAdmin),
+    [adminUsers]
+  );
+
   return (
     <div className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
       <ContentCard className="p-6">
@@ -157,7 +164,7 @@ export function AdminAdminsSection({
                 className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
               >
                 <option value="">Choose an existing delegated admin</option>
-                {adminUsers?.map((admin) => (
+                {visibleAdmins.map((admin) => (
                   <option key={admin.id} value={admin.id}>
                     {admin.fullName} ({admin.email})
                   </option>
@@ -221,96 +228,126 @@ export function AdminAdminsSection({
           />
         </div>
         <div className="mt-4 space-y-4">
-          {adminUsers?.length ? (
-            adminUsers.map((admin) => (
-              <div key={admin.id} className="rounded-2xl border border-slate-200 p-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p className="font-semibold text-slate-950">{admin.fullName}</p>
-                    <p className="mt-1 text-sm text-slate-500">{admin.email}</p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <span
-                        className={`rounded-full px-3 py-1 text-xs font-medium ${
-                          admin.isActive ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"
-                        }`}
-                      >
-                        {admin.isActive ? "Active" : "Inactive"}
-                      </span>
-                      {admin.mustChangePassword ? (
-                        <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">
-                          Must change password
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
+          {visibleAdmins.length ? (
+            visibleAdmins.map((admin) => {
+              const isOpen = openAdminId === admin.id;
+
+              return (
+                <div key={admin.id} className="overflow-hidden rounded-2xl border border-slate-200">
                   <button
                     type="button"
-                    onClick={() => onToggleAdminStatus({ id: admin.id, isActive: !admin.isActive })}
-                    className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
+                    onClick={() => setOpenAdminId((current) => (current === admin.id ? null : admin.id))}
+                    className="flex w-full items-start justify-between gap-3 p-4 text-left transition hover:bg-slate-50"
+                    aria-expanded={isOpen}
                   >
-                    {admin.isActive ? "Deactivate" : "Reactivate"}
+                    <div>
+                      <p className="font-semibold text-slate-950">{admin.fullName}</p>
+                      <p className="mt-1 text-sm text-slate-500">{admin.email}</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-medium ${
+                            admin.isActive ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"
+                          }`}
+                        >
+                          {admin.isActive ? "Active" : "Inactive"}
+                        </span>
+                        {admin.mustChangePassword ? (
+                          <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">
+                            Must change password
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                    <span className="mt-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        className={`h-4 w-4 transition ${isOpen ? "rotate-180" : ""}`}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
+                      </svg>
+                    </span>
                   </button>
-                </div>
-                <div className="mt-4 grid gap-3 md:grid-cols-2">
-                  {adminPermissionOrder.map((permission) => (
-                    <label
-                      key={`${admin.id}-${permission}`}
-                      className={`rounded-2xl border p-3 ${
-                        admin.adminPermissions.includes(permission) ? "border-sky-200 bg-sky-50" : "border-slate-200 bg-white"
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <input
-                          type="checkbox"
-                          checked={admin.adminPermissions.includes(permission)}
-                          onChange={(event) => {
-                            const nextPermissions = event.target.checked
-                              ? [...admin.adminPermissions, permission]
-                              : admin.adminPermissions.filter((entry) => entry !== permission);
-                            onUpdateAdminPermissions({ id: admin.id, permissions: nextPermissions });
-                          }}
-                          className="mt-1"
-                        />
-                        <div>
-                          <p className="text-sm font-medium text-slate-800">{adminPermissionLabels[permission].label}</p>
-                          <p className="mt-1 text-xs text-slate-500">{adminPermissionLabels[permission].description}</p>
+
+                  {isOpen ? (
+                    <div className="border-t border-slate-200 p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                          Open this admin to review permissions and account controls.
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => onToggleAdminStatus({ id: admin.id, isActive: !admin.isActive })}
+                          className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
+                        >
+                          {admin.isActive ? "Deactivate" : "Reactivate"}
+                        </button>
+                      </div>
+                      <div className="mt-4 grid gap-3 md:grid-cols-2">
+                        {adminPermissionOrder.map((permission) => (
+                          <label
+                            key={`${admin.id}-${permission}`}
+                            className={`rounded-2xl border p-3 ${
+                              admin.adminPermissions.includes(permission) ? "border-sky-200 bg-sky-50" : "border-slate-200 bg-white"
+                            }`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <input
+                                type="checkbox"
+                                checked={admin.adminPermissions.includes(permission)}
+                                onChange={(event) => {
+                                  const nextPermissions = event.target.checked
+                                    ? [...admin.adminPermissions, permission]
+                                    : admin.adminPermissions.filter((entry) => entry !== permission);
+                                  onUpdateAdminPermissions({ id: admin.id, permissions: nextPermissions });
+                                }}
+                                className="mt-1"
+                              />
+                              <div>
+                                <p className="text-sm font-medium text-slate-800">{adminPermissionLabels[permission].label}</p>
+                                <p className="mt-1 text-xs text-slate-500">{adminPermissionLabels[permission].description}</p>
+                              </div>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                      <div className="mt-4 rounded-2xl bg-slate-50 p-4">
+                        <p className="text-sm font-medium text-slate-900">Reset delegated admin password</p>
+                        <div className="mt-3 flex flex-wrap gap-3">
+                          <input
+                            type="password"
+                            value={adminPasswordDrafts[admin.id] ?? ""}
+                            onChange={(event) =>
+                              setAdminPasswordDrafts((current) => ({
+                                ...current,
+                                [admin.id]: event.target.value
+                              }))
+                            }
+                            placeholder="New temporary password"
+                            className="min-w-[220px] flex-1 rounded-xl border border-slate-300 px-4 py-3 text-sm"
+                          />
+                          <button
+                            type="button"
+                            disabled={!(adminPasswordDrafts[admin.id] ?? "").trim() || resetPending}
+                            onClick={() =>
+                              onResetAdminPassword({
+                                id: admin.id,
+                                password: (adminPasswordDrafts[admin.id] ?? "").trim()
+                              })
+                            }
+                            className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 disabled:opacity-50"
+                          >
+                            Reset password
+                          </button>
                         </div>
                       </div>
-                    </label>
-                  ))}
+                    </div>
+                  ) : null}
                 </div>
-                <div className="mt-4 rounded-2xl bg-slate-50 p-4">
-                  <p className="text-sm font-medium text-slate-900">Reset delegated admin password</p>
-                  <div className="mt-3 flex flex-wrap gap-3">
-                    <input
-                      type="password"
-                      value={adminPasswordDrafts[admin.id] ?? ""}
-                      onChange={(event) =>
-                        setAdminPasswordDrafts((current) => ({
-                          ...current,
-                          [admin.id]: event.target.value
-                        }))
-                      }
-                      placeholder="New temporary password"
-                      className="min-w-[220px] flex-1 rounded-xl border border-slate-300 px-4 py-3 text-sm"
-                    />
-                    <button
-                      type="button"
-                      disabled={!(adminPasswordDrafts[admin.id] ?? "").trim() || resetPending}
-                      onClick={() =>
-                        onResetAdminPassword({
-                          id: admin.id,
-                          password: (adminPasswordDrafts[admin.id] ?? "").trim()
-                        })
-                      }
-                      className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 disabled:opacity-50"
-                    >
-                      Reset password
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))
+              );
+            })
           ) : adminsLoading ? (
             <StatusBanner>Loading admin accounts...</StatusBanner>
           ) : (
