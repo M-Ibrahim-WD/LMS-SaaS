@@ -201,7 +201,7 @@ export function AdminOverviewSection({
         </div>
 
         {activity ? (
-          <div className="mt-5 grid gap-4 lg:grid-cols-2 2xl:grid-cols-4">
+          <div className="mt-5 grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
             <div className="rounded-[24px] border border-slate-200 bg-slate-50/80 p-4">
               <p className="text-sm font-semibold text-slate-950">Users</p>
               <div className="mt-3 space-y-2">
