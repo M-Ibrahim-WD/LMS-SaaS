@@ -220,13 +220,13 @@ export function AdminSiteMenu({
   }
 
   return (
-    <div ref={menuRef} className="relative self-start xl:hidden">
+    <div ref={menuRef} className="relative z-[70] self-start">
       <IconButton onClick={() => setOpen((current) => !current)} label="Menu">
         <MenuIcon />
       </IconButton>
 
       {open ? (
-        <div className="absolute right-0 top-[calc(100%+0.55rem)] z-30 flex w-[3.75rem] flex-col items-center gap-2 rounded-[28px] border border-slate-200 bg-white/55 p-2 shadow-[0_20px_45px_-26px_rgba(15,23,42,0.45)] backdrop-blur-2xl">
+        <div className="absolute right-0 top-[calc(100%+0.55rem)] z-[80] flex w-[3.75rem] flex-col items-center gap-2 rounded-[28px] border border-slate-200 bg-white/55 p-2 shadow-[0_20px_45px_-26px_rgba(15,23,42,0.45)] backdrop-blur-2xl">
           <NotificationCenter
             items={notificationsQuery.data}
             unreadCount={unreadCountQuery.data?.unreadCount ?? 0}
