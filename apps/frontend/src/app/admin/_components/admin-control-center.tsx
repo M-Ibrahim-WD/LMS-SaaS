@@ -11,7 +11,9 @@ import type { AdminPermission } from "../../../lib/auth/token";
 import { AdminSectionKey, AdminShell } from "./admin-shell";
 import { AdminAdminsSection } from "./admin-admins-section";
 import { AdminAuditSection } from "./admin-audit-section";
+import { AdminCoursesSection } from "./admin-courses-section";
 import { AdminOverviewSection } from "./admin-overview-section";
+import { AdminPaymentsSection } from "./admin-payments-section";
 import { AdminPlansSection } from "./admin-plans-section";
 import { AdminTenantsSection } from "./admin-tenants-section";
 import { AdminUsersSection } from "./admin-users-section";
@@ -549,6 +551,20 @@ export function AdminControlCenter({ section }: AdminControlCenterProps) {
       visible: canReviewUsers
     },
     {
+      key: "courses" as const,
+      label: "Courses",
+      description: "Review the platform course catalog directly.",
+      href: "/admin/courses",
+      visible: hasAdminPermission("REVIEW_COURSES")
+    },
+    {
+      key: "payments" as const,
+      label: "Payments",
+      description: "Review platform payments and approval flow.",
+      href: "/admin/payments",
+      visible: hasAdminPermission("REVIEW_PAYMENTS")
+    },
+    {
       key: "admins" as const,
       label: "Admins",
       description: "Delegate platform authority with controlled permissions.",
@@ -580,6 +596,14 @@ export function AdminControlCenter({ section }: AdminControlCenterProps) {
     users: {
       title: "User Oversight",
       description: "Review instructor and student accounts with cleaner filters, status controls, and focused account detail."
+    },
+    courses: {
+      title: "Course Review",
+      description: "Inspect all platform courses from a dedicated review catalog instead of a mixed overview card."
+    },
+    payments: {
+      title: "Payment Review",
+      description: "Inspect payment activity from a dedicated admin payment view instead of a mixed overview card."
     },
     admins: {
       title: "Delegated Admins",
@@ -1114,13 +1138,7 @@ export function AdminControlCenter({ section }: AdminControlCenterProps) {
       {activeNavItem && section === "overview" ? (
         <AdminOverviewSection
           overview={overviewQuery.data}
-          courses={coursesQuery.data}
-          payments={paymentsQuery.data}
           activity={activityQuery.data}
-          canReviewCourses={hasAdminPermission("REVIEW_COURSES")}
-          canReviewPayments={hasAdminPermission("REVIEW_PAYMENTS")}
-          coursesLoading={coursesQuery.isLoading}
-          paymentsLoading={paymentsQuery.isLoading}
           activityLoading={activityQuery.isLoading}
         />
       ) : null}
@@ -1214,6 +1232,14 @@ export function AdminControlCenter({ section }: AdminControlCenterProps) {
           userDetailLoading={userDetailQuery.isLoading}
           onToggleUserStatus={(input) => userStatusMutation.mutate(input)}
         />
+      ) : null}
+
+      {hasAdminPermission("REVIEW_COURSES") && section === "courses" ? (
+        <AdminCoursesSection courses={coursesQuery.data} isLoading={coursesQuery.isLoading} />
+      ) : null}
+
+      {hasAdminPermission("REVIEW_PAYMENTS") && section === "payments" ? (
+        <AdminPaymentsSection payments={paymentsQuery.data} isLoading={paymentsQuery.isLoading} />
       ) : null}
     </AdminShell>
   );

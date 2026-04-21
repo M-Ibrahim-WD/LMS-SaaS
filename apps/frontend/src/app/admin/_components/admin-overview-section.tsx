@@ -1,29 +1,20 @@
 "use client";
 
-import Link from "next/link";
+import { useMemo, useState } from "react";
 import { ContentCard } from "../../../components/content-card";
 import { EmptyState } from "../../../components/empty-state";
 import { StatusBanner } from "../../../components/status-banner";
 import { StatusChip } from "../../../components/status-chip";
-import type {
-  AdminActivity,
-  AdminCourseSummary,
-  AdminPaymentSummary,
-  Overview
-} from "./admin-control-center.shared";
+import type { AdminActivity, Overview } from "./admin-control-center.shared";
 import { money } from "./admin-control-center.shared";
 
 interface AdminOverviewSectionProps {
   overview?: Overview;
-  courses?: AdminCourseSummary[];
-  payments?: AdminPaymentSummary[];
   activity?: AdminActivity;
-  canReviewCourses: boolean;
-  canReviewPayments: boolean;
-  coursesLoading: boolean;
-  paymentsLoading: boolean;
   activityLoading: boolean;
 }
+
+type ActivityTabKey = "users" | "courses" | "payments" | "notifications";
 
 const statCards = (
   overview?: Overview
@@ -37,19 +28,30 @@ const statCards = (
   { label: "Unread notifications", value: overview?.totals.unreadNotifications ?? 0, tone: "info" }
 ];
 
-export function AdminOverviewSection({
-  overview,
-  courses,
-  payments,
-  activity,
-  canReviewCourses,
-  canReviewPayments,
-  coursesLoading,
-  paymentsLoading,
-  activityLoading
-}: AdminOverviewSectionProps) {
-  const recentCourses = courses?.slice(0, 4) ?? [];
-  const recentPayments = payments?.slice(0, 4) ?? [];
+export function AdminOverviewSection({ overview, activity, activityLoading }: AdminOverviewSectionProps) {
+  const [activeTab, setActiveTab] = useState<ActivityTabKey>("users");
+
+  const tabMeta = useMemo(
+    () => ({
+      users: {
+        label: "Users",
+        items: activity?.recentUsers.map((item) => `${item.fullName} | ${item.role}`) ?? []
+      },
+      courses: {
+        label: "Courses",
+        items: activity?.recentCourses.map((item) => `${item.title} | ${item.status}`) ?? []
+      },
+      payments: {
+        label: "Payments",
+        items: activity?.recentPayments.map((item) => `${item.user.fullName} | ${item.course.title}`) ?? []
+      },
+      notifications: {
+        label: "Notifications",
+        items: activity?.recentNotifications.map((item) => item.title) ?? []
+      }
+    }),
+    [activity]
+  );
 
   return (
     <div className="space-y-5">
@@ -73,177 +75,49 @@ export function AdminOverviewSection({
         ))}
       </div>
 
-      <div className="grid gap-5 2xl:grid-cols-[minmax(0,1.3fr)_minmax(0,0.9fr)]">
-        <ContentCard className="p-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <p className="section-kicker">Operations</p>
-              <h3 className="mt-2 text-xl font-semibold text-slate-950">Review queue</h3>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-                Keep course quality, payments, and instructor publishing health visible without repeating the same
-                information in multiple cards.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {canReviewCourses ? <StatusChip tone="info">Course review</StatusChip> : null}
-              {canReviewPayments ? <StatusChip tone="warning">Payment review</StatusChip> : null}
-            </div>
-          </div>
-
-          <div className={`mt-5 grid gap-4 ${canReviewCourses && canReviewPayments ? "xl:grid-cols-2" : ""}`}>
-            {canReviewCourses ? (
-              <div className="rounded-[26px] border border-slate-200 bg-slate-50/90 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-950">Recent courses</p>
-                    <p className="mt-1 text-xs text-slate-500">Open courses directly in the review workspace.</p>
-                  </div>
-                  <Link
-                    href="/courses"
-                    className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-400"
-                  >
-                    Open catalog
-                  </Link>
-                </div>
-                <div className="mt-4 space-y-3">
-                  {recentCourses.length ? (
-                    recentCourses.map((course) => (
-                      <div key={course.id} className="rounded-[22px] bg-white p-4 shadow-sm">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="truncate font-semibold text-slate-950">{course.title}</p>
-                            <p className="mt-1 text-sm text-slate-500">
-                              {course.instructor.fullName} | {course.tenant.name}
-                            </p>
-                          </div>
-                          <StatusChip tone="info">{course.status}</StatusChip>
-                        </div>
-                        <p className="mt-3 text-xs text-slate-500">
-                          {course._count.enrollments} enrollments | {course._count.reviews} reviews
-                        </p>
-                        <Link
-                          href={`/courses/${course.id}`}
-                          className="mt-4 inline-flex rounded-full border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-400"
-                        >
-                          Review course
-                        </Link>
-                      </div>
-                    ))
-                  ) : coursesLoading ? (
-                    <StatusBanner>Loading courses...</StatusBanner>
-                  ) : (
-                    <EmptyState
-                      title="No courses yet"
-                      description="Course oversight will appear here when instructors publish or draft content."
-                    />
-                  )}
-                </div>
-              </div>
-            ) : null}
-
-            {canReviewPayments ? (
-              <div className="rounded-[26px] border border-slate-200 bg-slate-50/90 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-950">Recent payments</p>
-                    <p className="mt-1 text-xs text-slate-500">Track approvals and identify stalled transactions.</p>
-                  </div>
-                </div>
-                <div className="mt-4 space-y-3">
-                  {recentPayments.length ? (
-                    recentPayments.map((payment) => (
-                      <div key={payment.id} className="rounded-[22px] bg-white p-4 shadow-sm">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="truncate font-semibold text-slate-950">{payment.course.title}</p>
-                            <p className="mt-1 text-sm text-slate-500">
-                              {payment.user.fullName} | {payment.tenant.name}
-                            </p>
-                          </div>
-                          <StatusChip tone={payment.status === "APPROVED" ? "success" : "warning"}>
-                            {payment.status}
-                          </StatusChip>
-                        </div>
-                        <p className="mt-3 text-xs text-slate-500">
-                          {payment.method.label} | {money.format(payment.amount)}
-                        </p>
-                      </div>
-                    ))
-                  ) : paymentsLoading ? (
-                    <StatusBanner>Loading payments...</StatusBanner>
-                  ) : (
-                    <EmptyState
-                      title="No payments yet"
-                      description="Payment oversight will appear here when transactions start flowing."
-                    />
-                  )}
-                </div>
-              </div>
-            ) : null}
-
-            {!canReviewCourses && !canReviewPayments ? (
-              <EmptyState
-                title="Operational review is restricted"
-                description="This admin account can see overview metrics, but course and payment review are not enabled."
-              />
-            ) : null}
-          </div>
-        </ContentCard>
-
-      </div>
-
       <ContentCard className="p-6">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="section-kicker">Activity feed</p>
             <h3 className="mt-2 text-xl font-semibold text-slate-950">Detailed recent events</h3>
           </div>
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+            {(Object.keys(tabMeta) as ActivityTabKey[]).map((tabKey) => {
+              const isActive = activeTab === tabKey;
+              return (
+                <button
+                  key={tabKey}
+                  type="button"
+                  onClick={() => setActiveTab(tabKey)}
+                  className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                    isActive
+                      ? "border-slate-950 bg-slate-950 text-white"
+                      : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+                  }`}
+                >
+                  {tabMeta[tabKey].label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {activity ? (
-          <div className="mt-5 grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
-            <div className="rounded-[24px] border border-slate-200 bg-slate-50/80 p-4">
-              <p className="text-sm font-semibold text-slate-950">Users</p>
-              <div className="mt-3 space-y-2">
-                {activity.recentUsers.map((item) => (
-                  <div key={item.id} className="rounded-2xl bg-white p-3 text-sm text-slate-700 shadow-sm">
-                    {item.fullName} | {item.role}
+          <div className="mt-5 rounded-[24px] border border-slate-200 bg-slate-50/80 p-4">
+            <p className="text-sm font-semibold text-slate-950">{tabMeta[activeTab].label}</p>
+            <div className="mt-3 space-y-2">
+              {tabMeta[activeTab].items.length ? (
+                tabMeta[activeTab].items.map((item, index) => (
+                  <div key={`${activeTab}-${index}`} className="rounded-2xl bg-white p-3 text-sm text-slate-700 shadow-sm">
+                    {item}
                   </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="rounded-[24px] border border-slate-200 bg-slate-50/80 p-4">
-              <p className="text-sm font-semibold text-slate-950">Courses</p>
-              <div className="mt-3 space-y-2">
-                {activity.recentCourses.map((item) => (
-                  <div key={item.id} className="rounded-2xl bg-white p-3 text-sm text-slate-700 shadow-sm">
-                    {item.title} | {item.status}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="rounded-[24px] border border-slate-200 bg-slate-50/80 p-4">
-              <p className="text-sm font-semibold text-slate-950">Payments</p>
-              <div className="mt-3 space-y-2">
-                {activity.recentPayments.map((item) => (
-                  <div key={item.id} className="rounded-2xl bg-white p-3 text-sm text-slate-700 shadow-sm">
-                    {item.user.fullName} | {item.course.title}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="rounded-[24px] border border-slate-200 bg-slate-50/80 p-4">
-              <p className="text-sm font-semibold text-slate-950">Notifications</p>
-              <div className="mt-3 space-y-2">
-                {activity.recentNotifications.map((item) => (
-                  <div key={item.id} className="rounded-2xl bg-white p-3 text-sm text-slate-700 shadow-sm">
-                    {item.title}
-                  </div>
-                ))}
-              </div>
+                ))
+              ) : (
+                <EmptyState
+                  title={`No recent ${tabMeta[activeTab].label.toLowerCase()}`}
+                  description="This tab will populate as the platform is used."
+                />
+              )}
             </div>
           </div>
         ) : activityLoading ? (

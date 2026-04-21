@@ -9,6 +9,8 @@ export type AdminSectionKey =
   | "plans"
   | "tenants"
   | "users"
+  | "courses"
+  | "payments"
   | "admins"
   | "audit";
 

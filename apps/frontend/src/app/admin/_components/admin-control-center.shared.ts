@@ -506,6 +506,14 @@ export const adminSectionMeta: Record<AdminSectionKey, { title: string; descript
     title: "User Oversight",
     description: "Review instructor and student accounts with cleaner filters, status controls, and focused account detail."
   },
+  courses: {
+    title: "Course Review",
+    description: "Inspect all platform courses from a dedicated review catalog instead of a mixed overview card."
+  },
+  payments: {
+    title: "Payment Review",
+    description: "Inspect payment activity from a dedicated admin payment view instead of a mixed overview card."
+  },
   admins: {
     title: "Delegated Admins",
     description: "Create and control delegated admin accounts while keeping the super admin surface separate and protected."
