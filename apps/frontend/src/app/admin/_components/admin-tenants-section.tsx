@@ -124,7 +124,7 @@ export function AdminTenantsSection({
         {tenantDetail ? (
           <div className="mt-4 space-y-4">
             <div className="rounded-[24px] border border-slate-200 bg-white/70 p-5">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-col gap-4">
                 <div className="min-w-0">
                   <p className="text-xl font-semibold text-slate-950">{tenantDetail.name}</p>
                   <div className="mt-3 flex flex-wrap gap-2 lg:flex-nowrap">
@@ -147,7 +147,7 @@ export function AdminTenantsSection({
                       isActive: !tenantDetail.isActive
                     })
                   }
-                  className="shrink-0 rounded-full border border-slate-300 px-5 py-2.5 text-sm font-medium text-slate-700"
+                  className="w-full rounded-full border border-slate-300 px-5 py-3 text-sm font-medium text-slate-700 lg:w-full"
                 >
                   {tenantDetail.isActive ? "Deactivate" : "Reactivate"}
                 </button>
