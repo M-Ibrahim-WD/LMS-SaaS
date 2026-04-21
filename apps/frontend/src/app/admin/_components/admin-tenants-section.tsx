@@ -154,8 +154,9 @@ export function AdminTenantsSection({
               </div>
             </div>
 
-            <div className="rounded-[24px] border border-slate-200 bg-slate-50/70 p-4 lg:p-5">
-              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px_auto] lg:items-end">
+            <div className="rounded-[24px] border border-slate-200 bg-slate-50/70 p-5">
+              <p className="text-sm font-medium text-slate-900">Subscription controls</p>
+              <div className="mt-4 grid gap-4 xl:grid-cols-2">
                 <label className="block">
                   <span className="mb-2 block text-sm font-medium text-slate-800">Plan</span>
                   <select
@@ -184,53 +185,53 @@ export function AdminTenantsSection({
                     <option value="YEARLY">Yearly</option>
                   </select>
                 </label>
-                <div className="flex flex-wrap gap-2 lg:justify-end">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      tenantPlanId &&
-                      onActivateSubscription({
-                        tenantId: tenantDetail.id,
-                        planId: tenantPlanId,
-                        billingPeriod: tenantBillingPeriod
-                      })
-                    }
-                    disabled={!tenantPlanId}
-                    className="w-full rounded-full bg-slate-950 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50 lg:w-auto"
-                  >
-                    Activate
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      tenantPlanId &&
-                      onActivateSubscription({
-                        tenantId: tenantDetail.id,
-                        planId: tenantPlanId,
-                        billingPeriod: "MONTHLY",
-                        isTrial: true
-                      })
-                    }
-                    disabled={!tenantPlanId}
-                    className="w-full rounded-full border border-sky-300 px-4 py-2.5 text-sm font-medium text-sky-700 disabled:opacity-50 lg:w-auto"
-                  >
-                    Restart trial
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onEndSubscription({ tenantId: tenantDetail.id, markCanceled: true })}
-                    className="w-full rounded-full border border-rose-300 px-4 py-2.5 text-sm font-medium text-rose-700 lg:w-auto"
-                  >
-                    End current
-                  </button>
-                </div>
+              </div>
+              <div className="mt-4 flex flex-col gap-2 xl:flex-row xl:flex-wrap">
+                <button
+                  type="button"
+                  onClick={() =>
+                    tenantPlanId &&
+                    onActivateSubscription({
+                      tenantId: tenantDetail.id,
+                      planId: tenantPlanId,
+                      billingPeriod: tenantBillingPeriod
+                    })
+                  }
+                  disabled={!tenantPlanId}
+                  className="rounded-full bg-slate-950 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50"
+                >
+                  Activate
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    tenantPlanId &&
+                    onActivateSubscription({
+                      tenantId: tenantDetail.id,
+                      planId: tenantPlanId,
+                      billingPeriod: "MONTHLY",
+                      isTrial: true
+                    })
+                  }
+                  disabled={!tenantPlanId}
+                  className="rounded-full border border-sky-300 px-4 py-2.5 text-sm font-medium text-sky-700 disabled:opacity-50"
+                >
+                  Restart trial
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onEndSubscription({ tenantId: tenantDetail.id, markCanceled: true })}
+                  className="rounded-full border border-rose-300 px-4 py-2.5 text-sm font-medium text-rose-700"
+                >
+                  End current
+                </button>
               </div>
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid gap-4 xl:grid-cols-2">
               <div className="rounded-[24px] bg-slate-50 p-5 text-sm text-slate-700">
                 <p className="font-medium text-slate-900">Usage</p>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="mt-4 grid gap-x-6 gap-y-4 md:grid-cols-2">
                   <div>
                     <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Users</p>
                     <p className="mt-1 text-base font-semibold text-slate-900">
@@ -272,7 +273,7 @@ export function AdminTenantsSection({
 
               <div className="rounded-[24px] bg-slate-50 p-5 text-sm text-slate-700">
                 <p className="font-medium text-slate-900">Subscription</p>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="mt-4 grid gap-x-6 gap-y-4 md:grid-cols-2">
                   <div>
                     <p className="text-xs uppercase tracking-[0.18em] text-slate-400">State</p>
                     <p className="mt-1 text-base font-semibold text-slate-900">
