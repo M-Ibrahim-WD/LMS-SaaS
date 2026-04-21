@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { BackButton } from "../../../components/back-button";
 
 export type AdminSectionKey =
   | "overview"
@@ -31,21 +30,23 @@ interface AdminShellProps {
   children: ReactNode;
 }
 
-export function AdminShell({ title, description, active, navItems, headerActions, children }: AdminShellProps) {
+export function AdminShell({ title, description: _description, active, navItems, headerActions, children }: AdminShellProps) {
   return (
     <main className="mx-auto w-full max-w-[96rem] px-4 py-5 sm:px-6 sm:py-7 lg:px-8 lg:py-8">
       <div className="grid gap-5 xl:grid-cols-[18rem_minmax(0,1fr)] xl:items-start">
         <aside className="xl:sticky xl:top-6 xl:self-start">
           <div className="surface-card-strong rounded-[30px] p-5 sm:p-6">
             <p className="section-kicker">Admin</p>
-            <h1 className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">Platform</h1>
-            <p className="mt-3 text-sm leading-6 text-slate-600">
-              Keep the platform clean, accountable, and easy to operate.
-            </p>
-            <div className="mt-5">
-              <BackButton fallbackHref="/dashboard" label="Back to dashboard" />
+            <div className="mt-3 flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <h1 className="text-2xl font-semibold tracking-tight text-slate-950">Platform</h1>
+                <p className="mt-3 text-sm leading-6 text-slate-600">
+                  Keep the platform clean, accountable, and easy to operate.
+                </p>
+              </div>
+              {headerActions ? <div className="flex shrink-0 sm:hidden">{headerActions}</div> : null}
             </div>
-            <nav className="mt-6 grid grid-cols-5 gap-2 xl:grid-cols-1">
+            <nav className="mt-6 grid grid-cols-4 gap-2 xl:grid-cols-1">
               {navItems.filter((item) => item.visible).map((item) => {
                 const isActive = item.key === active;
                 return (
@@ -68,14 +69,18 @@ export function AdminShell({ title, description, active, navItems, headerActions
 
         <section className="min-w-0 space-y-5">
           <div className="surface-card-strong rounded-[30px] p-5 sm:p-6 lg:p-7">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
                 <p className="section-kicker">Admin</p>
                 <h2 className="mt-3 text-balance text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
                   {title}
                 </h2>
               </div>
-              {headerActions ? <div className="flex flex-wrap gap-2">{headerActions}</div> : null}
+              {headerActions ? (
+                <div className="hidden shrink-0 flex-wrap items-start justify-end gap-2 sm:flex">
+                  {headerActions}
+                </div>
+              ) : null}
             </div>
           </div>
           {children}

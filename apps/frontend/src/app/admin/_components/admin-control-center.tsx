@@ -15,6 +15,7 @@ import { AdminCoursesSection } from "./admin-courses-section";
 import { AdminOverviewSection } from "./admin-overview-section";
 import { AdminPaymentsSection } from "./admin-payments-section";
 import { AdminPlansSection } from "./admin-plans-section";
+import { AdminSiteMenu } from "./admin-site-menu";
 import { AdminTenantsSection } from "./admin-tenants-section";
 import { AdminUsersSection } from "./admin-users-section";
 
@@ -519,7 +520,7 @@ export function AdminControlCenter({ section }: AdminControlCenterProps) {
   const canReviewUsers = hasAdminPermission("REVIEW_STUDENTS") || hasAdminPermission("REVIEW_INSTRUCTORS");
   const canReviewAdmins = hasAdminPermission("REVIEW_ADMINS");
   const canReviewAudit = isSuperAdmin;
-  const canReviewOps = hasAdminPermission("REVIEW_COURSES") || hasAdminPermission("REVIEW_PAYMENTS");
+  const canHandleSupport = isSuperAdmin || adminPermissions.includes("HANDLE_SUPPORT");
 
   const navItems = [
     {
@@ -1120,7 +1121,7 @@ export function AdminControlCenter({ section }: AdminControlCenterProps) {
       description={sectionMeta[section].description}
       active={section}
       navItems={navItems}
-      headerActions={null}
+      headerActions={<AdminSiteMenu accessToken={accessToken} canHandleSupport={canHandleSupport} />}
     >
       {overviewQuery.error instanceof Error ? <StatusBanner variant="error">{overviewQuery.error.message}</StatusBanner> : null}
       {message ? <StatusBanner variant="success">{message}</StatusBanner> : null}

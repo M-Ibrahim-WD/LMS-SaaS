@@ -81,7 +81,7 @@ export function AdminOverviewSection({ overview, activity, activityLoading }: Ad
             <p className="section-kicker">Activity feed</p>
             <h3 className="mt-2 text-xl font-semibold text-slate-950">Detailed recent events</h3>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+          <div className="grid grid-cols-4 gap-2 sm:flex sm:flex-wrap">
             {(Object.keys(tabMeta) as ActivityTabKey[]).map((tabKey) => {
               const isActive = activeTab === tabKey;
               return (
@@ -89,7 +89,7 @@ export function AdminOverviewSection({ overview, activity, activityLoading }: Ad
                   key={tabKey}
                   type="button"
                   onClick={() => setActiveTab(tabKey)}
-                  className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                  className={`rounded-full border px-2 py-2 text-[0.72rem] font-semibold transition sm:px-4 sm:text-sm ${
                     isActive
                       ? "border-slate-950 bg-slate-950 text-white"
                       : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
