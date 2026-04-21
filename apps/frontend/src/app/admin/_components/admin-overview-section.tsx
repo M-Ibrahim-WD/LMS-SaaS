@@ -190,40 +190,6 @@ export function AdminOverviewSection({
           </div>
         </ContentCard>
 
-        <ContentCard className="p-6">
-          <p className="section-kicker">Platform pulse</p>
-          <h3 className="mt-2 text-xl font-semibold text-slate-950">Recent activity</h3>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            Get a quick read on where platform activity is happening before you move into the detailed review cards.
-          </p>
-
-          {activity ? (
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              {[
-                ["Recent users", activity.recentUsers.length],
-                ["Recent courses", activity.recentCourses.length],
-                ["Recent payments", activity.recentPayments.length],
-                ["Recent notifications", activity.recentNotifications.length]
-              ].map(([label, value]) => (
-                <div key={String(label)} className="rounded-[24px] border border-slate-200 bg-slate-50/80 p-4">
-                  <p className="text-xs uppercase tracking-[0.18em] text-slate-400">{label}</p>
-                  <p className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">{value}</p>
-                </div>
-              ))}
-            </div>
-          ) : activityLoading ? (
-            <div className="mt-5">
-              <StatusBanner>Loading activity...</StatusBanner>
-            </div>
-          ) : (
-            <div className="mt-5">
-              <EmptyState
-                title="No recent activity"
-                description="Platform activity will populate here as the system is used."
-              />
-            </div>
-          )}
-        </ContentCard>
       </div>
 
       <ContentCard className="p-6">
