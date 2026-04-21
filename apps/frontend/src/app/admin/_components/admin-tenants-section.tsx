@@ -127,7 +127,7 @@ export function AdminTenantsSection({
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div className="min-w-0">
                   <p className="text-xl font-semibold text-slate-950">{tenantDetail.name}</p>
-                  <div className="mt-3 flex flex-wrap gap-2">
+                  <div className="mt-3 flex flex-wrap gap-2 lg:flex-nowrap">
                     <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
                       Invite code: {tenantDetail.inviteCode}
                     </span>
@@ -186,7 +186,7 @@ export function AdminTenantsSection({
                   </select>
                 </label>
               </div>
-              <div className="mt-4 flex flex-col gap-2 xl:flex-row xl:flex-wrap">
+              <div className="mt-4 flex flex-row flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={() =>
@@ -231,81 +231,67 @@ export function AdminTenantsSection({
             <div className="grid gap-4 xl:grid-cols-2">
               <div className="rounded-[24px] bg-slate-50 p-5 text-sm text-slate-700">
                 <p className="font-medium text-slate-900">Usage</p>
-                <div className="mt-4 grid gap-x-6 gap-y-4 md:grid-cols-2">
-                  <div>
+                <div className="mt-4 grid gap-3">
+                  <div className="flex items-baseline justify-between gap-4">
                     <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Users</p>
-                    <p className="mt-1 text-base font-semibold text-slate-900">
-                      {tenantDetail.usage.usersCount}
-                    </p>
+                    <p className="text-base font-semibold text-slate-900">{tenantDetail.usage.usersCount}</p>
                   </div>
-                  <div>
+                  <div className="flex items-baseline justify-between gap-4">
                     <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Students</p>
-                    <p className="mt-1 text-base font-semibold text-slate-900">
-                      {tenantDetail.usage.studentsCount ?? 0}
-                    </p>
+                    <p className="text-base font-semibold text-slate-900">{tenantDetail.usage.studentsCount ?? 0}</p>
                   </div>
-                  <div>
+                  <div className="flex items-baseline justify-between gap-4">
                     <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Instructors</p>
-                    <p className="mt-1 text-base font-semibold text-slate-900">
-                      {tenantDetail.usage.instructorsCount ?? 0}
-                    </p>
+                    <p className="text-base font-semibold text-slate-900">{tenantDetail.usage.instructorsCount ?? 0}</p>
                   </div>
-                  <div>
+                  <div className="flex items-baseline justify-between gap-4">
                     <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Admins</p>
-                    <p className="mt-1 text-base font-semibold text-slate-900">
-                      {tenantDetail.usage.adminsCount ?? 0}
-                    </p>
+                    <p className="text-base font-semibold text-slate-900">{tenantDetail.usage.adminsCount ?? 0}</p>
                   </div>
-                  <div>
+                  <div className="flex items-baseline justify-between gap-4">
                     <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Courses</p>
-                    <p className="mt-1 text-base font-semibold text-slate-900">
-                      {tenantDetail.usage.coursesCount}
-                    </p>
+                    <p className="text-base font-semibold text-slate-900">{tenantDetail.usage.coursesCount}</p>
                   </div>
-                  <div>
+                  <div className="flex items-baseline justify-between gap-4">
                     <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Approved revenue</p>
-                    <p className="mt-1 text-base font-semibold text-slate-900">
-                      {money.format(tenantDetail.usage.approvedRevenue ?? 0)}
-                    </p>
+                    <p className="text-base font-semibold text-slate-900">{money.format(tenantDetail.usage.approvedRevenue ?? 0)}</p>
                   </div>
                 </div>
               </div>
 
               <div className="rounded-[24px] bg-slate-50 p-5 text-sm text-slate-700">
                 <p className="font-medium text-slate-900">Subscription</p>
-                <div className="mt-4 grid gap-x-6 gap-y-4 md:grid-cols-2">
-                  <div>
+                <div className="mt-4 grid gap-3">
+                  <div className="flex items-baseline justify-between gap-4">
                     <p className="text-xs uppercase tracking-[0.18em] text-slate-400">State</p>
-                    <p className="mt-1 text-base font-semibold text-slate-900">
+                    <p className="text-base font-semibold text-slate-900">
                       {tenantDetail.subscription?.currentSubscription?.state ??
                         tenantDetail.subscription?.latestSubscription?.state ??
                         "NONE"}
                     </p>
                   </div>
-                  <div>
+                  <div className="flex items-baseline justify-between gap-4">
                     <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Trial days left</p>
-                    <p className="mt-1 text-base font-semibold text-slate-900">
-                      {tenantDetail.subscription?.daysRemaining ?? 0}
-                    </p>
+                    <p className="text-base font-semibold text-slate-900">{tenantDetail.subscription?.daysRemaining ?? 0}</p>
                   </div>
-                  <div>
+                  <div className="flex items-baseline justify-between gap-4">
                     <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Freeze creation</p>
-                    <p className="mt-1 text-base font-semibold text-slate-900">
+                    <p className="text-base font-semibold text-slate-900">
                       {tenantDetail.subscription?.freezeCreation ? "Yes" : "No"}
                     </p>
                   </div>
-                  <div>
+                  <div className="flex items-baseline justify-between gap-4">
                     <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Limit snapshot</p>
-                    <p className="mt-1 text-base font-semibold text-slate-900">
+                    <p className="text-base font-semibold text-slate-900">
                       {tenantDetail.plan?.maxCourses ??
                         tenantDetail.subscription?.trialRules.maxCourses ??
                         "-"}{" "}
                       courses
                     </p>
                   </div>
-                  <div className="sm:col-span-2">
+                  <div className="flex items-baseline justify-between gap-4">
                     <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Student cap</p>
-                    <p className="mt-1 text-base font-semibold text-slate-900">
+                    <p className="text-base font-semibold text-slate-900">
                       {tenantDetail.plan?.maxStudentsTotal ??
                         tenantDetail.subscription?.trialRules.maxStudentsTotal ??
                         "-"}
