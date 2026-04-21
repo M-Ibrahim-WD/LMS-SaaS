@@ -210,9 +210,13 @@ export function AdminAdminsSection({
             <h2 className="text-lg font-semibold text-slate-950">Managed Admin Accounts</h2>
           </div>
           <input
+            type="search"
+            name="admin-search"
             value={adminSearch}
             onChange={(event) => setAdminSearch(event.target.value)}
             placeholder="Search admins"
+            autoComplete="off"
+            spellCheck={false}
             className="w-full max-w-56 rounded-xl border border-slate-300 px-4 py-3 text-sm"
           />
         </div>
