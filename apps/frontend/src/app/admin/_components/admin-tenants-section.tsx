@@ -124,7 +124,7 @@ export function AdminTenantsSection({
         {tenantDetail ? (
           <div className="mt-4 space-y-4">
             <div className="rounded-[24px] border border-slate-200 bg-white/70 p-5">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div className="min-w-0">
                   <p className="text-xl font-semibold text-slate-950">{tenantDetail.name}</p>
                   <div className="mt-3 flex flex-wrap gap-2">
@@ -154,46 +154,37 @@ export function AdminTenantsSection({
               </div>
             </div>
 
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_220px] xl:items-start">
-              <div className="rounded-[24px] border border-slate-200 bg-slate-50/70 p-4">
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Subscription controls
-                </p>
-                <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
-                  <label className="block">
-                    <span className="mb-2 block text-sm font-medium text-slate-800">Plan</span>
-                    <select
-                      value={tenantPlanId}
-                      onChange={(event) => setTenantPlanId(event.target.value)}
-                      className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm"
-                    >
-                      <option value="">Choose a plan</option>
-                      {plans?.filter((plan) => !plan.isArchived).map((plan) => (
-                        <option key={plan.id} value={plan.id}>
-                          {plan.name} ({plan.code})
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="block">
-                    <span className="mb-2 block text-sm font-medium text-slate-800">Billing period</span>
-                    <select
-                      value={tenantBillingPeriod}
-                      onChange={(event) =>
-                        setTenantBillingPeriod(event.target.value as "MONTHLY" | "YEARLY")
-                      }
-                      className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm"
-                    >
-                      <option value="MONTHLY">Monthly</option>
-                      <option value="YEARLY">Yearly</option>
-                    </select>
-                  </label>
-                </div>
-              </div>
-
-              <div className="rounded-[24px] border border-slate-200 bg-white p-4">
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Actions</p>
-                <div className="mt-4 flex flex-col gap-2">
+            <div className="rounded-[24px] border border-slate-200 bg-slate-50/70 p-4 lg:p-5">
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px_auto] lg:items-end">
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-slate-800">Plan</span>
+                  <select
+                    value={tenantPlanId}
+                    onChange={(event) => setTenantPlanId(event.target.value)}
+                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm"
+                  >
+                    <option value="">Choose a plan</option>
+                    {plans?.filter((plan) => !plan.isArchived).map((plan) => (
+                      <option key={plan.id} value={plan.id}>
+                        {plan.name} ({plan.code})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-slate-800">Billing period</span>
+                  <select
+                    value={tenantBillingPeriod}
+                    onChange={(event) =>
+                      setTenantBillingPeriod(event.target.value as "MONTHLY" | "YEARLY")
+                    }
+                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm"
+                  >
+                    <option value="MONTHLY">Monthly</option>
+                    <option value="YEARLY">Yearly</option>
+                  </select>
+                </label>
+                <div className="flex flex-wrap gap-2 lg:justify-end">
                   <button
                     type="button"
                     onClick={() =>
@@ -205,7 +196,7 @@ export function AdminTenantsSection({
                       })
                     }
                     disabled={!tenantPlanId}
-                    className="w-full rounded-full bg-slate-950 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50"
+                    className="w-full rounded-full bg-slate-950 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50 lg:w-auto"
                   >
                     Activate
                   </button>
@@ -221,14 +212,14 @@ export function AdminTenantsSection({
                       })
                     }
                     disabled={!tenantPlanId}
-                    className="w-full rounded-full border border-sky-300 px-4 py-2.5 text-sm font-medium text-sky-700 disabled:opacity-50"
+                    className="w-full rounded-full border border-sky-300 px-4 py-2.5 text-sm font-medium text-sky-700 disabled:opacity-50 lg:w-auto"
                   >
                     Restart trial
                   </button>
                   <button
                     type="button"
                     onClick={() => onEndSubscription({ tenantId: tenantDetail.id, markCanceled: true })}
-                    className="w-full rounded-full border border-rose-300 px-4 py-2.5 text-sm font-medium text-rose-700"
+                    className="w-full rounded-full border border-rose-300 px-4 py-2.5 text-sm font-medium text-rose-700 lg:w-auto"
                   >
                     End current
                   </button>
