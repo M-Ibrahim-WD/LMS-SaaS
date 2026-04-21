@@ -53,14 +53,22 @@ export function AdminOverviewSection({
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-4 gap-2 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
         {statCards(overview).map((item) => (
-          <ContentCard key={item.label} className="p-5">
+          <ContentCard key={item.label} className="p-3 sm:p-5">
             <div className="flex items-start justify-between gap-3">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{item.label}</p>
-              {item.tone ? <StatusChip tone={item.tone}>{item.label.split(" ")[0]}</StatusChip> : null}
+              <p className="text-[0.55rem] uppercase tracking-[0.18em] text-slate-400 sm:text-xs">
+                {item.label}
+              </p>
+              {item.tone ? (
+                <div className="hidden sm:block">
+                  <StatusChip tone={item.tone}>{item.label.split(" ")[0]}</StatusChip>
+                </div>
+              ) : null}
             </div>
-            <p className="mt-4 text-3xl font-semibold tracking-tight text-slate-950">{item.value}</p>
+            <p className="mt-3 text-xl font-semibold tracking-tight text-slate-950 sm:mt-4 sm:text-3xl">
+              {item.value}
+            </p>
           </ContentCard>
         ))}
       </div>
