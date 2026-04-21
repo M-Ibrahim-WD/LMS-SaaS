@@ -186,7 +186,7 @@ export function AdminTenantsSection({
                   </select>
                 </label>
               </div>
-              <div className="mt-4 flex flex-row flex-wrap gap-2">
+              <div className="mt-4 flex flex-row flex-nowrap items-center justify-center gap-2 overflow-x-auto">
                 <button
                   type="button"
                   onClick={() =>
@@ -198,7 +198,7 @@ export function AdminTenantsSection({
                     })
                   }
                   disabled={!tenantPlanId}
-                  className="rounded-full bg-slate-950 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50"
+                  className="shrink-0 rounded-full bg-slate-950 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50"
                 >
                   Activate
                 </button>
@@ -214,14 +214,14 @@ export function AdminTenantsSection({
                     })
                   }
                   disabled={!tenantPlanId}
-                  className="rounded-full border border-sky-300 px-4 py-2.5 text-sm font-medium text-sky-700 disabled:opacity-50"
+                  className="shrink-0 rounded-full border border-sky-300 px-4 py-2.5 text-sm font-medium text-sky-700 disabled:opacity-50"
                 >
                   Restart trial
                 </button>
                 <button
                   type="button"
                   onClick={() => onEndSubscription({ tenantId: tenantDetail.id, markCanceled: true })}
-                  className="rounded-full border border-rose-300 px-4 py-2.5 text-sm font-medium text-rose-700"
+                  className="shrink-0 rounded-full border border-rose-300 px-4 py-2.5 text-sm font-medium text-rose-700"
                 >
                   End current
                 </button>
