@@ -68,7 +68,7 @@ export function AdminShell({ title, description: _description, active, navItems,
         </aside>
 
         <section className="relative z-10 min-w-0 space-y-5">
-          <div className="surface-card-strong relative overflow-visible rounded-[30px] p-5 sm:p-6 lg:p-7">
+          <div className="surface-card-strong relative z-30 overflow-visible rounded-[30px] p-5 sm:p-6 lg:p-7">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
                 <p className="section-kicker">Admin</p>
