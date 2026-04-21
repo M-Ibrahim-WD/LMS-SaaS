@@ -72,9 +72,6 @@ export function AdminShell({ title, description, active, navItems, headerActions
                 <h2 className="mt-3 text-balance text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
                   {title}
                 </h2>
-                <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600 sm:text-[0.98rem]">
-                  {description}
-                </p>
               </div>
               {headerActions ? <div className="flex flex-wrap gap-2">{headerActions}</div> : null}
             </div>

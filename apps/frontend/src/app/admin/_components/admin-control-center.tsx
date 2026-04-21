@@ -1096,22 +1096,7 @@ export function AdminControlCenter({ section }: AdminControlCenterProps) {
       description={sectionMeta[section].description}
       active={section}
       navItems={navItems}
-      headerActions={
-        section === "overview" ? (
-          <>
-            {canManagePlans ? (
-              <a href="/admin/plans" className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700">
-                Manage plans
-              </a>
-            ) : null}
-            {canReviewTenants ? (
-              <a href="/admin/tenants" className="rounded-full bg-slate-950 px-4 py-2 text-sm font-medium text-white">
-                Review tenants
-              </a>
-            ) : null}
-          </>
-        ) : null
-      }
+      headerActions={null}
     >
       {overviewQuery.error instanceof Error ? <StatusBanner variant="error">{overviewQuery.error.message}</StatusBanner> : null}
       {message ? <StatusBanner variant="success">{message}</StatusBanner> : null}
