@@ -47,9 +47,6 @@ export function useConversationsWorkspace({ kind }: UseConversationsWorkspaceOpt
   const [groupStudentIds, setGroupStudentIds] = useState<string[]>([]);
   const [groupImageFile, setGroupImageFile] = useState<File | null>(null);
   const [groupError, setGroupError] = useState<string | null>(null);
-  const [groupEditTitle, setGroupEditTitle] = useState("");
-  const [groupEditStudentIds, setGroupEditStudentIds] = useState<string[]>([]);
-  const [groupEditImageFile, setGroupEditImageFile] = useState<File | null>(null);
   const lastMarkedConversationRef = useRef<string | null>(null);
   const initialDirectTargetRef = useRef<string | null>(null);
 
@@ -260,22 +257,29 @@ export function useConversationsWorkspace({ kind }: UseConversationsWorkspaceOpt
   });
 
   const updateGroupMutation = useMutation({
-    mutationFn: () =>
-      apiFetch<ConversationSummary>(`/conversations/${activeConversationId}/group`, {
+    mutationFn: ({
+      conversationId,
+      title,
+      studentIds
+    }: {
+      conversationId: string;
+      title?: string;
+      studentIds?: string[];
+    }) =>
+      apiFetch<ConversationSummary>(`/conversations/${conversationId}/group`, {
         method: "PATCH",
         token: accessToken ?? undefined,
         body: JSON.stringify({
-          title: groupEditTitle,
-          studentIds:
-            activeConversation?.groupScope === "SELECTED" ? groupEditStudentIds : undefined
+          ...(title !== undefined ? { title } : {}),
+          ...(studentIds !== undefined ? { studentIds } : {})
         })
       }),
-    onSuccess: async (conversation) => {
+    onSuccess: async (conversation, variables) => {
       setGroupError(null);
       setActiveConversationId(conversation.id);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["conversations"] }),
-        queryClient.invalidateQueries({ queryKey: ["conversation", activeConversationId] }),
+        queryClient.invalidateQueries({ queryKey: ["conversation", variables.conversationId] }),
         queryClient.invalidateQueries({ queryKey: ["notifications"] })
       ]);
     },
@@ -439,22 +443,6 @@ export function useConversationsWorkspace({ kind }: UseConversationsWorkspaceOpt
     return "Open";
   }, [activeConversation]);
 
-  useEffect(() => {
-    if (activeConversation?.kind !== "GROUP") {
-      setGroupEditTitle("");
-      setGroupEditStudentIds([]);
-      setGroupEditImageFile(null);
-      return;
-    }
-
-    setGroupEditTitle(activeConversation.groupTitle ?? "");
-    setGroupEditStudentIds(
-      activeConversation.participantPreview
-        .filter((participant) => participant.role === "STUDENT")
-        .map((participant) => participant.id)
-    );
-  }, [activeConversation]);
-
   return {
     accessToken,
     user,
@@ -499,12 +487,6 @@ export function useConversationsWorkspace({ kind }: UseConversationsWorkspaceOpt
     groupImageFile,
     setGroupImageFile,
     groupError,
-    groupEditTitle,
-    setGroupEditTitle,
-    groupEditStudentIds,
-    setGroupEditStudentIds,
-    groupEditImageFile,
-    setGroupEditImageFile,
     sendMessageMutation,
     createDirectMutation,
     createGroupMutation,
@@ -560,32 +542,19 @@ export function useConversationsWorkspace({ kind }: UseConversationsWorkspaceOpt
       }
       setGroupImageFile(null);
     },
-    onDeleteActiveGroup: async () => {
-      if (!activeConversationId || activeConversation?.kind !== "GROUP") {
-        return;
-      }
-      await deleteGroupMutation.mutateAsync(activeConversationId);
-    },
-    onUpdateActiveGroup: async () => {
-      if (!activeConversationId || activeConversation?.kind !== "GROUP") {
-        return;
-      }
-      if (!groupEditTitle.trim()) {
+    onRenameGroupConversation: async (conversationId: string, title: string) => {
+      if (!title.trim()) {
         setGroupError("Add a group title first.");
         return;
       }
-      if (activeConversation.groupScope === "SELECTED" && groupEditStudentIds.length === 0) {
-        setGroupError("Choose at least one student.");
-        return;
-      }
-      const conversation = await updateGroupMutation.mutateAsync();
-      if (groupEditImageFile) {
-        await uploadGroupImageMutation.mutateAsync({
-          conversationId: conversation.id,
-          file: groupEditImageFile
-        });
-      }
-      setGroupEditImageFile(null);
+
+      await updateGroupMutation.mutateAsync({
+        conversationId,
+        title: title.trim()
+      });
+    },
+    onDeleteGroupConversation: async (conversationId: string) => {
+      await deleteGroupMutation.mutateAsync(conversationId);
     },
     onCreateSupportConversation: async () => {
       if (!supportMessage.trim()) {

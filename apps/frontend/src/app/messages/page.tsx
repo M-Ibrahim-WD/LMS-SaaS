@@ -4,6 +4,8 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { AdminSiteMenu } from "../admin/_components/admin-site-menu";
+import { PageShell } from "../../components/page-shell";
 import { StatusBanner } from "../../components/status-banner";
 import { useConversationsWorkspace } from "../../hooks/use-conversations-workspace";
 import {
@@ -38,11 +40,16 @@ function SearchIcon() {
   );
 }
 
-function PencilIcon() {
+function ChevronDownIcon({ open }: { open: boolean }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4.5 w-4.5">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 20h9" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="m16.5 3.5 4 4L8 20l-5 1 1-5 12.5-12.5Z" />
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      className={`h-4.5 w-4.5 transition ${open ? "rotate-180" : ""}`}
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
     </svg>
   );
 }
@@ -62,6 +69,27 @@ function SendIcon() {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" className="h-5 w-5">
       <path strokeLinecap="round" strokeLinejoin="round" d="M21 3 10 14" />
       <path strokeLinecap="round" strokeLinejoin="round" d="m21 3-7 18-4-7-7-4 18-7Z" />
+    </svg>
+  );
+}
+
+function EditIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 20h9" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="m16.5 3.5 4 4L8 20l-5 1 1-5 12.5-12.5Z" />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M10 11v6" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M14 11v6" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M7 7l1-2h8l1 2" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12" />
     </svg>
   );
 }
@@ -102,6 +130,10 @@ function ChatAvatar({
 export default function MessagesPage() {
   const workspace = useConversationsWorkspace({ kind: "MESSAGES" });
   const [mobilePane, setMobilePane] = useState<"list" | "chat">("list");
+  const [newConversationOpen, setNewConversationOpen] = useState(false);
+  const [groupConversationOpen, setGroupConversationOpen] = useState(false);
+  const [editingConversationId, setEditingConversationId] = useState<string | null>(null);
+  const [editingConversationTitle, setEditingConversationTitle] = useState("");
   const messageEndRef = useRef<HTMLDivElement | null>(null);
 
   const conversations = workspace.filteredConversations ?? [];
@@ -125,7 +157,17 @@ export default function MessagesPage() {
   }
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-[110rem] px-3 py-3 sm:px-4 sm:py-5 lg:px-6 lg:py-6">
+    <PageShell
+      title="Messages"
+      actionsInlineOnMobile
+      maxWidthClassName="max-w-[110rem]"
+      actions={
+        <AdminSiteMenu
+          accessToken={workspace.accessToken}
+          canHandleSupport
+        />
+      }
+    >
       <div className="overflow-hidden rounded-[32px] border border-slate-200 bg-white/80 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur-xl lg:grid lg:min-h-[calc(100vh-3rem)] lg:grid-cols-[360px_minmax(0,1fr)] xl:grid-cols-[390px_minmax(0,1fr)]">
         <aside
           className={`border-r border-slate-200 bg-[linear-gradient(180deg,#f8fbff_0%,#f3f7fd_100%)] ${
@@ -133,19 +175,11 @@ export default function MessagesPage() {
           } min-h-[calc(100vh-3rem)] flex-col`}
         >
           <div className="border-b border-slate-200 px-4 pb-4 pt-5 sm:px-5 lg:px-6">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h1 className="text-[1.9rem] font-bold tracking-tight text-slate-950">Chats</h1>
-                <p className="mt-1 text-sm text-slate-500">
-                  {conversations.length} conversation{conversations.length === 1 ? "" : "s"}
-                </p>
-              </div>
-              <button
-                type="button"
-                className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-slate-950 text-white shadow-sm transition hover:bg-slate-800"
-              >
-                <PencilIcon />
-              </button>
+            <div>
+              <h2 className="text-[1.9rem] font-bold tracking-tight text-slate-950">Chats</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                {conversations.length} conversation{conversations.length === 1 ? "" : "s"}
+              </p>
             </div>
 
             {workspace.conversationsQuery.isError ? (
@@ -166,114 +200,139 @@ export default function MessagesPage() {
               />
             </div>
 
-            <div className="mt-4 rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="flex items-center justify-between gap-3">
+            <div className="mt-4 rounded-[24px] border border-slate-200 bg-white shadow-sm">
+              <button
+                type="button"
+                onClick={() => setNewConversationOpen((current) => !current)}
+                className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left"
+              >
                 <div>
                   <p className="text-sm font-semibold text-slate-900">New conversation</p>
                   <p className="mt-1 text-xs text-slate-500">
                     {isStudent ? "Start a chat with your instructor." : "Pick who you want to message next."}
                   </p>
                 </div>
-                <label className="flex items-center gap-2 text-xs font-medium text-slate-500">
-                  <input
-                    type="checkbox"
-                    checked={workspace.unreadOnly}
-                    onChange={(event) => workspace.setUnreadOnly(event.target.checked)}
-                    className="rounded border-slate-300"
-                  />
-                  Unread
-                </label>
-              </div>
-              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                <select
-                  value={workspace.directTargetId}
-                  onChange={(event) => workspace.setDirectTargetId(event.target.value)}
-                  className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700"
-                >
-                  <option value="">Choose a person</option>
-                  {(workspace.directTargetsQuery.data ?? []).map((target) => (
-                    <option key={target.id} value={target.id}>
-                      {target.fullName}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => void workspace.onStartDirectConversation()}
-                  disabled={workspace.createDirectMutation.isPending}
-                  className="rounded-full bg-[#0084ff] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#0070db] disabled:cursor-not-allowed disabled:bg-sky-300"
-                >
-                  {workspace.createDirectMutation.isPending ? "Opening..." : "Chat"}
-                </button>
-              </div>
-              {workspace.directStartError ? (
-                <p className="mt-2 text-sm text-rose-600">{workspace.directStartError}</p>
+                <ChevronDownIcon open={newConversationOpen} />
+              </button>
+              {newConversationOpen ? (
+                <div className="border-t border-slate-200 px-4 pb-4 pt-3">
+                  <label className="flex items-center gap-2 text-xs font-medium text-slate-500">
+                    <input
+                      type="checkbox"
+                      checked={workspace.unreadOnly}
+                      onChange={(event) => workspace.setUnreadOnly(event.target.checked)}
+                      className="rounded border-slate-300"
+                    />
+                    Unread
+                  </label>
+                  <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                    <select
+                      value={workspace.directTargetId}
+                      onChange={(event) => workspace.setDirectTargetId(event.target.value)}
+                      className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700"
+                    >
+                      <option value="">Choose a person</option>
+                      {(workspace.directTargetsQuery.data ?? []).map((target) => (
+                        <option key={target.id} value={target.id}>
+                          {target.fullName}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => void workspace.onStartDirectConversation()}
+                      disabled={workspace.createDirectMutation.isPending}
+                      className="rounded-full bg-[#0084ff] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#0070db] disabled:cursor-not-allowed disabled:bg-sky-300"
+                    >
+                      {workspace.createDirectMutation.isPending ? "Opening..." : "Chat"}
+                    </button>
+                  </div>
+                  {workspace.directStartError ? (
+                    <p className="mt-2 text-sm text-rose-600">{workspace.directStartError}</p>
+                  ) : null}
+                </div>
               ) : null}
             </div>
 
             {isInstructor ? (
-              <div className="mt-3 rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
-                <p className="text-sm font-semibold text-slate-900">Group conversations</p>
-                <div className="mt-3 space-y-2">
-                  <input
-                    value={workspace.groupTitle}
-                    onChange={(event) => workspace.setGroupTitle(event.target.value)}
-                    placeholder="Group title"
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700"
-                  />
-                  <select
-                    value={workspace.groupScope}
-                    onChange={(event) =>
-                      workspace.setGroupScope(event.target.value as "COURSE" | "FOLLOWERS" | "SELECTED")
-                    }
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700"
-                  >
-                    <option value="FOLLOWERS">All followers</option>
-                    <option value="COURSE">Course learners</option>
-                    <option value="SELECTED">Selected students</option>
-                  </select>
-                  {workspace.groupScope === "COURSE" ? (
-                    <select
-                      value={workspace.groupCourseId}
-                      onChange={(event) => workspace.setGroupCourseId(event.target.value)}
-                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700"
-                    >
-                      <option value="">Choose a course</option>
-                      {(workspace.groupTargetsQuery.data?.courses ?? []).map((course) => (
-                        <option key={course.id} value={course.id}>
-                          {course.title}
-                        </option>
-                      ))}
-                    </select>
-                  ) : null}
-                  {workspace.groupScope !== "COURSE" ? (
-                    <label className="block rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                      <span className="block font-medium text-slate-700">Group picture</span>
-                      <span className="mt-1 block text-xs text-slate-500">
-                        Choose the picture that should represent this group chat.
-                      </span>
+              <div className="mt-3 rounded-[24px] border border-slate-200 bg-white shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => setGroupConversationOpen((current) => !current)}
+                  className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left"
+                >
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">Group conversations</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Create and manage course or student groups.
+                    </p>
+                  </div>
+                  <ChevronDownIcon open={groupConversationOpen} />
+                </button>
+                {groupConversationOpen ? (
+                  <div className="border-t border-slate-200 px-4 pb-4 pt-3">
+                    <div className="space-y-2">
                       <input
-                        type="file"
-                        accept="image/png,image/jpeg,image/jpg,image/webp"
-                        onChange={(event) => workspace.setGroupImageFile(event.target.files?.[0] ?? null)}
-                        className="mt-3 block w-full text-xs text-slate-500"
+                        value={workspace.groupTitle}
+                        onChange={(event) => workspace.setGroupTitle(event.target.value)}
+                        placeholder="Group title"
+                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700"
                       />
-                    </label>
-                  ) : (
-                    <div className="rounded-2xl border border-slate-200 bg-sky-50 px-4 py-3 text-xs text-sky-700">
-                      Course groups automatically use the selected course image.
+                      <select
+                        value={workspace.groupScope}
+                        onChange={(event) =>
+                          workspace.setGroupScope(event.target.value as "COURSE" | "FOLLOWERS" | "SELECTED")
+                        }
+                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700"
+                      >
+                        <option value="FOLLOWERS">All followers</option>
+                        <option value="COURSE">Course learners</option>
+                        <option value="SELECTED">Selected students</option>
+                      </select>
+                      {workspace.groupScope === "COURSE" ? (
+                        <select
+                          value={workspace.groupCourseId}
+                          onChange={(event) => workspace.setGroupCourseId(event.target.value)}
+                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700"
+                        >
+                          <option value="">Choose a course</option>
+                          {(workspace.groupTargetsQuery.data?.courses ?? []).map((course) => (
+                            <option key={course.id} value={course.id}>
+                              {course.title}
+                            </option>
+                          ))}
+                        </select>
+                      ) : null}
+                      {workspace.groupScope !== "COURSE" ? (
+                        <label className="block rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                          <span className="block font-medium text-slate-700">Group picture</span>
+                          <span className="mt-1 block text-xs text-slate-500">
+                            Choose the picture that should represent this group chat.
+                          </span>
+                          <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/jpg,image/webp"
+                            onChange={(event) => workspace.setGroupImageFile(event.target.files?.[0] ?? null)}
+                            className="mt-3 block w-full text-xs text-slate-500"
+                          />
+                        </label>
+                      ) : (
+                        <div className="rounded-2xl border border-slate-200 bg-sky-50 px-4 py-3 text-xs text-sky-700">
+                          Course groups automatically use the selected course image.
+                        </div>
+                      )}
+                      {workspace.groupError ? <p className="text-sm text-rose-600">{workspace.groupError}</p> : null}
+                      <button
+                        type="button"
+                        onClick={() => void workspace.onStartGroupConversation()}
+                        disabled={workspace.createGroupMutation.isPending}
+                        className="w-full rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                      >
+                        {workspace.createGroupMutation.isPending ? "Creating..." : "Create group"}
+                      </button>
                     </div>
-                  )}
-                  {workspace.groupError ? <p className="text-sm text-rose-600">{workspace.groupError}</p> : null}
-                  <button
-                    type="button"
-                    onClick={() => void workspace.onStartGroupConversation()}
-                    disabled={workspace.createGroupMutation.isPending}
-                    className="w-full rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-                  >
-                    {workspace.createGroupMutation.isPending ? "Creating..." : "Create group"}
-                  </button>
-                </div>
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </div>
@@ -310,37 +369,106 @@ export default function MessagesPage() {
                     : conversation.latestMessage?.body ?? "No messages yet";
 
                 return (
-                  <button
+                  <div
                     key={conversation.id}
-                    type="button"
-                    onClick={() => {
-                      workspace.setActiveConversationId(conversation.id);
-                      setMobilePane("chat");
-                    }}
-                    className={`mx-2 mb-1.5 flex w-[calc(100%-1rem)] items-center gap-3 rounded-[24px] px-3 py-3 text-left transition ${
+                    className={`group mx-2 mb-1.5 w-[calc(100%-1rem)] rounded-[24px] transition ${
                       workspace.activeConversationId === conversation.id
                         ? "bg-[#e7f3ff] shadow-sm"
                         : "hover:bg-white/80"
                     }`}
                   >
-                    <div className="relative shrink-0">
-                      <ChatAvatar name={displayName} image={displayImage} />
-                      {conversation.unreadCount > 0 ? (
-                        <span className="absolute -bottom-1 -right-1 inline-flex min-w-5 items-center justify-center rounded-full bg-[#0084ff] px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                          {conversation.unreadCount}
-                        </span>
-                      ) : null}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-3">
-                        <p className="truncate text-[0.95rem] font-semibold text-slate-950">{displayName}</p>
-                        <p className="shrink-0 text-xs text-slate-400">
-                          {formatRelativeConversationTime(conversation.lastMessageAt)}
-                        </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        workspace.setActiveConversationId(conversation.id);
+                        setMobilePane("chat");
+                      }}
+                      className="flex w-full items-center gap-3 px-3 py-3 text-left"
+                    >
+                      <div className="relative shrink-0">
+                        <ChatAvatar name={displayName} image={displayImage} />
+                        {conversation.unreadCount > 0 ? (
+                          <span className="absolute -bottom-1 -right-1 inline-flex min-w-5 items-center justify-center rounded-full bg-[#0084ff] px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                            {conversation.unreadCount}
+                          </span>
+                        ) : null}
                       </div>
-                      <p className="mt-1 line-clamp-2 text-sm leading-5 text-slate-500">{previewText}</p>
-                    </div>
-                  </button>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-3">
+                          <p className="truncate text-[0.95rem] font-semibold text-slate-950">{displayName}</p>
+                          <p className="shrink-0 text-xs text-slate-400">
+                            {formatRelativeConversationTime(conversation.lastMessageAt)}
+                          </p>
+                        </div>
+                        <p className="mt-1 line-clamp-2 text-sm leading-5 text-slate-500">{previewText}</p>
+                      </div>
+                    </button>
+                    {conversation.kind === "GROUP" && conversation.groupInstructor?.id === workspace.user?.id ? (
+                      <div className="border-t border-slate-200/70 px-3 pb-3 pt-2 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+                        {editingConversationId === conversation.id ? (
+                          <div className="flex flex-col gap-2 sm:flex-row">
+                            <input
+                              value={editingConversationTitle}
+                              onChange={(event) => setEditingConversationTitle(event.target.value)}
+                              className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700"
+                            />
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  void workspace
+                                    .onRenameGroupConversation(conversation.id, editingConversationTitle)
+                                    .then(() => {
+                                      setEditingConversationId(null);
+                                      setEditingConversationTitle("");
+                                    })
+                                }
+                                className="rounded-full bg-slate-950 px-4 py-2 text-xs font-semibold text-white"
+                              >
+                                Save
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingConversationId(null);
+                                  setEditingConversationTitle("");
+                                }}
+                                className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingConversationId(conversation.id);
+                                setEditingConversationTitle(conversation.groupTitle ?? "");
+                              }}
+                              className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-sky-300 hover:text-sky-700"
+                            >
+                              <EditIcon />
+                              Edit chat name
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (window.confirm("Do you want to delete this group chat?")) {
+                                  void workspace.onDeleteGroupConversation(conversation.id);
+                                }
+                              }}
+                              className="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:border-rose-300"
+                            >
+                              <TrashIcon />
+                              Delete chat
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ) : null}
+                  </div>
                 );
               })
             )}
@@ -416,57 +544,6 @@ export default function MessagesPage() {
                   </div>
                 </div>
 
-                {active.kind === "GROUP" && isInstructor && active.groupInstructor?.id === workspace.user?.id ? (
-                  <div className="mt-4 rounded-[24px] border border-slate-200 bg-slate-50/85 p-4">
-                    <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
-                      <div className="space-y-3">
-                        <input
-                          value={workspace.groupEditTitle}
-                          onChange={(event) => workspace.setGroupEditTitle(event.target.value)}
-                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700"
-                        />
-                        {active.groupScope !== "COURSE" ? (
-                          <label className="block rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-sm text-slate-600">
-                            <span className="block font-medium text-slate-700">Update group picture</span>
-                            <input
-                              type="file"
-                              accept="image/png,image/jpeg,image/jpg,image/webp"
-                              onChange={(event) =>
-                                workspace.setGroupEditImageFile(event.target.files?.[0] ?? null)
-                              }
-                              className="mt-3 block w-full text-xs text-slate-500"
-                            />
-                          </label>
-                        ) : (
-                          <div className="rounded-2xl border border-slate-200 bg-sky-50 px-4 py-3 text-xs text-sky-700">
-                            Course groups keep the course image as their group picture.
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={() => void workspace.onUpdateActiveGroup()}
-                          disabled={workspace.updateGroupMutation.isPending}
-                          className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
-                        >
-                          {workspace.updateGroupMutation.isPending ? "Saving..." : "Save group"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void workspace.onDeleteActiveGroup()}
-                          disabled={workspace.deleteGroupMutation.isPending}
-                          className="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700"
-                        >
-                          {workspace.deleteGroupMutation.isPending ? "Deleting..." : "Delete group"}
-                        </button>
-                      </div>
-                    </div>
-                    {workspace.groupError ? (
-                      <p className="mt-3 text-sm text-rose-600">{workspace.groupError}</p>
-                    ) : null}
-                  </div>
-                ) : null}
               </div>
 
               <div className="flex-1 overflow-y-auto bg-[radial-gradient(circle_at_top,#f6fafe_0%,#ffffff_45%)] px-3 py-4 sm:px-5 lg:px-6">
@@ -560,7 +637,7 @@ export default function MessagesPage() {
           )}
         </section>
       </div>
-    </main>
+    </PageShell>
   );
 }
 
