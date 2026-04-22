@@ -98,20 +98,38 @@ function Resolve-PnpmEntryScript {
         [string]$RelativeEntry
     )
 
-    $packageDir = Get-ChildItem -Path $pnpmStorePath -Directory -Filter $PackagePattern -ErrorAction Stop |
-        Sort-Object Name -Descending |
-        Select-Object -First 1
+    $packageDirs = Get-ChildItem -Path $pnpmStorePath -Directory -Filter $PackagePattern -ErrorAction Stop |
+        Sort-Object Name -Descending
 
-    if (-not $packageDir) {
+    if (-not $packageDirs) {
         throw "Unable to find package '$PackagePattern' under $pnpmStorePath."
     }
 
-    $entryPath = Join-Path $packageDir.FullName $RelativeEntry
-    if (-not (Test-Path $entryPath)) {
-        throw "Unable to find entry script '$RelativeEntry' under $($packageDir.FullName)."
+    foreach ($packageDir in $packageDirs) {
+        $entryPath = Join-Path $packageDir.FullName $RelativeEntry
+        if (Test-Path $entryPath) {
+            return $entryPath
+        }
     }
 
-    return $entryPath
+    throw "Unable to find entry script '$RelativeEntry' under any package matching '$PackagePattern'."
+}
+
+function Resolve-PreferredScriptPath {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$PreferredPath,
+        [Parameter(Mandatory = $true)]
+        [string]$PackagePattern,
+        [Parameter(Mandatory = $true)]
+        [string]$RelativeEntry
+    )
+
+    if (Test-Path $PreferredPath) {
+        return $PreferredPath
+    }
+
+    return Resolve-PnpmEntryScript -PackagePattern $PackagePattern -RelativeEntry $RelativeEntry
 }
 
 function Get-GhCommand {
@@ -163,9 +181,18 @@ Invoke-Step "Backup and summary" {
     }
 }
 
-$frontendTscScript = Resolve-PnpmEntryScript -PackagePattern "typescript@*" -RelativeEntry "node_modules\typescript\bin\tsc"
-$nextBuildScript = Resolve-PnpmEntryScript -PackagePattern "next@*" -RelativeEntry "node_modules\next\dist\bin\next"
-$nestCliScript = Resolve-PnpmEntryScript -PackagePattern "@nestjs+cli@*" -RelativeEntry "node_modules\@nestjs\cli\bin\nest.js"
+$frontendTscScript = Resolve-PreferredScriptPath `
+    -PreferredPath (Join-Path $frontendPath "node_modules\typescript\lib\tsc.js") `
+    -PackagePattern "typescript@*" `
+    -RelativeEntry "node_modules\typescript\lib\tsc.js"
+$nextBuildScript = Resolve-PreferredScriptPath `
+    -PreferredPath (Join-Path $frontendPath "node_modules\next\dist\bin\next") `
+    -PackagePattern "next@*" `
+    -RelativeEntry "node_modules\next\dist\bin\next"
+$nestCliScript = Resolve-PreferredScriptPath `
+    -PreferredPath (Join-Path $backendPath "node_modules\@nestjs\cli\bin\nest.js") `
+    -PackagePattern "@nestjs+cli@*" `
+    -RelativeEntry "node_modules\@nestjs\cli\bin\nest.js"
 $backendBuildCommand = 'Remove-Item -Recurse -Force ''dist'' -ErrorAction SilentlyContinue; Remove-Item -Force ''tsconfig.build.tsbuildinfo'' -ErrorAction SilentlyContinue; & ''{0}'' ''{1}'' build' -f $nodeExe, $nestCliScript
 $frontendBuildCommand = '$env:NEXT_DIST_DIR=''.next-build''; & ''{0}'' ''{1}'' build' -f $nodeExe, $nextBuildScript
 

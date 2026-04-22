@@ -75,14 +75,16 @@ function ChatAvatar({
   image?: string | null;
   size?: "sm" | "md" | "lg";
 }) {
+  const [hasImageError, setHasImageError] = useState(false);
   const sizeClass =
     size === "sm" ? "h-10 w-10 text-xs" : size === "lg" ? "h-14 w-14 text-base" : "h-12 w-12 text-sm";
 
-  if (image) {
+  if (image && !hasImageError) {
     return (
       <img
         src={image}
         alt={name}
+        onError={() => setHasImageError(true)}
         className={`${sizeClass} rounded-full border border-slate-200 object-cover shadow-sm`}
       />
     );
@@ -244,6 +246,24 @@ export default function MessagesPage() {
                       ))}
                     </select>
                   ) : null}
+                  {workspace.groupScope !== "COURSE" ? (
+                    <label className="block rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                      <span className="block font-medium text-slate-700">Group picture</span>
+                      <span className="mt-1 block text-xs text-slate-500">
+                        Choose the picture that should represent this group chat.
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/jpg,image/webp"
+                        onChange={(event) => workspace.setGroupImageFile(event.target.files?.[0] ?? null)}
+                        className="mt-3 block w-full text-xs text-slate-500"
+                      />
+                    </label>
+                  ) : (
+                    <div className="rounded-2xl border border-slate-200 bg-sky-50 px-4 py-3 text-xs text-sky-700">
+                      Course groups automatically use the selected course image.
+                    </div>
+                  )}
                   {workspace.groupError ? <p className="text-sm text-rose-600">{workspace.groupError}</p> : null}
                   <button
                     type="button"
@@ -280,12 +300,12 @@ export default function MessagesPage() {
                     : conversation.otherParticipant?.fullName ?? "Conversation";
                 const displayImage =
                   conversation.kind === "GROUP"
-                    ? conversation.groupInstructor?.profileImage
+                    ? conversation.groupImage
                     : conversation.otherParticipant?.profileImage;
                 const previewText =
                   conversation.kind === "GROUP"
                     ? `${conversation.participantCount} members${
-                        conversation.course ? ` • ${conversation.course.title}` : ""
+                        conversation.course ? ` | ${conversation.course.title}` : ""
                       }`
                     : conversation.latestMessage?.body ?? "No messages yet";
 
@@ -356,7 +376,7 @@ export default function MessagesPage() {
                       }
                       image={
                         active.kind === "GROUP"
-                          ? active.groupInstructor?.profileImage
+                          ? active.groupImage
                           : active.otherParticipant?.profileImage
                       }
                       size="lg"
@@ -370,7 +390,7 @@ export default function MessagesPage() {
                       <p className="mt-1 truncate text-sm text-slate-500">
                         {active.kind === "GROUP"
                           ? `${active.participantCount} members${
-                              active.course ? ` • ${active.course.title}` : ""
+                              active.course ? ` | ${active.course.title}` : ""
                             }`
                           : active.otherParticipant?.tenant?.name ??
                             workspace.supportStatusLabel ??
@@ -399,11 +419,30 @@ export default function MessagesPage() {
                 {active.kind === "GROUP" && isInstructor && active.groupInstructor?.id === workspace.user?.id ? (
                   <div className="mt-4 rounded-[24px] border border-slate-200 bg-slate-50/85 p-4">
                     <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
-                      <input
-                        value={workspace.groupEditTitle}
-                        onChange={(event) => workspace.setGroupEditTitle(event.target.value)}
-                        className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700"
-                      />
+                      <div className="space-y-3">
+                        <input
+                          value={workspace.groupEditTitle}
+                          onChange={(event) => workspace.setGroupEditTitle(event.target.value)}
+                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700"
+                        />
+                        {active.groupScope !== "COURSE" ? (
+                          <label className="block rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-sm text-slate-600">
+                            <span className="block font-medium text-slate-700">Update group picture</span>
+                            <input
+                              type="file"
+                              accept="image/png,image/jpeg,image/jpg,image/webp"
+                              onChange={(event) =>
+                                workspace.setGroupEditImageFile(event.target.files?.[0] ?? null)
+                              }
+                              className="mt-3 block w-full text-xs text-slate-500"
+                            />
+                          </label>
+                        ) : (
+                          <div className="rounded-2xl border border-slate-200 bg-sky-50 px-4 py-3 text-xs text-sky-700">
+                            Course groups keep the course image as their group picture.
+                          </div>
+                        )}
+                      </div>
                       <div className="flex flex-wrap gap-2">
                         <button
                           type="button"

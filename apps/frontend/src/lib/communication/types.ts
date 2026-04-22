@@ -27,12 +27,14 @@ export interface ConversationSummary {
   courseId: string | null;
   groupTitle: string | null;
   groupScope: "COURSE" | "FOLLOWERS" | "SELECTED" | null;
+  groupImage: string | null;
   groupInstructor: ConversationUser | null;
   participantPreview: ConversationUser[];
   participantCount: number;
   course: {
     id: string;
     title: string;
+    thumbnailImage?: string | null;
   } | null;
   createdAt: string;
   updatedAt: string;

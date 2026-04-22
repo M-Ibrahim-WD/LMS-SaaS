@@ -45,9 +45,11 @@ export function useConversationsWorkspace({ kind }: UseConversationsWorkspaceOpt
   const [groupScope, setGroupScope] = useState<"COURSE" | "FOLLOWERS" | "SELECTED">("FOLLOWERS");
   const [groupCourseId, setGroupCourseId] = useState("");
   const [groupStudentIds, setGroupStudentIds] = useState<string[]>([]);
+  const [groupImageFile, setGroupImageFile] = useState<File | null>(null);
   const [groupError, setGroupError] = useState<string | null>(null);
   const [groupEditTitle, setGroupEditTitle] = useState("");
   const [groupEditStudentIds, setGroupEditStudentIds] = useState<string[]>([]);
+  const [groupEditImageFile, setGroupEditImageFile] = useState<File | null>(null);
   const lastMarkedConversationRef = useRef<string | null>(null);
   const initialDirectTargetRef = useRef<string | null>(null);
 
@@ -228,6 +230,18 @@ export function useConversationsWorkspace({ kind }: UseConversationsWorkspaceOpt
     },
     onError: (error) => {
       setGroupError(error instanceof Error ? error.message : "Could not create the group chat.");
+    }
+  });
+
+  const uploadGroupImageMutation = useMutation({
+    mutationFn: ({ conversationId, file }: { conversationId: string; file: File }) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      return apiFetch<ConversationSummary>(`/conversations/${conversationId}/group-image`, {
+        method: "PATCH",
+        token: accessToken ?? undefined,
+        body: formData
+      });
     }
   });
 
@@ -429,6 +443,7 @@ export function useConversationsWorkspace({ kind }: UseConversationsWorkspaceOpt
     if (activeConversation?.kind !== "GROUP") {
       setGroupEditTitle("");
       setGroupEditStudentIds([]);
+      setGroupEditImageFile(null);
       return;
     }
 
@@ -481,14 +496,19 @@ export function useConversationsWorkspace({ kind }: UseConversationsWorkspaceOpt
     setGroupCourseId,
     groupStudentIds,
     setGroupStudentIds,
+    groupImageFile,
+    setGroupImageFile,
     groupError,
     groupEditTitle,
     setGroupEditTitle,
     groupEditStudentIds,
     setGroupEditStudentIds,
+    groupEditImageFile,
+    setGroupEditImageFile,
     sendMessageMutation,
     createDirectMutation,
     createGroupMutation,
+    uploadGroupImageMutation,
     deleteGroupMutation,
     updateGroupMutation,
     createSupportMutation,
@@ -527,7 +547,18 @@ export function useConversationsWorkspace({ kind }: UseConversationsWorkspaceOpt
         setGroupError("Choose at least one student.");
         return;
       }
-      await createGroupMutation.mutateAsync();
+      if (groupScope !== "COURSE" && !groupImageFile) {
+        setGroupError("Choose a group picture before creating this group.");
+        return;
+      }
+      const conversation = await createGroupMutation.mutateAsync();
+      if (groupImageFile) {
+        await uploadGroupImageMutation.mutateAsync({
+          conversationId: conversation.id,
+          file: groupImageFile
+        });
+      }
+      setGroupImageFile(null);
     },
     onDeleteActiveGroup: async () => {
       if (!activeConversationId || activeConversation?.kind !== "GROUP") {
@@ -547,7 +578,14 @@ export function useConversationsWorkspace({ kind }: UseConversationsWorkspaceOpt
         setGroupError("Choose at least one student.");
         return;
       }
-      await updateGroupMutation.mutateAsync();
+      const conversation = await updateGroupMutation.mutateAsync();
+      if (groupEditImageFile) {
+        await uploadGroupImageMutation.mutateAsync({
+          conversationId: conversation.id,
+          file: groupEditImageFile
+        });
+      }
+      setGroupEditImageFile(null);
     },
     onCreateSupportConversation: async () => {
       if (!supportMessage.trim()) {

@@ -16,7 +16,9 @@ import {
 import type { JwtPayload } from "../../../shared/types/auth.types";
 import { PrismaService } from "../../../shared/prisma/prisma.service";
 import { AdminAccessService } from "../../admin/services/admin-access.service";
+import { CoursesService } from "../../courses/services/courses.service";
 import { NotificationsService } from "../../notifications/services/notifications.service";
+import { UsersService } from "../../users/services/users.service";
 import { AssignSupportConversationDto } from "../dto/assign-support-conversation.dto";
 import { ConversationQueryDto } from "../dto/conversation-query.dto";
 import { CreateDirectConversationDto } from "../dto/create-direct-conversation.dto";
@@ -26,6 +28,7 @@ import { CreateSupportConversationDto } from "../dto/create-support-conversation
 import { UpdateGroupConversationDto } from "../dto/update-group-conversation.dto";
 import { UpdateConversationStatusDto } from "../dto/update-conversation-status.dto";
 import { CommunicationEventsService } from "./communication-events.service";
+import { ConversationGroupImageStorageService } from "./conversation-group-image-storage.service";
 
 const CONVERSATION_INCLUDE = {
   participants: {
@@ -47,7 +50,7 @@ const CONVERSATION_INCLUDE = {
       }
     }
   },
-  course: { select: { id: true, title: true } },
+  course: { select: { id: true, title: true, thumbnailImage: true } },
   requester: {
     select: {
       id: true,
@@ -110,7 +113,10 @@ export class CommunicationsService {
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
     private readonly adminAccessService: AdminAccessService,
-    private readonly communicationEventsService: CommunicationEventsService
+    private readonly communicationEventsService: CommunicationEventsService,
+    private readonly usersService: UsersService,
+    private readonly coursesService: CoursesService,
+    private readonly conversationGroupImageStorageService: ConversationGroupImageStorageService
   ) {}
 
   async listConversations(currentUser: JwtPayload, query: ConversationQueryDto) {
@@ -148,7 +154,7 @@ export class CommunicationsService {
         }
       });
 
-      return relations.map((relation) => relation.instructor);
+      return relations.map((relation) => this.toConversationUser(relation.instructor));
     }
 
     if (currentUser.role === "INSTRUCTOR") {
@@ -170,7 +176,7 @@ export class CommunicationsService {
         }
       });
 
-      return relations.map((relation) => relation.student);
+      return relations.map((relation) => this.toConversationUser(relation.student));
     }
 
     throw new ForbiddenException("Direct chat targets are only available to students and instructors.");
@@ -206,7 +212,7 @@ export class CommunicationsService {
       })
     ]);
 
-    const students = relations.map((relation) => relation.student);
+    const students = relations.map((relation) => this.toConversationUser(relation.student));
     return { courses, followers: students, students };
   }
 
@@ -390,6 +396,49 @@ export class CommunicationsService {
     return this.toConversationSummary(refreshed, currentUser, false);
   }
 
+  async uploadGroupImage(
+    currentUser: JwtPayload,
+    conversationId: string,
+    file: {
+      buffer: Buffer;
+      originalname?: string;
+      mimetype?: string;
+      size?: number;
+    }
+  ) {
+    if (currentUser.role !== "INSTRUCTOR") {
+      throw new ForbiddenException("Only instructors can update group chat images.");
+    }
+
+    const conversation = await this.prisma.conversation.findUnique({
+      where: { id: conversationId },
+      include: CONVERSATION_INCLUDE
+    });
+
+    if (!conversation || conversation.kind !== ConversationKind.GROUP) {
+      throw new NotFoundException("Group conversation not found.");
+    }
+
+    if (conversation.groupInstructorId !== currentUser.sub) {
+      throw new ForbiddenException("Only the instructor who created this group can update it.");
+    }
+
+    const storedRef = await this.conversationGroupImageStorageService.storeGroupImage({
+      buffer: file.buffer,
+      mimetype: file.mimetype ?? "application/octet-stream",
+      originalname: file.originalname ?? "group-image",
+      size: file.size ?? file.buffer.length
+    });
+
+    const updated = await this.prisma.conversation.update({
+      where: { id: conversationId },
+      data: { groupImage: storedRef },
+      include: CONVERSATION_INCLUDE
+    });
+
+    return this.toConversationSummary(updated, currentUser, false);
+  }
+
   async createSupportConversation(currentUser: JwtPayload, dto: CreateSupportConversationDto) {
     if (!["STUDENT", "INSTRUCTOR"].includes(currentUser.role)) {
       throw new ForbiddenException("Only students and instructors can create support conversations.");
@@ -456,7 +505,7 @@ export class CommunicationsService {
         id: message.id,
         body: message.body,
         createdAt: message.createdAt.toISOString(),
-        sender: message.sender
+        sender: this.toConversationUser(message.sender)
       }))
     };
   }
@@ -529,7 +578,7 @@ export class CommunicationsService {
       id: message.id,
       body: message.body,
       createdAt: message.createdAt.toISOString(),
-      sender: message.sender
+      sender: this.toConversationUser(message.sender)
     };
   }
 
@@ -667,6 +716,19 @@ export class CommunicationsService {
 
     await this.prisma.conversation.delete({ where: { id: conversationId } });
     return { deleted: true };
+  }
+
+  async readGroupImage(conversationId: string) {
+    const conversation = await this.prisma.conversation.findUnique({
+      where: { id: conversationId },
+      select: { groupImage: true }
+    });
+
+    if (!conversation?.groupImage?.startsWith("local:")) {
+      throw new NotFoundException("Group image not found.");
+    }
+
+    return this.conversationGroupImageStorageService.readLocalGroupImageRef(conversation.groupImage);
   }
 
   async assertConversationAccess(currentUser: JwtPayload, conversationId: string) {
@@ -935,11 +997,14 @@ export class CommunicationsService {
     const latestMessage = conversation.messages[0] ?? null;
     const participantPreview = conversation.participants
       .filter((participant: { userId: string }) => participant.userId !== currentUser.sub)
-      .map((participant: { user: unknown }) => participant.user);
+      .map((participant: { user: unknown }) => this.toConversationUser(participant.user));
 
     const otherParticipant =
       conversation.kind === ConversationKind.DIRECT
-        ? conversation.participants.find((participant: { userId: string }) => participant.userId !== currentUser.sub)?.user ?? null
+        ? this.toConversationUser(
+            conversation.participants.find((participant: { userId: string }) => participant.userId !== currentUser.sub)
+              ?.user ?? null
+          )
         : null;
 
     return {
@@ -950,29 +1015,73 @@ export class CommunicationsService {
       courseId: conversation.courseId,
       groupTitle: conversation.groupTitle ?? null,
       groupScope: conversation.groupScope ?? null,
-      groupInstructor: conversation.groupInstructor ?? null,
+      groupImage: this.resolveGroupImage(conversation),
+      groupInstructor: this.toConversationUser(conversation.groupInstructor ?? null),
       participantPreview,
       participantCount: conversation.participants.length,
-      course: conversation.course ?? null,
+      course: this.toConversationCourse(conversation.course ?? null),
       createdAt: conversation.createdAt.toISOString(),
       updatedAt: conversation.updatedAt.toISOString(),
       lastMessageAt: conversation.lastMessageAt.toISOString(),
       unreadCount,
       otherParticipant,
-      requester: conversation.requester,
-      assignedAdmin: conversation.supportAssignment?.admin ?? null,
+      requester: this.toConversationUser(conversation.requester ?? null),
+      assignedAdmin: this.toConversationUser(conversation.supportAssignment?.admin ?? null),
       latestMessage: latestMessage
         ? {
             id: latestMessage.id,
             body: latestMessage.body,
             createdAt: latestMessage.createdAt.toISOString(),
-            sender: latestMessage.sender
+            sender: this.toConversationUser(latestMessage.sender)
           }
         : null,
       canReply: conversation.kind === ConversationKind.SUPPORT ? isSupportAdmin || Boolean(participantRecord) : Boolean(participantRecord),
       isAssignedToCurrentAdmin:
         currentUser.role === "ADMIN" && conversation.supportAssignment?.admin.id === currentUser.sub
     };
+  }
+
+  private toConversationUser(user: any) {
+    if (!user) {
+      return null;
+    }
+
+    return {
+      ...user,
+      profileImage: this.usersService.resolveProfileImageUrl(user.id, user.profileImage ?? null)
+    };
+  }
+
+  private toConversationCourse(course: any) {
+    if (!course) {
+      return null;
+    }
+
+    return {
+      ...course,
+      thumbnailImage: this.coursesService.resolveCourseThumbnailUrl(
+        course.id,
+        course.thumbnailImage ?? null
+      )
+    };
+  }
+
+  private resolveGroupImage(conversation: any) {
+    if (conversation.groupImage) {
+      return this.conversationGroupImageStorageService.getPublicGroupImageUrl(
+        conversation.id,
+        conversation.groupImage
+      );
+    }
+
+    if (conversation.kind === ConversationKind.GROUP && conversation.course) {
+      return this.coursesService.resolveCourseThumbnailUrl(
+        conversation.course.id,
+        conversation.course.thumbnailImage ?? null
+      );
+    }
+
+    return null;
   }
 
   private async createNotificationsForMessage(kind: ConversationKind, conversation: any, recipientUserIds: string[]) {

@@ -1,4 +1,21 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  StreamableFile,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors
+} from "@nestjs/common";
+import { Res } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
+import { Response } from "express";
 import { CurrentUser } from "../../shared/decorators/current-user.decorator";
 import { Roles } from "../../shared/decorators/roles.decorator";
 import { RolesGuard } from "../../shared/guards/roles.guard";
@@ -13,6 +30,13 @@ import { CreateSupportConversationDto } from "./dto/create-support-conversation.
 import { UpdateGroupConversationDto } from "./dto/update-group-conversation.dto";
 import { UpdateConversationStatusDto } from "./dto/update-conversation-status.dto";
 import { CommunicationsService } from "./services/communications.service";
+
+type UploadedImageFile = {
+  buffer: Buffer;
+  mimetype: string;
+  size: number;
+  originalname: string;
+};
 
 @Controller()
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -54,6 +78,21 @@ export class CommunicationsController {
     @Body() dto: UpdateGroupConversationDto
   ) {
     return this.communicationsService.updateGroupConversation(user, id, dto);
+  }
+
+  @Roles("INSTRUCTOR")
+  @Patch("conversations/:id/group-image")
+  @UseInterceptors(FileInterceptor("file", { limits: { fileSize: 4 * 1024 * 1024 } }))
+  uploadGroupImage(
+    @CurrentUser() user: JwtPayload,
+    @Param("id") id: string,
+    @UploadedFile() file: UploadedImageFile | undefined
+  ) {
+    if (!file) {
+      throw new BadRequestException("Group image is required");
+    }
+
+    return this.communicationsService.uploadGroupImage(user, id, file);
   }
 
   @Post("conversations/support")
@@ -102,5 +141,20 @@ export class CommunicationsController {
   @Delete("conversations/:id/group")
   deleteGroupConversation(@CurrentUser() user: JwtPayload, @Param("id") id: string) {
     return this.communicationsService.deleteGroupConversation(user, id);
+  }
+}
+
+@Controller("conversations")
+export class CommunicationsPublicController {
+  constructor(private readonly communicationsService: CommunicationsService) {}
+
+  @Get(":id/group-image")
+  async getGroupImage(@Param("id") id: string, @Res({ passthrough: true }) res: Response) {
+    const file = await this.communicationsService.readGroupImage(id);
+    res.setHeader("Content-Type", file.contentType);
+    res.setHeader("Content-Disposition", `inline; filename="${file.fileName}"`);
+    res.setHeader("Cache-Control", "private, max-age=3600");
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    return new StreamableFile(file.buffer);
   }
 }

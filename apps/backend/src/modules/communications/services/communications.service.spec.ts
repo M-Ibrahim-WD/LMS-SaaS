@@ -18,6 +18,33 @@ function createEventsStub() {
   };
 }
 
+function createUsersServiceStub() {
+  return {
+    resolveProfileImageUrl: (userId: string, profileImage: string | null) =>
+      profileImage?.startsWith("local:///")
+        ? `http://localhost:4000/api/users/${userId}/profile-image`
+        : profileImage
+  };
+}
+
+function createCoursesServiceStub() {
+  return {
+    resolveCourseThumbnailUrl: (courseId: string, thumbnailImage?: string | null) =>
+      thumbnailImage?.startsWith("local:")
+        ? `http://localhost:4000/api/courses/${courseId}/thumbnail`
+        : thumbnailImage ?? null
+  };
+}
+
+function createGroupImageStorageStub() {
+  return {
+    getPublicGroupImageUrl: (conversationId: string, groupImage?: string | null) =>
+      groupImage?.startsWith("local:")
+        ? `http://localhost:4000/api/conversations/${conversationId}/group-image`
+        : groupImage ?? null
+  };
+}
+
 function createAdminAccessStub() {
   return {
     loadAdminActor: createAsyncMock(async () => ({
@@ -115,7 +142,10 @@ test("listDirectTargets returns joined instructors for students", async () => {
     prisma as never,
     createNotificationsStub() as never,
     createAdminAccessStub() as never,
-    createEventsStub() as never
+    createEventsStub() as never,
+    createUsersServiceStub() as never,
+    createCoursesServiceStub() as never,
+    createGroupImageStorageStub() as never
   );
 
   const result = await service.listDirectTargets({
@@ -158,7 +188,10 @@ test("createDirectConversation reuses an existing open thread", async () => {
     prisma as never,
     createNotificationsStub() as never,
     createAdminAccessStub() as never,
-    createEventsStub() as never
+    createEventsStub() as never,
+    createUsersServiceStub() as never,
+    createCoursesServiceStub() as never,
+    createGroupImageStorageStub() as never
   );
 
   const result = await service.createDirectConversation(

@@ -717,6 +717,7 @@ model Conversation {
   requesterUserId   String?            @map("requester_user_id")
   groupScope        ConversationGroupScope? @map("group_scope")
   groupTitle        String?            @map("group_title")
+  groupImage        String?            @map("group_image")
   groupInstructorId String?            @map("group_instructor_id")
   lastMessageAt     DateTime           @default(now()) @map("last_message_at")
   createdAt         DateTime           @default(now())
