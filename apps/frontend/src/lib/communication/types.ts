@@ -57,6 +57,11 @@ export interface MessageGroup {
   items: ConversationMessage[];
 }
 
+export interface MessageRun {
+  senderId: string;
+  items: ConversationMessage[];
+}
+
 export function formatConversationDate(value?: string | null) {
   if (!value) {
     return "";
@@ -132,4 +137,24 @@ export function groupConversationMessages(messages: ConversationMessage[]): Mess
     label,
     items
   }));
+}
+
+export function groupConsecutiveMessages(messages: ConversationMessage[]): MessageRun[] {
+  const runs: MessageRun[] = [];
+
+  for (const message of messages) {
+    const previousRun = runs[runs.length - 1];
+
+    if (previousRun && previousRun.senderId === message.sender.id) {
+      previousRun.items.push(message);
+      continue;
+    }
+
+    runs.push({
+      senderId: message.sender.id,
+      items: [message]
+    });
+  }
+
+  return runs;
 }

@@ -16,6 +16,7 @@ interface ProfileHeaderProps {
   badge?: string;
   stats: StatItem[];
   actions?: ReactNode;
+  compactStats?: boolean;
 }
 
 function initialsFromName(name: string) {
@@ -28,7 +29,7 @@ function initialsFromName(name: string) {
     .toUpperCase();
 }
 
-export function ProfileHeader({ name, bio, imageUrl, badge, stats, actions }: ProfileHeaderProps) {
+export function ProfileHeader({ name, bio, imageUrl, badge, stats, actions, compactStats = false }: ProfileHeaderProps) {
   return (
     <ProfilePanel className="relative overflow-hidden text-center">
       <div className="pointer-events-none absolute inset-x-10 top-0 h-28 rounded-full bg-gradient-to-r from-sky-200/40 via-emerald-100/25 to-amber-100/40 blur-3xl" />
@@ -53,10 +54,16 @@ export function ProfileHeader({ name, bio, imageUrl, badge, stats, actions }: Pr
           {stats.map((stat) => (
             <div
               key={stat.label}
-              className="rounded-[24px] border border-slate-200/80 bg-white/90 px-4 py-4 text-left shadow-sm"
+              className="rounded-[24px] border border-slate-200/80 bg-white/90 px-4 py-4 text-center shadow-sm"
             >
               <p className="text-[11px] uppercase tracking-[0.24em] text-slate-400">{stat.label}</p>
-              <p className="mt-2 text-2xl font-semibold text-slate-950">{stat.value}</p>
+              <p
+                className={`mt-2 whitespace-nowrap font-semibold text-slate-950 ${
+                  compactStats ? "text-sm sm:text-base" : "text-2xl"
+                }`}
+              >
+                {stat.value}
+              </p>
             </div>
           ))}
         </div>

@@ -96,7 +96,7 @@ export default function InstructorCoursesPage() {
       backHref="/dashboard"
       maxWidthClassName="max-w-7xl"
     >
-      <section className="grid gap-4 md:grid-cols-3">
+      <section className="grid grid-cols-3 gap-3 sm:gap-4">
         <StatPill label="Total courses" value={String(courses.length)} tone="info" />
         <StatPill label="Drafts" value={String(draftCount)} tone="warning" />
         <StatPill label="Published" value={String(publishedCount)} tone="success" />
@@ -111,7 +111,7 @@ export default function InstructorCoursesPage() {
                 Create the shell here, then we’ll move straight into the builder to finish the real structure.
               </p>
             </div>
-            <span className="rounded-full bg-slate-100 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-700">
+            <span className="whitespace-nowrap rounded-full bg-slate-100 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-700">
               Step 1
             </span>
           </div>
@@ -238,7 +238,7 @@ export default function InstructorCoursesPage() {
           {coursesQuery.isLoading ? <span className="text-sm text-slate-500">Loading...</span> : null}
         </div>
         {coursesQuery.isError ? <StatusBanner variant="error">Failed to load instructor courses.</StatusBanner> : null}
-        <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+        <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
           {courses.map((course) => (
             <ContentCard key={course.id} className="rounded-[28px] p-0 overflow-hidden">
               <div className="h-44 overflow-hidden bg-gradient-to-br from-sky-500 via-cyan-500 to-emerald-400">

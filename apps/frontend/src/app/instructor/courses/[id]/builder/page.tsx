@@ -27,6 +27,7 @@ import { useCourseBuilderWorkspace } from "./_hooks/use-course-builder-workspace
 
 type BuilderTab = "course" | "sections" | "lessons" | "quizzes" | "assignments" | "learners";
 type AssessmentViewTab = "authoring" | "submissions";
+type AssessmentScopeTab = "COURSE" | "SECTION" | "LESSON";
 
 function buildScopeOptions(course: Course | undefined) {
   if (!course) {
@@ -77,6 +78,21 @@ function resetScopeState(
     sectionId: scopeType === "COURSE" ? "" : firstSection?.id ?? "",
     lessonId: scopeType === "LESSON" ? firstLesson?.id ?? "" : ""
   };
+}
+
+function getAssessmentScopeTabs() {
+  return [
+    { id: "COURSE" as const, label: "Courses" },
+    { id: "SECTION" as const, label: "Sections" },
+    { id: "LESSON" as const, label: "Lessons" }
+  ];
+}
+
+function filterByScopeType<T extends { scopeType: AssessmentScopeType }>(
+  items: T[],
+  scopeType: AssessmentScopeTab
+) {
+  return items.filter((item) => item.scopeType === scopeType);
 }
 
 function deriveActiveTab(builder: ReturnType<typeof useCourseBuilderWorkspace>): BuilderTab {
@@ -207,6 +223,10 @@ export default function CourseBuilderPage() {
   const activeTab = deriveActiveTab(builder);
   const [quizViewTab, setQuizViewTab] = useState<AssessmentViewTab>("authoring");
   const [assignmentViewTab, setAssignmentViewTab] = useState<AssessmentViewTab>("authoring");
+  const [quizScopeTab, setQuizScopeTab] = useState<AssessmentScopeTab>("COURSE");
+  const [assignmentScopeTab, setAssignmentScopeTab] = useState<AssessmentScopeTab>("COURSE");
+  const [openLearnerId, setOpenLearnerId] = useState<string | null>(null);
+  const assessmentScopeTabs = getAssessmentScopeTabs();
   const tabItems: Array<{ id: BuilderTab; label: string; hint: string }> = [
     { id: "course", label: "Course", hint: "Basics" },
     { id: "sections", label: "Sections", hint: "Outline" },
@@ -370,25 +390,45 @@ export default function CourseBuilderPage() {
     <WorkspacePanel
       title="Quizzes"
       description="Switch between quiz authoring and student answers without carrying both views on the screen at once."
-      actions={
-        <div className="flex flex-wrap gap-2">
-          <PillButton
+    >
+      <div className="mb-5 flex flex-col gap-2">
+        <div className="grid grid-cols-2 overflow-hidden rounded-[22px] border border-slate-200 bg-slate-50 p-1">
+          <button
             type="button"
-            active={quizViewTab === "authoring"}
             onClick={() => setQuizViewTab("authoring")}
+            className={`rounded-[18px] px-4 py-3 text-center text-sm font-semibold transition ${
+              quizViewTab === "authoring"
+                ? "bg-slate-200 text-slate-950 shadow-sm"
+                : "text-slate-500 hover:text-slate-800"
+            }`}
           >
             Authoring
-          </PillButton>
-          <PillButton
+          </button>
+          <button
             type="button"
-            active={quizViewTab === "submissions"}
             onClick={() => setQuizViewTab("submissions")}
+            className={`rounded-[18px] px-4 py-3 text-center text-sm font-semibold transition ${
+              quizViewTab === "submissions"
+                ? "bg-slate-950 text-white shadow-sm"
+                : "text-slate-500 hover:text-slate-800"
+            }`}
           >
             Student answers
-          </PillButton>
+          </button>
         </div>
-      }
-    >
+        <div className="flex flex-wrap gap-2">
+          {assessmentScopeTabs.map((tab) => (
+            <PillButton
+              key={tab.id}
+              type="button"
+              active={quizScopeTab === tab.id}
+              onClick={() => setQuizScopeTab(tab.id)}
+            >
+              {tab.label}
+            </PillButton>
+          ))}
+        </div>
+      </div>
       {quizViewTab === "authoring" ? (
         <div className="grid gap-5 xl:grid-cols-[260px_minmax(0,1fr)]">
           <div className="space-y-3">
@@ -398,8 +438,8 @@ export default function CourseBuilderPage() {
                 New quiz
               </PillButton>
             </div>
-            {(builder.assessmentsQuery.data?.quizzes ?? []).length ? (
-              (builder.assessmentsQuery.data?.quizzes ?? []).map((quiz) => (
+            {filterByScopeType(builder.assessmentsQuery.data?.quizzes ?? [], quizScopeTab).length ? (
+              filterByScopeType(builder.assessmentsQuery.data?.quizzes ?? [], quizScopeTab).map((quiz) => (
                 <button
                   key={quiz.id}
                   type="button"
@@ -417,8 +457,8 @@ export default function CourseBuilderPage() {
               ))
             ) : (
               <EmptyState
-                title="No quizzes yet"
-                description="Create the first quiz for a lesson, section, or the whole course."
+                title={`No ${quizScopeTab === "COURSE" ? "course" : quizScopeTab === "SECTION" ? "section" : "lesson"} quizzes yet`}
+                description={`Create the first quiz for ${quizScopeTab === "COURSE" ? "the full course" : quizScopeTab === "SECTION" ? "a section" : "a lesson"}.`}
                 action={
                   <PillButton type="button" onClick={() => builder.setEditorMode({ kind: "new-quiz" })}>
                     Create quiz
@@ -441,8 +481,8 @@ export default function CourseBuilderPage() {
       ) : (
         <div className="space-y-4">
           {builder.quizSubmissionsQuery.isLoading ? <StatusBanner>Loading quiz submissions...</StatusBanner> : null}
-          {(builder.quizSubmissionsQuery.data ?? []).length ? (
-            (builder.quizSubmissionsQuery.data ?? []).map((group) => (
+          {filterByScopeType(builder.quizSubmissionsQuery.data ?? [], quizScopeTab).length ? (
+            filterByScopeType(builder.quizSubmissionsQuery.data ?? [], quizScopeTab).map((group) => (
               <div key={group.id} className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
@@ -482,8 +522,8 @@ export default function CourseBuilderPage() {
             ))
           ) : builder.quizSubmissionsQuery.isLoading ? null : (
             <EmptyState
-              title="No quiz submissions yet"
-              description="Student answers will appear here as soon as learners complete quizzes."
+              title={`No ${quizScopeTab === "COURSE" ? "course" : quizScopeTab === "SECTION" ? "section" : "lesson"} quiz submissions yet`}
+              description={`Student answers for ${quizScopeTab === "COURSE" ? "course-level quizzes" : quizScopeTab === "SECTION" ? "section quizzes" : "lesson quizzes"} will appear here once learners complete them.`}
             />
           )}
         </div>
@@ -521,25 +561,45 @@ export default function CourseBuilderPage() {
     <WorkspacePanel
       title="Assignments"
       description="Switch between assignment authoring and student submissions without overloading the screen."
-      actions={
-        <div className="flex flex-wrap gap-2">
-          <PillButton
+    >
+      <div className="mb-5 flex flex-col gap-2">
+        <div className="grid grid-cols-2 overflow-hidden rounded-[22px] border border-slate-200 bg-slate-50 p-1">
+          <button
             type="button"
-            active={assignmentViewTab === "authoring"}
             onClick={() => setAssignmentViewTab("authoring")}
+            className={`rounded-[18px] px-4 py-3 text-center text-sm font-semibold transition ${
+              assignmentViewTab === "authoring"
+                ? "bg-slate-200 text-slate-950 shadow-sm"
+                : "text-slate-500 hover:text-slate-800"
+            }`}
           >
             Authoring
-          </PillButton>
-          <PillButton
+          </button>
+          <button
             type="button"
-            active={assignmentViewTab === "submissions"}
             onClick={() => setAssignmentViewTab("submissions")}
+            className={`rounded-[18px] px-4 py-3 text-center text-sm font-semibold transition ${
+              assignmentViewTab === "submissions"
+                ? "bg-slate-950 text-white shadow-sm"
+                : "text-slate-500 hover:text-slate-800"
+            }`}
           >
             Student answers
-          </PillButton>
+          </button>
         </div>
-      }
-    >
+        <div className="flex flex-wrap gap-2">
+          {assessmentScopeTabs.map((tab) => (
+            <PillButton
+              key={tab.id}
+              type="button"
+              active={assignmentScopeTab === tab.id}
+              onClick={() => setAssignmentScopeTab(tab.id)}
+            >
+              {tab.label}
+            </PillButton>
+          ))}
+        </div>
+      </div>
       {assignmentViewTab === "authoring" ? (
         <div className="grid gap-5 xl:grid-cols-[260px_minmax(0,1fr)]">
           <div className="space-y-3">
@@ -552,8 +612,8 @@ export default function CourseBuilderPage() {
                 New assignment
               </PillButton>
             </div>
-            {(builder.assessmentsQuery.data?.assignments ?? []).length ? (
-              (builder.assessmentsQuery.data?.assignments ?? []).map((assignment) => (
+            {filterByScopeType(builder.assessmentsQuery.data?.assignments ?? [], assignmentScopeTab).length ? (
+              filterByScopeType(builder.assessmentsQuery.data?.assignments ?? [], assignmentScopeTab).map((assignment) => (
                 <button
                   key={assignment.id}
                   type="button"
@@ -571,8 +631,8 @@ export default function CourseBuilderPage() {
               ))
             ) : (
               <EmptyState
-                title="No assignments yet"
-                description="Create the first assignment for a lesson, section, or the full course."
+                title={`No ${assignmentScopeTab === "COURSE" ? "course" : assignmentScopeTab === "SECTION" ? "section" : "lesson"} assignments yet`}
+                description={`Create the first assignment for ${assignmentScopeTab === "COURSE" ? "the full course" : assignmentScopeTab === "SECTION" ? "a section" : "a lesson"}.`}
                 action={
                   <PillButton type="button" onClick={() => builder.setEditorMode({ kind: "new-assignment" })}>
                     Create assignment
@@ -595,12 +655,12 @@ export default function CourseBuilderPage() {
       ) : (
         <div className="space-y-4">
           {builder.assignmentSubmissionsQuery.isLoading ? <StatusBanner>Loading assignment submissions...</StatusBanner> : null}
-          {(builder.assignmentSubmissionsQuery.data ?? []).length ? (
-            (builder.assignmentSubmissionsQuery.data ?? []).map(renderAssignmentReview)
+          {filterByScopeType(builder.assignmentSubmissionsQuery.data ?? [], assignmentScopeTab).length ? (
+            filterByScopeType(builder.assignmentSubmissionsQuery.data ?? [], assignmentScopeTab).map(renderAssignmentReview)
           ) : builder.assignmentSubmissionsQuery.isLoading ? null : (
             <EmptyState
-              title="No assignment submissions yet"
-              description="Student work will appear here as soon as learners submit assignments."
+              title={`No ${assignmentScopeTab === "COURSE" ? "course" : assignmentScopeTab === "SECTION" ? "section" : "lesson"} assignment submissions yet`}
+              description={`Student work for ${assignmentScopeTab === "COURSE" ? "course-level assignments" : assignmentScopeTab === "SECTION" ? "section assignments" : "lesson assignments"} will appear here once learners submit it.`}
             />
           )}
         </div>
@@ -609,42 +669,47 @@ export default function CourseBuilderPage() {
   );
 
   const renderLearnersTab = () => (
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_360px]">
+    <div>
       <WorkspacePanel title="Learner progress" description="This tab is dedicated to student progress, completion, and certificate readiness.">
         <div className="space-y-4">
           {(builder.learnersQuery.data ?? []).length ? (builder.learnersQuery.data ?? []).map((entry) => (
             <div key={entry.id} className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-base font-semibold text-slate-900">{entry.learner.fullName}</p><p className="mt-1 text-sm text-slate-500">{entry.learner.email}</p></div><div className="flex flex-wrap gap-2"><span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-800">{entry.progress.percentage}% complete</span>{entry.certificate ? <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">Certificate issued</span> : null}</div></div>
-              <div className="mt-4 grid gap-3 md:grid-cols-4"><StatPill label="Completed lessons" value={`${entry.progress.completedLessons}/${entry.progress.totalLessons}`} tone="default" /><StatPill label="Quizzes" value={`${entry.assessments.quizzesCompleted}/${entry.assessments.quizzesTotal}`} tone="info" /><StatPill label="Assignments" value={`${entry.assessments.assignmentsSubmitted}/${entry.assessments.assignmentsTotal}`} tone="warning" /><StatPill label="Joined" value={formatBuilderDate(entry.enrolledAt)} tone="success" /></div>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-base font-semibold text-slate-900">{entry.learner.fullName}</p>
+                  <p className="mt-1 text-sm text-slate-500">{entry.learner.email}</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-800">
+                    {entry.progress.percentage}% complete
+                  </span>
+                  {entry.certificate ? (
+                    <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">
+                      Certificate issued
+                    </span>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setOpenLearnerId((current) => (current === entry.id ? null : entry.id))
+                    }
+                    className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-100"
+                  >
+                    {openLearnerId === entry.id ? "Hide details" : "Show details"}
+                  </button>
+                </div>
+              </div>
+              {openLearnerId === entry.id ? (
+                <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+                  <StatPill label="Completed lessons" value={`${entry.progress.completedLessons}/${entry.progress.totalLessons}`} tone="default" />
+                  <StatPill label="Quizzes" value={`${entry.assessments.quizzesCompleted}/${entry.assessments.quizzesTotal}`} tone="info" />
+                  <StatPill label="Assignments" value={`${entry.assessments.assignmentsSubmitted}/${entry.assessments.assignmentsTotal}`} tone="warning" />
+                  <StatPill label="Joined" value={formatBuilderDate(entry.enrolledAt)} tone="success" />
+                </div>
+              ) : null}
             </div>
           )) : <EmptyState title="No learners yet" description="Learner progress will appear here once students enroll in this course." />}
         </div>
-      </WorkspacePanel>
-
-      <WorkspacePanel title="Security activity" description="Recent protected-content events for this course. This view is audit-focused and helps you spot suspicious viewer behavior quickly.">
-        {builder.securityEventsQuery.isLoading ? (
-          <StatusBanner>Loading security activity...</StatusBanner>
-        ) : (builder.securityEventsQuery.data ?? []).length ? (
-          <div className="space-y-3">
-            {(builder.securityEventsQuery.data ?? []).map((event) => (
-              <div key={event.id} className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">{event.user.fullName}</p>
-                    <p className="mt-1 text-xs text-slate-500">{event.user.email}</p>
-                  </div>
-                  <span className="rounded-full bg-rose-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-rose-800">
-                    {event.eventType.replaceAll("_", " ")}
-                  </span>
-                </div>
-                <p className="mt-3 text-sm font-medium text-slate-800">{event.lesson.title}</p>
-                <p className="mt-1 text-xs text-slate-500">{formatBuilderDate(event.createdAt)}</p>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <EmptyState title="No security events yet" description="Protected viewer alerts will appear here if learners trigger suspicious-content signals." />
-        )}
       </WorkspacePanel>
     </div>
   );
@@ -665,7 +730,7 @@ export default function CourseBuilderPage() {
       {builder.builderSuccess ? <div className="mt-3"><StatusBanner variant="success">{builder.builderSuccess}</StatusBanner></div> : null}
       {builder.courseQuery.isLoading ? <div className="mt-3"><StatusBanner>Loading the builder...</StatusBanner></div> : null}
       {builder.courseQuery.isError ? <div className="mt-3"><StatusBanner variant="error">Could not load this course builder.</StatusBanner></div> : null}
-      <div className="mt-6 overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-sm sm:rounded-[28px]"><div className="flex gap-0 overflow-x-auto px-2 py-2">{tabItems.map((tab) => { const isActive = activeTab === tab.id; return (<button key={tab.id} type="button" onClick={() => openBuilderTab(tab.id, builder)} className={`group relative min-w-[120px] flex-1 rounded-[18px] px-3 py-3 text-left transition sm:min-w-[140px] sm:rounded-[22px] sm:px-4 ${isActive ? "bg-slate-950 text-white shadow-lg" : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"}`}><div className="text-[11px] font-semibold uppercase tracking-[0.2em] opacity-70">{tab.hint}</div><div className="mt-1 text-sm font-semibold">{tab.label}</div><div className={`mt-3 h-1 rounded-full transition ${isActive ? "bg-emerald-400" : "bg-slate-200 group-hover:bg-slate-300"}`} /></button>); })}</div></div>
+      <div className="mt-6 overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-sm sm:rounded-[28px]"><div className="ui-scrollbar flex gap-0 overflow-x-auto px-2 py-2 pb-3">{tabItems.map((tab) => { const isActive = activeTab === tab.id; return (<button key={tab.id} type="button" onClick={() => openBuilderTab(tab.id, builder)} className={`group relative min-w-[120px] flex-1 rounded-[18px] px-3 py-3 text-left transition sm:min-w-[140px] sm:rounded-[22px] sm:px-4 ${isActive ? "bg-slate-950 text-white shadow-lg" : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"}`}><div className="text-[11px] font-semibold uppercase tracking-[0.2em] opacity-70">{tab.hint}</div><div className="mt-1 text-sm font-semibold">{tab.label}</div><div className={`mt-3 h-1 rounded-full transition ${isActive ? "bg-emerald-400" : "bg-slate-200 group-hover:bg-slate-300"}`} /></button>); })}</div></div>
       <div className="mt-6">{activeTab === "course" ? renderCourseTab() : null}{activeTab === "sections" ? renderSectionsTab() : null}{activeTab === "lessons" ? renderLessonsTab() : null}{activeTab === "quizzes" ? renderQuizzesTab() : null}{activeTab === "assignments" ? renderAssignmentsTab() : null}{activeTab === "learners" ? renderLearnersTab() : null}</div>
       <ConfirmationModal open={Boolean(builder.confirmDeleteKey)} title="Delete item" description="This action cannot be undone. The content and learner progress linked to it may be affected." confirmLabel="Delete" cancelLabel="Cancel" onConfirm={() => void builder.onConfirmDelete()} onCancel={() => builder.setConfirmDeleteKey(null)} />
     </main>

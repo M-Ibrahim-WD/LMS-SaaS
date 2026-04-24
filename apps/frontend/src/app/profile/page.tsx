@@ -9,6 +9,7 @@ import { ProfileShell, ProfileSkeleton } from "../../components/profile/profile-
 import { useRequireAuth } from "../../hooks/use-require-auth";
 import { apiFetch } from "../../lib/api/client";
 import { useAuthStore } from "../../store/auth.store";
+import { AdminProfileView } from "./_components/admin-profile-view";
 import { InstructorProfileView } from "./_components/instructor-profile-view";
 import {
   CertificateItem,
@@ -307,6 +308,16 @@ export default function ProfilePage() {
           courses={studentCoursesQuery.data}
           certificates={studentCertificatesQuery.data}
           following={studentFollowingQuery.data}
+          notifications={notificationsQuery.data}
+          settingsForm={settingsForm}
+        />
+      ) : null}
+
+      {summaryQuery.data?.role === "ADMIN" ? (
+        <AdminProfileView
+          summary={summaryQuery.data}
+          isSuperAdmin={Boolean(user?.isSuperAdmin)}
+          adminPermissions={user?.adminPermissions}
           notifications={notificationsQuery.data}
           settingsForm={settingsForm}
         />

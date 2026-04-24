@@ -11,6 +11,7 @@ import { useConversationsWorkspace } from "../../hooks/use-conversations-workspa
 import {
   formatConversationDate,
   formatRelativeConversationTime,
+  groupConsecutiveMessages,
   groupConversationMessages
 } from "../../lib/communication/types";
 
@@ -46,20 +47,10 @@ function ChevronDownIcon({ open }: { open: boolean }) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
-      className={`h-4.5 w-4.5 transition ${open ? "rotate-180" : ""}`}
+      strokeWidth="1.5"
+      className={`h-4 w-4 shrink-0 transition ${open ? "rotate-180" : ""}`}
     >
       <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
-    </svg>
-  );
-}
-
-function MoreIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
-      <circle cx="5" cy="12" r="1.8" />
-      <circle cx="12" cy="12" r="1.8" />
-      <circle cx="19" cy="12" r="1.8" />
     </svg>
   );
 }
@@ -127,14 +118,69 @@ function ChatAvatar({
   );
 }
 
+function autosizeComposer(element: HTMLTextAreaElement | null) {
+  if (!element) {
+    return;
+  }
+
+  element.style.height = "0px";
+  const computed = window.getComputedStyle(element);
+  const lineHeight = Number.parseFloat(computed.lineHeight || "24");
+  const verticalPadding =
+    Number.parseFloat(computed.paddingTop || "0") + Number.parseFloat(computed.paddingBottom || "0");
+  const minHeight = lineHeight + verticalPadding;
+  const maxHeight = lineHeight * 3 + verticalPadding;
+  const nextHeight = Math.min(Math.max(element.scrollHeight, minHeight), maxHeight);
+  element.style.height = `${nextHeight}px`;
+  element.style.overflowY = element.scrollHeight > maxHeight ? "auto" : "hidden";
+}
+
+function hashString(value: string) {
+  let hash = 0;
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+  }
+
+  return hash;
+}
+
+function getGroupBubbleTone(senderId: string) {
+  const tones = [
+    {
+      bubble: "bg-sky-50 text-sky-950",
+      time: "text-sky-400",
+      name: "text-sky-600"
+    },
+    {
+      bubble: "bg-cyan-50 text-cyan-950",
+      time: "text-cyan-400",
+      name: "text-cyan-600"
+    },
+    {
+      bubble: "bg-blue-50 text-blue-950",
+      time: "text-blue-400",
+      name: "text-blue-600"
+    },
+    {
+      bubble: "bg-indigo-50 text-indigo-950",
+      time: "text-indigo-400",
+      name: "text-indigo-600"
+    }
+  ] as const;
+
+  return tones[hashString(senderId) % tones.length];
+}
+
 export default function MessagesPage() {
   const workspace = useConversationsWorkspace({ kind: "MESSAGES" });
   const [mobilePane, setMobilePane] = useState<"list" | "chat">("list");
-  const [newConversationOpen, setNewConversationOpen] = useState(false);
-  const [groupConversationOpen, setGroupConversationOpen] = useState(false);
+  const [composerTab, setComposerTab] = useState<"direct" | "group" | null>(null);
   const [editingConversationId, setEditingConversationId] = useState<string | null>(null);
   const [editingConversationTitle, setEditingConversationTitle] = useState("");
+  const groupImageInputId = "group-image-upload";
   const messageEndRef = useRef<HTMLDivElement | null>(null);
+  const composerRef = useRef<HTMLTextAreaElement | null>(null);
 
   const conversations = workspace.filteredConversations ?? [];
   const active = workspace.activeConversation;
@@ -147,6 +193,10 @@ export default function MessagesPage() {
       messageEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
     }
   }, [active, groupedMessages, mobilePane]);
+
+  useEffect(() => {
+    autosizeComposer(composerRef.current);
+  }, [workspace.composerText]);
 
   if (!workspace.hasHydrated) {
     return <p className="p-6 text-sm text-slate-500">Messages</p>;
@@ -175,9 +225,9 @@ export default function MessagesPage() {
           } min-h-[calc(100vh-3rem)] flex-col`}
         >
           <div className="border-b border-slate-200 px-4 pb-4 pt-5 sm:px-5 lg:px-6">
-            <div>
+            <div className="flex items-end justify-between gap-3">
               <h2 className="text-[1.9rem] font-bold tracking-tight text-slate-950">Chats</h2>
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="shrink-0 text-sm text-slate-500">
                 {conversations.length} conversation{conversations.length === 1 ? "" : "s"}
               </p>
             </div>
@@ -188,44 +238,62 @@ export default function MessagesPage() {
               </div>
             ) : null}
 
-            <div className="relative mt-4">
-              <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                <SearchIcon />
-              </span>
-              <input
-                value={workspace.searchQuery}
-                onChange={(event) => workspace.setSearchQuery(event.target.value)}
-                placeholder="Search Messenger"
-                className="w-full rounded-full border border-transparent bg-slate-100 pl-11 pr-4 py-3 text-sm text-slate-700 outline-none transition focus:border-sky-300 focus:bg-white"
-              />
+            <div className="mt-4 flex items-center gap-3">
+              <div className="relative min-w-0 flex-1">
+                <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                  <SearchIcon />
+                </span>
+                <input
+                  value={workspace.searchQuery}
+                  onChange={(event) => workspace.setSearchQuery(event.target.value)}
+                  placeholder="Search Messages"
+                  className="w-full rounded-full border border-transparent bg-slate-100 pl-11 pr-4 py-3 text-sm text-slate-700 outline-none transition focus:border-sky-300 focus:bg-white"
+                />
+              </div>
+              <label className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-500 shadow-sm">
+                <input
+                  type="checkbox"
+                  checked={workspace.unreadOnly}
+                  onChange={(event) => workspace.setUnreadOnly(event.target.checked)}
+                  className="rounded border-slate-300"
+                />
+                Unread
+              </label>
             </div>
 
-            <div className="mt-4 rounded-[24px] border border-slate-200 bg-white shadow-sm">
-              <button
-                type="button"
-                onClick={() => setNewConversationOpen((current) => !current)}
-                className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left"
-              >
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">New conversation</p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    {isStudent ? "Start a chat with your instructor." : "Pick who you want to message next."}
-                  </p>
-                </div>
-                <ChevronDownIcon open={newConversationOpen} />
-              </button>
-              {newConversationOpen ? (
-                <div className="border-t border-slate-200 px-4 pb-4 pt-3">
-                  <label className="flex items-center gap-2 text-xs font-medium text-slate-500">
-                    <input
-                      type="checkbox"
-                      checked={workspace.unreadOnly}
-                      onChange={(event) => workspace.setUnreadOnly(event.target.checked)}
-                      className="rounded border-slate-300"
-                    />
-                    Unread
-                  </label>
-                  <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+            <div className="mt-4">
+              <div className={`grid gap-2 ${isInstructor ? "grid-cols-2" : "grid-cols-1"}`}>
+                <button
+                  type="button"
+                  onClick={() => setComposerTab((current) => (current === "direct" ? null : "direct"))}
+                  className={`flex h-11 w-full items-center justify-between gap-2 whitespace-nowrap rounded-2xl border px-3.5 text-[13px] font-semibold transition ${
+                    composerTab === "direct"
+                      ? "border-sky-500 bg-sky-500 text-white shadow-sm"
+                      : "border-slate-200 bg-white text-slate-700 hover:border-sky-300 hover:text-sky-700"
+                  }`}
+                >
+                  New chat
+                  <ChevronDownIcon open={composerTab === "direct"} />
+                </button>
+                {isInstructor ? (
+                  <button
+                    type="button"
+                    onClick={() => setComposerTab((current) => (current === "group" ? null : "group"))}
+                    className={`flex h-11 w-full items-center justify-between gap-2 whitespace-nowrap rounded-2xl border px-3.5 text-[13px] font-semibold transition ${
+                      composerTab === "group"
+                        ? "border-slate-950 bg-slate-950 text-white shadow-sm"
+                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:text-slate-950"
+                    }`}
+                  >
+                    New group
+                    <ChevronDownIcon open={composerTab === "group"} />
+                  </button>
+                ) : null}
+              </div>
+
+              {composerTab === "direct" ? (
+                <div className="mt-3 rounded-[24px] border border-slate-200 bg-white px-4 pb-4 pt-3 shadow-sm">
+                  <div className="flex flex-col gap-2 sm:flex-row">
                     <select
                       value={workspace.directTargetId}
                       onChange={(event) => workspace.setDirectTargetId(event.target.value)}
@@ -252,89 +320,80 @@ export default function MessagesPage() {
                   ) : null}
                 </div>
               ) : null}
-            </div>
 
-            {isInstructor ? (
-              <div className="mt-3 rounded-[24px] border border-slate-200 bg-white shadow-sm">
-                <button
-                  type="button"
-                  onClick={() => setGroupConversationOpen((current) => !current)}
-                  className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left"
-                >
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">Group conversations</p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      Create and manage course or student groups.
-                    </p>
-                  </div>
-                  <ChevronDownIcon open={groupConversationOpen} />
-                </button>
-                {groupConversationOpen ? (
-                  <div className="border-t border-slate-200 px-4 pb-4 pt-3">
-                    <div className="space-y-2">
-                      <input
-                        value={workspace.groupTitle}
-                        onChange={(event) => workspace.setGroupTitle(event.target.value)}
-                        placeholder="Group title"
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700"
-                      />
+              {isInstructor && composerTab === "group" ? (
+                <div className="mt-3 rounded-[24px] border border-slate-200 bg-white px-4 pb-4 pt-3 shadow-sm">
+                  <div className="space-y-2">
+                    <input
+                      value={workspace.groupTitle}
+                      onChange={(event) => workspace.setGroupTitle(event.target.value)}
+                      placeholder="Group title"
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700"
+                    />
+                    <select
+                      value={workspace.groupScope}
+                      onChange={(event) =>
+                        workspace.setGroupScope(event.target.value as "COURSE" | "FOLLOWERS" | "SELECTED")
+                      }
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700"
+                    >
+                      <option value="FOLLOWERS">All followers</option>
+                      <option value="COURSE">Course learners</option>
+                      <option value="SELECTED">Selected students</option>
+                    </select>
+                    {workspace.groupScope === "COURSE" ? (
                       <select
-                        value={workspace.groupScope}
-                        onChange={(event) =>
-                          workspace.setGroupScope(event.target.value as "COURSE" | "FOLLOWERS" | "SELECTED")
-                        }
+                        value={workspace.groupCourseId}
+                        onChange={(event) => workspace.setGroupCourseId(event.target.value)}
                         className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700"
                       >
-                        <option value="FOLLOWERS">All followers</option>
-                        <option value="COURSE">Course learners</option>
-                        <option value="SELECTED">Selected students</option>
+                        <option value="">Choose a course</option>
+                        {(workspace.groupTargetsQuery.data?.courses ?? []).map((course) => (
+                          <option key={course.id} value={course.id}>
+                            {course.title}
+                          </option>
+                        ))}
                       </select>
-                      {workspace.groupScope === "COURSE" ? (
-                        <select
-                          value={workspace.groupCourseId}
-                          onChange={(event) => workspace.setGroupCourseId(event.target.value)}
-                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700"
-                        >
-                          <option value="">Choose a course</option>
-                          {(workspace.groupTargetsQuery.data?.courses ?? []).map((course) => (
-                            <option key={course.id} value={course.id}>
-                              {course.title}
-                            </option>
-                          ))}
-                        </select>
-                      ) : null}
-                      {workspace.groupScope !== "COURSE" ? (
-                        <label className="block rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                          <span className="block font-medium text-slate-700">Group picture</span>
-                          <span className="mt-1 block text-xs text-slate-500">
-                            Choose the picture that should represent this group chat.
+                    ) : null}
+                    {workspace.groupScope !== "COURSE" ? (
+                      <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3">
+                        <input
+                          id={groupImageInputId}
+                          type="file"
+                          accept="image/png,image/jpeg,image/jpg,image/webp"
+                          onChange={(event) => workspace.setGroupImageFile(event.target.files?.[0] ?? null)}
+                          className="hidden"
+                        />
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <label
+                            htmlFor={groupImageInputId}
+                            className="inline-flex cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-sky-300 hover:text-sky-700"
+                          >
+                            Choose file
+                          </label>
+                          <span className="truncate text-sm text-slate-500">
+                            {workspace.groupImageFile?.name ?? "No file chosen"}
                           </span>
-                          <input
-                            type="file"
-                            accept="image/png,image/jpeg,image/jpg,image/webp"
-                            onChange={(event) => workspace.setGroupImageFile(event.target.files?.[0] ?? null)}
-                            className="mt-3 block w-full text-xs text-slate-500"
-                          />
-                        </label>
-                      ) : (
-                        <div className="rounded-2xl border border-slate-200 bg-sky-50 px-4 py-3 text-xs text-sky-700">
-                          Course groups automatically use the selected course image.
                         </div>
-                      )}
-                      {workspace.groupError ? <p className="text-sm text-rose-600">{workspace.groupError}</p> : null}
-                      <button
-                        type="button"
-                        onClick={() => void workspace.onStartGroupConversation()}
-                        disabled={workspace.createGroupMutation.isPending}
-                        className="w-full rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-                      >
-                        {workspace.createGroupMutation.isPending ? "Creating..." : "Create group"}
-                      </button>
-                    </div>
+                      </div>
+                    ) : (
+                      <div className="rounded-2xl border border-slate-200 bg-sky-50 px-4 py-3 text-xs text-sky-700">
+                        Course groups automatically use the selected course image.
+                      </div>
+                    )}
+                    {workspace.groupError ? <p className="text-sm text-rose-600">{workspace.groupError}</p> : null}
+                    <button
+                      type="button"
+                      onClick={() => void workspace.onStartGroupConversation()}
+                      disabled={workspace.createGroupMutation.isPending}
+                      className="w-full rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                    >
+                      {workspace.createGroupMutation.isPending ? "Creating..." : "Create group"}
+                    </button>
                   </div>
-                ) : null}
-              </div>
-            ) : null}
+                </div>
+              ) : null}
+            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto px-2 py-3 sm:px-3">
@@ -367,45 +426,93 @@ export default function MessagesPage() {
                         conversation.course ? ` | ${conversation.course.title}` : ""
                       }`
                     : conversation.latestMessage?.body ?? "No messages yet";
+                const toneClass =
+                  conversation.kind === "GROUP"
+                    ? workspace.activeConversationId === conversation.id
+                      ? "bg-sky-100 shadow-sm"
+                      : "bg-sky-50/70 hover:bg-sky-100/70"
+                    : workspace.activeConversationId === conversation.id
+                      ? "bg-blue-100 shadow-sm"
+                      : "bg-blue-50/50 hover:bg-blue-100/60";
 
                 return (
                   <div
                     key={conversation.id}
-                    className={`group mx-2 mb-1.5 w-[calc(100%-1rem)] rounded-[24px] transition ${
-                      workspace.activeConversationId === conversation.id
-                        ? "bg-[#e7f3ff] shadow-sm"
-                        : "hover:bg-white/80"
-                    }`}
+                    className={`group mx-2 mb-1.5 w-[calc(100%-1rem)] rounded-[24px] transition ${toneClass}`}
                   >
-                    <button
-                      type="button"
-                      onClick={() => {
-                        workspace.setActiveConversationId(conversation.id);
-                        setMobilePane("chat");
-                      }}
-                      className="flex w-full items-center gap-3 px-3 py-3 text-left"
-                    >
+                    <div className="flex items-center gap-3 px-3 py-3">
                       <div className="relative shrink-0">
-                        <ChatAvatar name={displayName} image={displayImage} />
-                        {conversation.unreadCount > 0 ? (
-                          <span className="absolute -bottom-1 -right-1 inline-flex min-w-5 items-center justify-center rounded-full bg-[#0084ff] px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                            {conversation.unreadCount}
-                          </span>
-                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            workspace.setActiveConversationId(conversation.id);
+                            setMobilePane("chat");
+                          }}
+                          className="relative block rounded-full text-left"
+                        >
+                          <ChatAvatar name={displayName} image={displayImage} />
+                          {conversation.unreadCount > 0 ? (
+                            <span className="absolute -bottom-1 -right-1 inline-flex min-w-5 items-center justify-center rounded-full bg-[#0084ff] px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                              {conversation.unreadCount}
+                            </span>
+                          ) : null}
+                        </button>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            workspace.setActiveConversationId(conversation.id);
+                            setMobilePane("chat");
+                          }}
+                          className="min-w-0 flex-1 text-left"
+                        >
                           <p className="truncate text-[0.95rem] font-semibold text-slate-950">{displayName}</p>
-                          <p className="shrink-0 text-xs text-slate-400">
+                          <p className="mt-1 line-clamp-2 text-sm leading-5 text-slate-500">{previewText}</p>
+                        </button>
+                        <div className="flex shrink-0 flex-col items-end gap-2">
+                          <p className="text-xs text-slate-400">
                             {formatRelativeConversationTime(conversation.lastMessageAt)}
                           </p>
+                          {conversation.kind === "GROUP" &&
+                          conversation.groupInstructor?.id === workspace.user?.id &&
+                          editingConversationId !== conversation.id ? (
+                            <div className="flex items-center gap-1 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+                              <button
+                                type="button"
+                                aria-label="Edit chat name"
+                                title="Edit chat name"
+                                onClick={() => {
+                                  setEditingConversationId(conversation.id);
+                                  setEditingConversationTitle(conversation.groupTitle ?? "");
+                                }}
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 transition hover:border-sky-300 hover:text-sky-700"
+                              >
+                                <EditIcon />
+                              </button>
+                              <button
+                                type="button"
+                                aria-label="Delete chat"
+                                title="Delete chat"
+                                onClick={() => {
+                                  if (window.confirm("Do you want to delete this group chat?")) {
+                                    void workspace.onDeleteGroupConversation(conversation.id);
+                                  }
+                                }}
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-700 transition hover:border-rose-300"
+                              >
+                                <TrashIcon />
+                              </button>
+                            </div>
+                          ) : null}
                         </div>
-                        <p className="mt-1 line-clamp-2 text-sm leading-5 text-slate-500">{previewText}</p>
                       </div>
-                    </button>
-                    {conversation.kind === "GROUP" && conversation.groupInstructor?.id === workspace.user?.id ? (
-                      <div className="border-t border-slate-200/70 px-3 pb-3 pt-2 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
-                        {editingConversationId === conversation.id ? (
+                    </div>
+                    {conversation.kind === "GROUP" &&
+                    conversation.groupInstructor?.id === workspace.user?.id &&
+                    editingConversationId === conversation.id ? (
+                      <div className="px-3 pb-3 pt-1">
+                        {
                           <div className="flex flex-col gap-2 sm:flex-row">
                             <input
                               value={editingConversationTitle}
@@ -439,33 +546,7 @@ export default function MessagesPage() {
                               </button>
                             </div>
                           </div>
-                        ) : (
-                          <div className="flex flex-wrap gap-2">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditingConversationId(conversation.id);
-                                setEditingConversationTitle(conversation.groupTitle ?? "");
-                              }}
-                              className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-sky-300 hover:text-sky-700"
-                            >
-                              <EditIcon />
-                              Edit chat name
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (window.confirm("Do you want to delete this group chat?")) {
-                                  void workspace.onDeleteGroupConversation(conversation.id);
-                                }
-                              }}
-                              className="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:border-rose-300"
-                            >
-                              <TrashIcon />
-                              Delete chat
-                            </button>
-                          </div>
-                        )}
+                        }
                       </div>
                     ) : null}
                   </div>
@@ -526,22 +607,6 @@ export default function MessagesPage() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {workspace.canUseSupportInbox && isStudent ? (
-                      <Link
-                        href="/support"
-                        className="hidden rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-sky-300 hover:text-sky-700 sm:inline-flex"
-                      >
-                        Support
-                      </Link>
-                    ) : null}
-                    <button
-                      type="button"
-                      className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm"
-                    >
-                      <MoreIcon />
-                    </button>
-                  </div>
                 </div>
 
               </div>
@@ -564,40 +629,65 @@ export default function MessagesPage() {
                           {group.label}
                         </span>
                       </div>
-                      {group.items.map((message) => {
-                        const isMine = message.sender.id === workspace.user?.id;
+                      {groupConsecutiveMessages(group.items).map((run) => {
+                        const firstMessage = run.items[0];
+                        const isMine = firstMessage.sender.id === workspace.user?.id;
+                        const senderTone =
+                          active.kind === "GROUP" && !isMine
+                            ? getGroupBubbleTone(firstMessage.sender.id)
+                            : null;
+
                         return (
                           <div
-                            key={message.id}
+                            key={`${group.label}-${firstMessage.id}`}
                             className={`flex items-end gap-2 ${isMine ? "justify-end" : "justify-start"}`}
                           >
                             {!isMine ? (
-                              <ChatAvatar
-                                name={message.sender.fullName}
-                                image={message.sender.profileImage}
-                                size="sm"
-                              />
+                              <div className="shrink-0 self-end">
+                                <ChatAvatar
+                                  name={firstMessage.sender.fullName}
+                                  image={firstMessage.sender.profileImage}
+                                  size="sm"
+                                />
+                              </div>
                             ) : null}
-                            <div
-                              className={`max-w-[84%] rounded-[22px] px-4 py-3 text-sm leading-6 shadow-sm sm:max-w-[72%] ${
-                                isMine
-                                  ? "rounded-br-[10px] bg-[#0084ff] text-white"
-                                  : "rounded-bl-[10px] bg-white text-slate-900"
-                              }`}
-                            >
+                            <div className={`max-w-[84%] space-y-1.5 sm:max-w-[72%] ${isMine ? "items-end" : "items-start"}`}>
                               {!isMine ? (
-                                <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                                  {message.sender.fullName}
+                                <p
+                                  className={`px-2 text-[11px] font-semibold uppercase tracking-[0.16em] ${
+                                    senderTone?.name ?? "text-slate-400"
+                                  }`}
+                                >
+                                  {firstMessage.sender.fullName}
                                 </p>
                               ) : null}
-                              <p className="whitespace-pre-wrap">{message.body}</p>
-                              <p
-                                className={`mt-2 text-[11px] ${
-                                  isMine ? "text-sky-100" : "text-slate-400"
-                                }`}
-                              >
-                                {formatConversationDate(message.createdAt)}
-                              </p>
+                              {run.items.map((message, index) => {
+                                const isLastInRun = index === run.items.length - 1;
+
+                                return (
+                                  <div
+                                    key={message.id}
+                                    className={`rounded-[22px] px-4 py-3 text-sm leading-6 shadow-sm ${
+                                      isMine
+                                        ? `${index === 0 ? "rounded-tr-[22px]" : ""} ${
+                                            isLastInRun ? "rounded-br-[10px]" : "rounded-br-[22px]"
+                                          } bg-[#0084ff] text-white`
+                                        : `${index === 0 ? "rounded-tl-[22px]" : ""} ${
+                                            isLastInRun ? "rounded-bl-[10px]" : "rounded-bl-[22px]"
+                                          } ${senderTone?.bubble ?? "bg-white text-slate-900"}`
+                                    }`}
+                                  >
+                                    <p className="whitespace-pre-wrap break-words">{message.body}</p>
+                                    <p
+                                      className={`mt-2 text-[11px] ${
+                                        isMine ? "text-sky-100" : senderTone?.time ?? "text-slate-400"
+                                      }`}
+                                    >
+                                      {formatConversationDate(message.createdAt)}
+                                    </p>
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
                         );
@@ -614,10 +704,12 @@ export default function MessagesPage() {
                 ) : null}
                 <div className="mt-3 flex items-end gap-3">
                   <textarea
+                    ref={composerRef}
                     value={workspace.composerText}
                     onChange={(event) => workspace.setComposerText(event.target.value)}
                     placeholder="Aa"
-                    className="min-h-[56px] flex-1 resize-none rounded-[28px] border border-transparent bg-slate-100 px-5 py-4 text-sm text-slate-700 outline-none transition focus:border-sky-300 focus:bg-white"
+                    rows={1}
+                    className="h-[52px] flex-1 resize-none rounded-[28px] border border-transparent bg-slate-100 px-5 py-[14px] text-sm leading-6 text-slate-700 outline-none transition focus:border-sky-300 focus:bg-white"
                   />
                   <button
                     type="button"

@@ -18,6 +18,10 @@
   --text-muted: #64748b;
   --shadow-soft: 0 18px 45px -30px rgba(15, 23, 42, 0.42);
   --shadow-medium: 0 24px 55px -28px rgba(15, 23, 42, 0.34);
+  --scrollbar-thumb: rgba(51, 65, 85, 0.42);
+  --scrollbar-thumb-hover: rgba(30, 41, 59, 0.56);
+  --scrollbar-track: rgba(226, 232, 240, 0.72);
+  --scrollbar-corner: rgba(255, 255, 255, 0);
 }
 
 *,
@@ -157,19 +161,43 @@ embed {
   box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.14);
 }
 
-.ui-scrollbar {
+.ui-scrollbar,
+* {
   scrollbar-width: thin;
-  scrollbar-color: rgba(148, 163, 184, 0.7) transparent;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
-.ui-scrollbar::-webkit-scrollbar {
+.ui-scrollbar::-webkit-scrollbar,
+*::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 
-.ui-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.55);
+.ui-scrollbar::-webkit-scrollbar-track,
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
   border-radius: 999px;
+}
+
+.ui-scrollbar::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(51, 65, 85, 0.5), rgba(14, 165, 233, 0.45));
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  border-radius: 999px;
+}
+
+.ui-scrollbar::-webkit-scrollbar-thumb:hover,
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--scrollbar-thumb-hover), rgba(14, 165, 233, 0.62));
+}
+
+.ui-scrollbar::-webkit-scrollbar-corner,
+*::-webkit-scrollbar-corner {
+  background: var(--scrollbar-corner);
+}
+
+.ui-scrollbar {
+  scrollbar-gutter: stable;
 }
 
 .mobile-split-shell {
