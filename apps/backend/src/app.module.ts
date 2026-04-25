@@ -11,6 +11,7 @@ import { CoursesModule } from "./modules/courses/courses.module";
 import { EnrollmentsModule } from "./modules/enrollments/enrollments.module";
 import { InstructorModule } from "./modules/instructor/instructor.module";
 import { LessonsModule } from "./modules/lessons/lessons.module";
+import { HomepageModule } from "./modules/homepage/homepage.module";
 import { NotificationsModule } from "./modules/notifications/notifications.module";
 import { PaymentMethodsModule } from "./modules/payment-methods/payment-methods.module";
 import { PaymentsModule } from "./modules/payments/payments.module";
@@ -46,6 +47,7 @@ import { PrismaModule } from "./shared/prisma/prisma.module";
     TenantsModule,
     CoursesModule,
     InstructorModule,
+    HomepageModule,
     PaymentMethodsModule,
     PaymentsModule,
     StudentInstructorsModule,

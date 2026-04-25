@@ -1,17 +1,19 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import * as bcrypt from "bcrypt";
-import { UserRole } from "@prisma/client";
+import { ExternalAuthProvider, UserRole } from "@prisma/client";
 import { AuthService } from "./auth.service";
 import { createAsyncMock } from "../../../test/mock-utils";
 
-test("register creates student, joins instructor by invite code, and signs a token", async () => {
+test("register creates student, joins instructor by invite code, and requires email verification", async () => {
   const createdStudent = {
     id: "student-1",
     email: "student@example.com",
     fullName: "Student User",
     role: UserRole.STUDENT,
-    tenantId: null
+    tenantId: null,
+    emailVerifiedAt: null,
+    primaryAuthProvider: ExternalAuthProvider.LOCAL
   };
 
   const hydratedStudent = {
@@ -20,36 +22,52 @@ test("register creates student, joins instructor by invite code, and signs a tok
   };
 
   const usersService = {
-    create: createAsyncMock<[{
-      email: string;
-      fullName: string;
-      role: UserRole;
-      tenantId: string | null;
-      password: string;
-    }], typeof createdStudent>(async () => createdStudent),
+    create: createAsyncMock<
+      [
+        {
+          email: string;
+          fullName: string;
+          role: UserRole;
+          tenantId: string | null;
+          password: string;
+          emailVerifiedAt: Date | null;
+          primaryAuthProvider: ExternalAuthProvider;
+        }
+      ],
+      typeof createdStudent
+    >(async () => createdStudent),
     findById: createAsyncMock<[string, string | null], typeof hydratedStudent>(async () => hydratedStudent)
   };
   const jwtService = {
-    signAsync: createAsyncMock<[{
-      sub: string;
-      email: string;
-      role: UserRole;
-      tenantId: string | null;
-    }], string>(async () => "signed-jwt")
+    signAsync: createAsyncMock(async () => "signed-jwt")
   };
   const studentInstructorsService = {
-    createRelationFromInviteCode: createAsyncMock<[string, string], void>(async () => undefined)
+    createRelationFromInviteCode: createAsyncMock(async () => undefined)
   };
   const notificationsService = {
     create: createAsyncMock(async () => undefined)
   };
+  const mailerService = {
+    sendMail: createAsyncMock(async () => undefined)
+  };
   const prisma = {
     tenant: {
       findUnique: createAsyncMock(async () => ({ id: "tenant-1" }))
+    },
+    emailVerificationToken: {
+      create: createAsyncMock(async () => undefined)
     }
   };
   const subscriptionsService = {
     assertTenantCanAddStudent: createAsyncMock(async () => undefined)
+  };
+  const configService = {
+    get: (key: string) => {
+      if (key === "app.publicWebUrl") {
+        return "http://localhost:3000";
+      }
+      return "";
+    }
   };
 
   const service = new AuthService(
@@ -59,7 +77,9 @@ test("register creates student, joins instructor by invite code, and signs a tok
     {} as never,
     studentInstructorsService as never,
     notificationsService as never,
-    subscriptionsService as never
+    subscriptionsService as never,
+    mailerService as never,
+    configService as never
   );
 
   const result = await service.register({
@@ -76,7 +96,9 @@ test("register creates student, joins instructor by invite code, and signs a tok
     fullName: "Student User",
     role: UserRole.STUDENT,
     tenantId: null,
-    password: "secret"
+    password: "secret",
+    emailVerifiedAt: null,
+    primaryAuthProvider: ExternalAuthProvider.LOCAL
   });
   assert.deepEqual(studentInstructorsService.createRelationFromInviteCode.calls[0], [
     "student-1",
@@ -84,18 +106,11 @@ test("register creates student, joins instructor by invite code, and signs a tok
   ]);
   assert.deepEqual(subscriptionsService.assertTenantCanAddStudent.calls[0], ["tenant-1"]);
   assert.deepEqual(usersService.findById.calls[0], ["student-1", null]);
-  assert.equal(jwtService.signAsync.calls.length, 1);
-  assert.deepEqual(jwtService.signAsync.calls[0][0], {
-    sub: "student-1",
-    email: "student@example.com",
-    role: UserRole.STUDENT,
-    tenantId: "tenant-1",
-    isSuperAdmin: false,
-    adminPermissions: [],
-    mustChangePassword: false
-  });
-  assert.equal(result.accessToken, "signed-jwt");
-  assert.equal(result.user.tenantId, "tenant-1");
+  assert.equal(jwtService.signAsync.calls.length, 0);
+  assert.equal(prisma.emailVerificationToken.create.calls.length, 1);
+  assert.equal(mailerService.sendMail.calls.length, 1);
+  assert.equal(result.requiresEmailVerification, true);
+  assert.equal(result.email, "student@example.com");
 });
 
 test("login accepts legacy short passwords and normalizes email before lookup", async () => {
@@ -107,7 +122,11 @@ test("login accepts legacy short passwords and normalizes email before lookup", 
     role: UserRole.STUDENT,
     isActive: true,
     tenantId: null,
-    password: hashed
+    password: hashed,
+    emailVerifiedAt: new Date(),
+    isSuperAdmin: false,
+    adminPermissions: [],
+    mustChangePassword: false
   };
   const safeUser = {
     id: "user-1",
@@ -129,6 +148,12 @@ test("login accepts legacy short passwords and normalizes email before lookup", 
       findUnique: createAsyncMock(async () => null)
     }
   };
+  const mailerService = {
+    sendMail: createAsyncMock(async () => undefined)
+  };
+  const configService = {
+    get: () => ""
+  };
 
   const service = new AuthService(
     usersService as never,
@@ -137,7 +162,9 @@ test("login accepts legacy short passwords and normalizes email before lookup", 
     {} as never,
     {} as never,
     {} as never,
-    {} as never
+    {} as never,
+    mailerService as never,
+    configService as never
   );
 
   const result = await service.login({

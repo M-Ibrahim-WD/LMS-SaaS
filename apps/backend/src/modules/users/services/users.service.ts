@@ -5,7 +5,7 @@ import {
   NotFoundException
 } from "@nestjs/common";
 import { PrismaService } from "../../../shared/prisma/prisma.service";
-import { AdminPermission, UserRole } from "@prisma/client";
+import { AdminPermission, ExternalAuthProvider, UserRole } from "@prisma/client";
 import * as bcrypt from "bcrypt";
 import { UpdateProfileDto } from "../dto/update-profile.dto";
 import { promises as fs } from "fs";
@@ -21,6 +21,8 @@ interface CreateUserInput {
   isSuperAdmin?: boolean;
   adminPermissions?: AdminPermission[];
   mustChangePassword?: boolean;
+  emailVerifiedAt?: Date | null;
+  primaryAuthProvider?: ExternalAuthProvider;
 }
 
 @Injectable()
@@ -51,6 +53,8 @@ export class UsersService {
     bio: true,
     profileImage: true,
     role: true,
+    emailVerifiedAt: true,
+    primaryAuthProvider: true,
     isSuperAdmin: true,
     adminPermissions: true,
     mustChangePassword: true,
@@ -118,7 +122,9 @@ export class UsersService {
           password,
           isSuperAdmin: data.isSuperAdmin ?? false,
           adminPermissions: data.adminPermissions ?? [],
-          mustChangePassword: data.mustChangePassword ?? false
+          mustChangePassword: data.mustChangePassword ?? false,
+          emailVerifiedAt: data.emailVerifiedAt ?? null,
+          primaryAuthProvider: data.primaryAuthProvider ?? ExternalAuthProvider.LOCAL
         },
         select: this.userSelect
       });
@@ -129,6 +135,16 @@ export class UsersService {
 
   getProfile(userId: string, tenantId: string | null) {
     return this.findById(userId, tenantId);
+  }
+
+  async markEmailVerified(userId: string) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        emailVerifiedAt: new Date()
+      },
+      select: this.userSelect
+    });
   }
 
   async getProfileSummary(userId: string) {

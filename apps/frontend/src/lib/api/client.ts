@@ -34,6 +34,10 @@ function resolveApiUrl() {
   }
 }
 
+export function getResolvedApiUrl() {
+  return resolveApiUrl();
+}
+
 function isLikelyTransientFetchError(error: unknown) {
   if (!(error instanceof Error)) {
     return false;

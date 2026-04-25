@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 
 export type AdminSectionKey =
   | "overview"
+  | "homepage"
   | "plans"
   | "tenants"
   | "users"

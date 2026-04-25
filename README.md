@@ -17,6 +17,7 @@ A working LMS SaaS product built as a TypeScript monorepo. This repo is no longe
 
 ## What Is Implemented
 - Auth, JWT sessions, RBAC, super-admin and delegated admin permissions
+- Email verification, password recovery by email, and Google sign-in for public users
 - Multi-instructor student model with invite-code joins
 - Instructor subscription plans, 7-day trials, and backend plan enforcement
 - Course authoring with sections, lessons, quizzes, assignments, and thumbnail upload
@@ -24,6 +25,7 @@ A working LMS SaaS product built as a TypeScript monorepo. This repo is no longe
 - Manual payment methods, proof uploads, approval/rejection, and enrollment gating
 - Public/private profiles, storefront pages, reviews, and notification center UI
 - Admin control center with plans, tenants, users, admins, and audit views
+- Global homepage publishing with an admin homepage builder and draft/publish flow
 
 ## Quick Start
 1. Install dependencies:
@@ -37,6 +39,12 @@ A working LMS SaaS product built as a TypeScript monorepo. This repo is no longe
    - `pnpm --filter @lms/backend prisma:migrate`
 5. Run development:
    - `pnpm dev`
+
+## Auth And Homepage Builder Configuration
+- Public email verification and password reset require valid SMTP settings in `apps/backend/.env`.
+- Google sign-in requires `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and a callback URL that points to `/api/auth/google/callback`.
+- The public homepage is driven from the admin homepage builder at `/admin/homepage`.
+- Super admins can always manage the homepage. Delegated admins need the `MANAGE_HOMEPAGE` permission.
 
 ## Validation Commands
 - Frontend type check: `pnpm --filter @lms/frontend lint`

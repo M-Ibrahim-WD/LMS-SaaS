@@ -17,6 +17,21 @@ export const appConfig = registerAs("app", () => ({
     secretKey: process.env.S3_SECRET_KEY ?? "",
     bucket: process.env.S3_BUCKET ?? ""
   },
-  stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? ""
+  stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? "",
+  publicServerUrl: process.env.PUBLIC_SERVER_URL?.trim() ?? "",
+  publicWebUrl: process.env.PUBLIC_WEB_URL?.trim() ?? "http://localhost:3000",
+  smtp: {
+    host: process.env.SMTP_HOST?.trim() ?? "",
+    port: Number(process.env.SMTP_PORT ?? 587),
+    secure: String(process.env.SMTP_SECURE ?? "false").toLowerCase() === "true",
+    user: process.env.SMTP_USER?.trim() ?? "",
+    pass: process.env.SMTP_PASS?.trim() ?? "",
+    fromEmail: process.env.SMTP_FROM_EMAIL?.trim() ?? "",
+    fromName: process.env.SMTP_FROM_NAME?.trim() ?? "ATHAR LMS"
+  },
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID?.trim() ?? "",
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET?.trim() ?? "",
+    redirectUri: process.env.GOOGLE_REDIRECT_URI?.trim() ?? ""
+  }
 }));
-

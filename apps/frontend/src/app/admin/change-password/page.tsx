@@ -33,6 +33,8 @@ type ChangePasswordResponse = {
       | "REVIEW_PAYMENTS"
       | "MANAGE_PLANS"
       | "REVIEW_ADMINS"
+      | "HANDLE_SUPPORT"
+      | "MANAGE_HOMEPAGE"
     >;
     tenantId: string | null;
     tenant?: {

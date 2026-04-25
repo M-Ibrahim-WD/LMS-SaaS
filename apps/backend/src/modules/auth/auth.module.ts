@@ -5,6 +5,7 @@ import { StudentInstructorsModule } from "../student-instructors/student-instruc
 import { SubscriptionsModule } from "../subscriptions/subscriptions.module";
 import { TenantsModule } from "../tenants/tenants.module";
 import { UsersModule } from "../users/users.module";
+import { MailerModule } from "../mailer/mailer.module";
 import { AuthController } from "./controllers/auth.controller";
 import { AuthService } from "./services/auth.service";
 import { JwtStrategy } from "./strategies/jwt.strategy";
@@ -12,6 +13,7 @@ import { JwtStrategy } from "./strategies/jwt.strategy";
 @Module({
   imports: [
     UsersModule,
+    MailerModule,
     SubscriptionsModule,
     TenantsModule,
     StudentInstructorsModule,

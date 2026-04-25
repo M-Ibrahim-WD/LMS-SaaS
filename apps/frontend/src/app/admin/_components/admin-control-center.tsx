@@ -423,6 +423,10 @@ const adminPermissionLabels: Record<AdminPermission, { label: string; descriptio
   HANDLE_SUPPORT: {
     label: "Handle support",
     description: "Access and reply to platform support conversations."
+  },
+  MANAGE_HOMEPAGE: {
+    label: "Manage homepage",
+    description: "Edit and publish the public homepage."
   }
 };
 
@@ -516,6 +520,7 @@ export function AdminControlCenter({ section }: AdminControlCenterProps) {
   const hasAdminPermission = (permission: AdminPermission) => isSuperAdmin || adminPermissions.includes(permission);
   const canViewOverview = hasAdminPermission("VIEW_OVERVIEW");
   const canManagePlans = hasAdminPermission("MANAGE_PLANS");
+  const canManageHomepage = hasAdminPermission("MANAGE_HOMEPAGE");
   const canReviewTenants = hasAdminPermission("REVIEW_TENANTS");
   const canReviewUsers = hasAdminPermission("REVIEW_STUDENTS") || hasAdminPermission("REVIEW_INSTRUCTORS");
   const canReviewAdmins = hasAdminPermission("REVIEW_ADMINS");
@@ -529,6 +534,13 @@ export function AdminControlCenter({ section }: AdminControlCenterProps) {
       description: "KPIs, activity, and quick operational context.",
       href: "/admin/overview",
       visible: canViewOverview
+    },
+    {
+      key: "homepage" as const,
+      label: "Homepage",
+      description: "Edit and publish the public homepage.",
+      href: "/admin/homepage",
+      visible: canManageHomepage
     },
     {
       key: "plans" as const,
@@ -585,6 +597,10 @@ export function AdminControlCenter({ section }: AdminControlCenterProps) {
     overview: {
       title: "Platform Overview",
       description: "A calm operational snapshot with KPIs, recent platform activity, and quick access to course and payment oversight."
+    },
+    homepage: {
+      title: "Homepage Builder",
+      description: "Compose and publish the public homepage with reusable content blocks."
     },
     plans: {
       title: "Plan Management",

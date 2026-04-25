@@ -434,6 +434,10 @@ export const adminPermissionLabels: Record<AdminPermission, { label: string; des
   HANDLE_SUPPORT: {
     label: "Handle support",
     description: "Access and reply to platform support conversations."
+  },
+  MANAGE_HOMEPAGE: {
+    label: "Manage homepage",
+    description: "Edit and publish the public homepage."
   }
 };
 
@@ -493,6 +497,10 @@ export const adminSectionMeta: Record<AdminSectionKey, { title: string; descript
   overview: {
     title: "Platform Overview",
     description: "A calm operational snapshot with KPIs, recent platform activity, and quick access to course and payment oversight."
+  },
+  homepage: {
+    title: "Homepage Builder",
+    description: "Compose, save, and publish the public homepage without editing code."
   },
   plans: {
     title: "Plan Management",

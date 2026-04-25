@@ -25,6 +25,12 @@ enum AdminPermission {
   MANAGE_PLANS
   REVIEW_ADMINS
   HANDLE_SUPPORT
+  MANAGE_HOMEPAGE
+}
+
+enum ExternalAuthProvider {
+  LOCAL
+  GOOGLE
 }
 
 enum CourseStatus {
@@ -269,6 +275,8 @@ model User {
   profileImage String? @map("profile_image")
   password  String
   role      UserRole
+  emailVerifiedAt DateTime? @map("email_verified_at")
+  primaryAuthProvider ExternalAuthProvider @default(LOCAL) @map("primary_auth_provider")
   isSuperAdmin Boolean @default(false) @map("is_super_admin")
   adminPermissions AdminPermission[] @default([])
   mustChangePassword Boolean @default(false) @map("must_change_password")
@@ -306,10 +314,66 @@ model User {
   supportAssignments SupportAssignment[] @relation("SupportAssignedAdmin")
   mediaSessions MediaSession[]
   protectedContentEvents ProtectedContentEvent[]
+  emailVerificationTokens EmailVerificationToken[]
+  passwordResetTokens PasswordResetToken[]
+  externalAuthIdentities ExternalAuthIdentity[]
 
   @@index([tenantId])
   @@index([tenantId, role])
   @@index([isActive])
+}
+
+model EmailVerificationToken {
+  id         String   @id @default(uuid())
+  userId      String   @map("user_id")
+  tokenHash   String   @unique @map("token_hash")
+  expiresAt   DateTime @map("expires_at")
+  consumedAt  DateTime? @map("consumed_at")
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id         String   @id @default(uuid())
+  userId      String   @map("user_id")
+  tokenHash   String   @unique @map("token_hash")
+  expiresAt   DateTime @map("expires_at")
+  consumedAt  DateTime? @map("consumed_at")
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model ExternalAuthIdentity {
+  id             String               @id @default(uuid())
+  userId          String               @map("user_id")
+  provider        ExternalAuthProvider
+  providerUserId  String               @map("provider_user_id")
+  email           String
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@index([userId])
+}
+
+model HomepageContent {
+  id               String   @id @default(uuid())
+  key              String   @unique
+  draftContent     Json?    @map("draft_content")
+  publishedContent Json?    @map("published_content")
+  publishedAt      DateTime? @map("published_at")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model AdminAuditLog {
