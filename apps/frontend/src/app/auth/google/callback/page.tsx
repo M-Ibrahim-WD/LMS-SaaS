@@ -28,6 +28,9 @@ function GoogleAuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const accessToken = useMemo(() => searchParams.get("accessToken") ?? "", [searchParams]);
+  const registrationToken = useMemo(() => searchParams.get("registrationToken") ?? "", [searchParams]);
+  const email = useMemo(() => searchParams.get("email") ?? "", [searchParams]);
+  const fullName = useMemo(() => searchParams.get("fullName") ?? "", [searchParams]);
   const error = useMemo(() => searchParams.get("error") ?? "", [searchParams]);
   const nextPath = useMemo(() => searchParams.get("nextPath") ?? "/dashboard", [searchParams]);
   const setSession = useAuthStore((state) => state.setSession);
@@ -42,8 +45,18 @@ function GoogleAuthCallbackContent() {
         return;
       }
 
+      if (registrationToken) {
+        const params = new URLSearchParams({
+          token: registrationToken,
+          email,
+          fullName
+        });
+        router.replace(`/register/gmail?${params.toString()}`);
+        return;
+      }
+
       if (!accessToken) {
-        setStatus("Google sign-in did not return an access token.");
+        setStatus("Gmail sign-in did not return an access token.");
         return;
       }
 
@@ -68,7 +81,7 @@ function GoogleAuthCallbackContent() {
           setStatus(
             callbackError instanceof Error
               ? callbackError.message
-              : "Could not finish Google sign-in."
+              : "Could not finish Gmail sign-in."
           );
         }
       }
@@ -79,10 +92,10 @@ function GoogleAuthCallbackContent() {
     return () => {
       cancelled = true;
     };
-  }, [accessToken, error, nextPath, router, setSession]);
+  }, [accessToken, email, error, fullName, nextPath, registrationToken, router, setSession]);
 
   return (
-    <AuthPanel title="Google Sign-In" description="">
+    <AuthPanel title="Gmail Sign-In" description="">
       <StatusBanner variant={error ? "error" : "success"}>{status}</StatusBanner>
     </AuthPanel>
   );
@@ -92,8 +105,8 @@ export default function GoogleAuthCallbackPage() {
   return (
     <Suspense
       fallback={
-        <AuthPanel title="Google Sign-In" description="">
-          <StatusBanner>Preparing Google sign-in...</StatusBanner>
+        <AuthPanel title="Gmail Sign-In" description="">
+          <StatusBanner>Preparing Gmail sign-in...</StatusBanner>
         </AuthPanel>
       }
     >

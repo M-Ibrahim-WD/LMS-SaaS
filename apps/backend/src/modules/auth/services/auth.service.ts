@@ -13,6 +13,7 @@ import { PrismaService } from "../../../shared/prisma/prisma.service";
 import { LoginDto } from "../dto/login.dto";
 import { RegisterDto } from "../dto/register.dto";
 import { ChangePasswordDto } from "../dto/change-password.dto";
+import { CompleteGoogleRegistrationDto } from "../dto/complete-google-registration.dto";
 import { StudentInstructorsService } from "../../student-instructors/services/student-instructors.service";
 import { UsersService } from "../../users/services/users.service";
 import { NotificationsService } from "../../notifications/services/notifications.service";
@@ -32,6 +33,13 @@ type GoogleUserInfo = {
   email: string;
   email_verified: boolean;
   name?: string;
+};
+
+type GoogleRegistrationPayload = {
+  kind: "google-registration";
+  providerUserId: string;
+  email: string;
+  fullName: string;
 };
 
 @Injectable()
@@ -85,6 +93,113 @@ export class AuthService {
 
   getGoogleCallbackErrorRedirect(message: string) {
     return this.buildWebUrl("/auth/google/callback", { error: message });
+  }
+
+  private getGoogleDisplayName(googleUser: GoogleUserInfo) {
+    return googleUser.name?.trim() || googleUser.email.trim().toLowerCase().split("@")[0];
+  }
+
+  private async createGoogleRegistrationToken(googleUser: GoogleUserInfo) {
+    return this.jwtService.signAsync(
+      {
+        kind: "google-registration",
+        providerUserId: googleUser.sub,
+        email: googleUser.email.trim().toLowerCase(),
+        fullName: this.getGoogleDisplayName(googleUser)
+      },
+      {
+        expiresIn: "20m"
+      }
+    );
+  }
+
+  private async buildGoogleCompletionRedirect(googleUser: GoogleUserInfo) {
+    const registrationToken = await this.createGoogleRegistrationToken(googleUser);
+    return this.buildWebUrl("/auth/google/callback", {
+      registrationToken,
+      email: googleUser.email.trim().toLowerCase(),
+      fullName: this.getGoogleDisplayName(googleUser)
+    });
+  }
+
+  private async findGoogleUser(googleUser: GoogleUserInfo) {
+    const normalizedEmail = googleUser.email.trim().toLowerCase();
+
+    const linkedIdentity = await this.prisma.externalAuthIdentity.findUnique({
+      where: {
+        provider_providerUserId: {
+          provider: ExternalAuthProvider.GOOGLE,
+          providerUserId: googleUser.sub
+        }
+      },
+      include: {
+        user: true
+      }
+    });
+
+    if (linkedIdentity?.user) {
+      return linkedIdentity.user;
+    }
+
+    const existingUser = await this.usersService.findAuthUserByEmail(normalizedEmail);
+    if (!existingUser) {
+      return null;
+    }
+
+    if (existingUser.role === UserRole.ADMIN) {
+      throw new Error("Google sign-in is not available for admin accounts.");
+    }
+
+    await this.prisma.externalAuthIdentity.upsert({
+      where: {
+        provider_providerUserId: {
+          provider: ExternalAuthProvider.GOOGLE,
+          providerUserId: googleUser.sub
+        }
+      },
+      update: {
+        userId: existingUser.id,
+        email: normalizedEmail
+      },
+      create: {
+        userId: existingUser.id,
+        provider: ExternalAuthProvider.GOOGLE,
+        providerUserId: googleUser.sub,
+        email: normalizedEmail
+      }
+    });
+
+    if (!existingUser.emailVerifiedAt) {
+      await this.usersService.markEmailVerified(existingUser.id);
+    }
+
+    return this.usersService.findAuthUserByEmail(normalizedEmail);
+  }
+
+  private async signInResolvedUser(user: Awaited<ReturnType<UsersService["findAuthUserByEmail"]>>) {
+    if (!user) {
+      throw new Error("Account could not be loaded.");
+    }
+
+    if (!user.isActive) {
+      throw new Error("This account has been deactivated. Please contact support.");
+    }
+
+    const token = await this.signToken(
+      user.id,
+      user.email,
+      user.role,
+      user.tenantId,
+      user.isSuperAdmin,
+      user.adminPermissions ?? [],
+      user.mustChangePassword ?? false
+    );
+    const safeUser = await this.usersService.findById(user.id, user.tenantId);
+
+    return {
+      ...token,
+      user: safeUser
+    };
   }
 
   private async issueEmailVerification(user: {
@@ -445,6 +560,80 @@ export class AuthService {
     };
   }
 
+  async completeGoogleRegistration(dto: CompleteGoogleRegistrationDto) {
+    const payload = await this.jwtService.verifyAsync<GoogleRegistrationPayload>(dto.token, {
+      ignoreExpiration: false
+    });
+
+    if (payload.kind !== "google-registration") {
+      throw new BadRequestException("Invalid Gmail registration session.");
+    }
+
+    const normalizedEmail = payload.email.trim().toLowerCase();
+    const existingUser = await this.usersService.findAuthUserByEmail(normalizedEmail);
+    if (existingUser) {
+      throw new BadRequestException("An account already exists for this Gmail address. Please log in instead.");
+    }
+
+    let createdUser;
+
+    if (dto.role === "INSTRUCTOR") {
+      if (!dto.organizationName?.trim()) {
+        throw new BadRequestException("Organization name is required for instructor registration.");
+      }
+
+      createdUser = await this.createInstructorAccount({
+        email: normalizedEmail,
+        fullName: payload.fullName,
+        password: dto.password,
+        organizationName: dto.organizationName.trim(),
+        emailVerifiedAt: new Date(),
+        primaryAuthProvider: ExternalAuthProvider.LOCAL
+      });
+    } else {
+      if (!dto.inviteCode?.trim()) {
+        throw new BadRequestException("Instructor invite code is required for student registration.");
+      }
+
+      createdUser = await this.createStudentAccount({
+        email: normalizedEmail,
+        fullName: payload.fullName,
+        password: dto.password,
+        inviteCode: dto.inviteCode.trim().toUpperCase(),
+        emailVerifiedAt: new Date(),
+        primaryAuthProvider: ExternalAuthProvider.LOCAL
+      });
+    }
+
+    await this.prisma.externalAuthIdentity.upsert({
+      where: {
+        provider_providerUserId: {
+          provider: ExternalAuthProvider.GOOGLE,
+          providerUserId: payload.providerUserId
+        }
+      },
+      update: {
+        userId: createdUser.id,
+        email: normalizedEmail
+      },
+      create: {
+        userId: createdUser.id,
+        provider: ExternalAuthProvider.GOOGLE,
+        providerUserId: payload.providerUserId,
+        email: normalizedEmail
+      }
+    });
+
+    const result = await this.signInResolvedUser(
+      await this.usersService.findAuthUserByEmail(normalizedEmail)
+    );
+
+    return {
+      ...result,
+      message: "Your account was created successfully with Gmail."
+    };
+  }
+
   async getGoogleStartUrl(query: GoogleStartQuery) {
     const clientId = this.configService.get<string>("app.google.clientId") ?? "";
     if (!clientId) {
@@ -495,7 +684,12 @@ export class AuthService {
         throw new Error("Google did not return a verified email address.");
       }
 
-      const result = await this.resolveGoogleIdentity(googleUser, state);
+      const user = await this.findGoogleUser(googleUser);
+      if (!user) {
+        return this.buildGoogleCompletionRedirect(googleUser);
+      }
+
+      const result = await this.signInResolvedUser(user);
       if (!result.user) {
         throw new Error("Google account could not be loaded after sign-in.");
       }
@@ -558,133 +752,6 @@ export class AuthService {
     }
 
     return (await profileResponse.json()) as GoogleUserInfo;
-  }
-
-  private async resolveGoogleIdentity(
-    googleUser: GoogleUserInfo,
-    state: {
-      intent: "login" | "register";
-      role?: "INSTRUCTOR" | "STUDENT";
-      organizationName?: string;
-      inviteCode?: string;
-    }
-  ) {
-    const normalizedEmail = googleUser.email.trim().toLowerCase();
-    let user =
-      (await this.prisma.externalAuthIdentity.findUnique({
-        where: {
-          provider_providerUserId: {
-            provider: ExternalAuthProvider.GOOGLE,
-            providerUserId: googleUser.sub
-          }
-        },
-        include: {
-          user: true
-        }
-      }))?.user ?? null;
-
-    if (!user) {
-      const existingUser = await this.usersService.findAuthUserByEmail(normalizedEmail);
-
-      if (existingUser) {
-        if (existingUser.role === UserRole.ADMIN) {
-          throw new Error("Google sign-in is not available for admin accounts.");
-        }
-
-        await this.prisma.externalAuthIdentity.create({
-          data: {
-            userId: existingUser.id,
-            provider: ExternalAuthProvider.GOOGLE,
-            providerUserId: googleUser.sub,
-            email: normalizedEmail
-          }
-        });
-
-        if (!existingUser.emailVerifiedAt) {
-          await this.usersService.markEmailVerified(existingUser.id);
-        }
-
-        user = await this.usersService.findAuthUserByEmail(normalizedEmail);
-      } else {
-        if (state.intent !== "register") {
-          throw new Error("No account exists for this Google email. Please register first.");
-        }
-
-        if (state.role === "INSTRUCTOR") {
-          if (!state.organizationName) {
-            throw new Error("Organization name is required to register as an instructor.");
-          }
-
-          const createdInstructor = await this.createInstructorAccount({
-            email: normalizedEmail,
-            fullName: googleUser.name?.trim() || normalizedEmail.split("@")[0],
-            password: randomBytes(24).toString("hex"),
-            organizationName: state.organizationName,
-            emailVerifiedAt: new Date(),
-            primaryAuthProvider: ExternalAuthProvider.GOOGLE
-          });
-
-          await this.prisma.externalAuthIdentity.create({
-            data: {
-              userId: createdInstructor.id,
-              provider: ExternalAuthProvider.GOOGLE,
-              providerUserId: googleUser.sub,
-              email: normalizedEmail
-            }
-          });
-        } else if (state.role === "STUDENT") {
-          if (!state.inviteCode) {
-            throw new Error("Invite code is required to register as a student.");
-          }
-
-          const createdStudent = await this.createStudentAccount({
-            email: normalizedEmail,
-            fullName: googleUser.name?.trim() || normalizedEmail.split("@")[0],
-            password: randomBytes(24).toString("hex"),
-            inviteCode: state.inviteCode,
-            emailVerifiedAt: new Date(),
-            primaryAuthProvider: ExternalAuthProvider.GOOGLE
-          });
-
-          await this.prisma.externalAuthIdentity.create({
-            data: {
-              userId: createdStudent.id,
-              provider: ExternalAuthProvider.GOOGLE,
-              providerUserId: googleUser.sub,
-              email: normalizedEmail
-            }
-          });
-        } else {
-          throw new Error("Google registration is only available for students and instructors.");
-        }
-
-        user = await this.usersService.findAuthUserByEmail(normalizedEmail);
-      }
-    }
-
-    if (!user) {
-      throw new Error("Google account could not be linked.");
-    }
-
-    if (!user.isActive) {
-      throw new Error("This account has been deactivated. Please contact support.");
-    }
-
-    const token = await this.signToken(
-      user.id,
-      user.email,
-      user.role,
-      user.tenantId,
-      user.isSuperAdmin,
-      user.adminPermissions ?? [],
-      user.mustChangePassword ?? false
-    );
-    const safeUser = await this.usersService.findById(user.id, user.tenantId);
-
-    return {
-      ...token,
-      user: safeUser
-    };
   }
 
   me(payload: JwtPayload) {

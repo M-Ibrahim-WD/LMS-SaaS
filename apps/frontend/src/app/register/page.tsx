@@ -67,29 +67,7 @@ export default function RegisterPage() {
 
   function startGoogleRegistration() {
     const apiBase = getResolvedApiUrl();
-
-    if (role === "INSTRUCTOR" && !organizationName.trim()) {
-      setError("Organization name is required before continuing with Google.");
-      return;
-    }
-
-    if (role === "STUDENT" && !inviteCode.trim()) {
-      setError("Instructor invite code is required before continuing with Google.");
-      return;
-    }
-
-    const params = new URLSearchParams({
-      intent: "register",
-      role
-    });
-
-    if (role === "INSTRUCTOR") {
-      params.set("organizationName", organizationName.trim());
-    } else {
-      params.set("inviteCode", inviteCode.trim().toUpperCase());
-    }
-
-    window.location.href = `${apiBase}/auth/google/start?${params.toString()}`;
+    window.location.href = `${apiBase}/auth/google/start?intent=register`;
   }
 
   return (
@@ -115,7 +93,7 @@ export default function RegisterPage() {
           className="flex w-full items-center justify-center gap-3 rounded-full border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-800 transition hover:border-slate-400 hover:bg-slate-50"
         >
           <GoogleIcon />
-          Register with Google
+          Register with Gmail
         </button>
 
         <div className="relative">

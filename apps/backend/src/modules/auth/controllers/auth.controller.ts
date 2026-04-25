@@ -9,6 +9,7 @@ import { ChangePasswordDto } from "../dto/change-password.dto";
 import { VerifyEmailDto } from "../dto/verify-email.dto";
 import { RequestPasswordResetDto } from "../dto/request-password-reset.dto";
 import { ResetPasswordDto } from "../dto/reset-password.dto";
+import { CompleteGoogleRegistrationDto } from "../dto/complete-google-registration.dto";
 import { AuthService } from "../services/auth.service";
 
 @Controller("auth")
@@ -38,6 +39,11 @@ export class AuthController {
   @Post("reset-password")
   resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto.token, dto.password);
+  }
+
+  @Post("google/complete-registration")
+  completeGoogleRegistration(@Body() dto: CompleteGoogleRegistrationDto) {
+    return this.authService.completeGoogleRegistration(dto);
   }
 
   @Get("google/start")
