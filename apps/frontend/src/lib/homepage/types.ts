@@ -3,7 +3,43 @@ export type HomepageCardType =
   | "WHY_US"
   | "ABOUT_SITE"
   | "TEXT_MEDIA"
-  | "FEATURED_INSTRUCTORS";
+  | "HEADING"
+  | "TEXT"
+  | "BUTTON"
+  | "IMAGE_BLOCK"
+  | "VIDEO"
+  | "ICON"
+  | "FEATURED_INSTRUCTORS"
+  | "SPACER"
+  | "DIVIDER"
+  | "LIST"
+  | "CARD"
+  | "COURSE_LIST"
+  | "INSTRUCTOR_LIST";
+
+export type HomepageTextTag = "H1" | "H2" | "H3" | "H4" | "H5" | "H6" | "P";
+export type HomepageResponsiveVisibility = {
+  desktop?: boolean;
+  tablet?: boolean;
+  mobile?: boolean;
+};
+export type HomepageRowOrder = "FIRST_SLOT_FIRST" | "SECOND_SLOT_FIRST";
+export type HomepageRowBackgroundStyle = "plain" | "soft" | "highlight";
+export type HomepagePaddingPreset = "compact" | "comfortable" | "spacious";
+export type HomepageGapPreset = "tight" | "normal" | "loose";
+export type HomepageCardBackgroundStyle = "surface" | "muted" | "highlight";
+export type HomepageRadiusPreset = "soft" | "rounded" | "pill";
+export type HomepageSpacingPreset = "compact" | "comfortable" | "spacious";
+export type HomepageImageHeightPreset = "compact" | "medium" | "tall";
+export type HomepageButtonVariant = "primary" | "secondary" | "ghost";
+export type HomepageAlign = "left" | "center";
+export type HomepageVideoAspectRatio = "16:9" | "4:3" | "1:1";
+export type HomepageSizePreset = "none" | "small" | "medium" | "large";
+export type HomepageBorderPreset = "none" | "soft" | "strong";
+export type HomepageWidthPreset = "auto" | "full" | "narrow";
+export type HomepageImageFit = "cover" | "contain";
+export type HomepageImagePosition = "center" | "top" | "bottom";
+export type HomepageColumnAlign = "start" | "center" | "end";
 
 export type HomepageInstructorCourse = {
   id: string;
@@ -27,9 +63,20 @@ export type HomepageInstructorEntry = {
 export type HomepageCardBase = {
   id: string;
   type: HomepageCardType;
+  builderLabel?: string;
+  hidden?: boolean;
+  visibility?: HomepageResponsiveVisibility;
   title: string;
   subtitle?: string;
   body?: string;
+  backgroundStyle?: HomepageCardBackgroundStyle;
+  backgroundColor?: string;
+  textColor?: string;
+  radiusPreset?: HomepageRadiusPreset;
+  spacingPreset?: HomepageSpacingPreset;
+  marginPreset?: HomepageSizePreset;
+  widthPreset?: HomepageWidthPreset;
+  borderPreset?: HomepageBorderPreset;
 };
 
 export type HomepageCard =
@@ -39,14 +86,104 @@ export type HomepageCard =
       accentLabel?: string;
     })
   | (HomepageCardBase & {
+      type: "HEADING";
+      textTag: Exclude<HomepageTextTag, "P">;
+      content: string;
+      textAlign?: HomepageAlign;
+    })
+  | (HomepageCardBase & {
+      type: "TEXT";
+      content: string;
+      textAlign?: HomepageAlign;
+    })
+  | (HomepageCardBase & {
+      type: "BUTTON";
+      label: string;
+      href: string;
+      variant?: HomepageButtonVariant;
+      textAlign?: HomepageAlign;
+    })
+  | (HomepageCardBase & {
+      type: "IMAGE_BLOCK";
+      imageUrl: string;
+      altText?: string;
+      caption?: string;
+      imageHeightPreset?: HomepageImageHeightPreset;
+      imageFit?: HomepageImageFit;
+      imagePosition?: HomepageImagePosition;
+    })
+  | (HomepageCardBase & {
+      type: "VIDEO";
+      videoUrl: string;
+      caption?: string;
+      aspectRatio?: HomepageVideoAspectRatio;
+    })
+  | (HomepageCardBase & {
+      type: "ICON";
+      iconSymbol: string;
+      content: string;
+      textAlign?: HomepageAlign;
+    })
+  | (HomepageCardBase & {
+      type: "SPACER";
+      heightPreset?: HomepageSizePreset;
+    })
+  | (HomepageCardBase & {
+      type: "DIVIDER";
+      dividerStyle?: "solid" | "dashed";
+    })
+  | (HomepageCardBase & {
+      type: "LIST";
+      items: string[];
+    })
+  | (HomepageCardBase & {
+      type: "CARD";
+      buttonLabel?: string;
+      buttonHref?: string;
+    })
+  | (HomepageCardBase & {
+      type: "COURSE_LIST";
+      items: HomepageInstructorCourse[];
+    })
+  | (HomepageCardBase & {
+      type: "INSTRUCTOR_LIST";
+      instructors: HomepageInstructorEntry[];
+    })
+  | (HomepageCardBase & {
       type: "FEATURED_INSTRUCTORS";
       instructors: HomepageInstructorEntry[];
     });
 
+export type HomepageColumn = {
+  id: string;
+  builderLabel?: string;
+  backgroundColor?: string;
+  paddingPreset?: HomepagePaddingPreset;
+  gapPreset?: HomepageGapPreset;
+  verticalAlign?: HomepageColumnAlign;
+  horizontalAlign?: HomepageColumnAlign;
+  widgets: HomepageCard[];
+};
+
 export type HomepageRow = {
   id: string;
+  builderLabel?: string;
   columns: 1 | 2;
-  slots: Array<HomepageCard | null>;
+  hidden?: boolean;
+  visibility?: HomepageResponsiveVisibility;
+  mobileOrder?: HomepageRowOrder;
+  tabletOrder?: HomepageRowOrder;
+  backgroundStyle?: HomepageRowBackgroundStyle;
+  backgroundColor?: string;
+  backgroundImage?: string;
+  paddingPreset?: HomepagePaddingPreset;
+  marginPreset?: HomepageSizePreset;
+  minHeightPreset?: HomepageSizePreset;
+  borderPreset?: HomepageBorderPreset;
+  radiusPreset?: HomepageRadiusPreset;
+  gapPreset?: HomepageGapPreset;
+  slots?: Array<HomepageCard | null>;
+  columnsData?: HomepageColumn[];
 };
 
 export type HomepageContent = {

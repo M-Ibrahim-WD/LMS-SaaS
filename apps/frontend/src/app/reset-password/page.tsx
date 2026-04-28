@@ -4,6 +4,7 @@ import { Suspense, type FormEvent, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { AuthPanel } from "../../components/auth-panel";
+import { PasswordInput } from "../../components/password-input";
 import { StatusBanner } from "../../components/status-banner";
 import { apiFetch } from "../../lib/api/client";
 
@@ -69,9 +70,8 @@ function ResetPasswordContent() {
       <form onSubmit={onSubmit} className="space-y-4">
         <label className="block">
           <span className="field-label">New Password</span>
-          <input
+          <PasswordInput
             className="field-input"
-            type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             required
@@ -81,9 +81,8 @@ function ResetPasswordContent() {
 
         <label className="block">
           <span className="field-label">Confirm Password</span>
-          <input
+          <PasswordInput
             className="field-input"
-            type="password"
             value={confirmPassword}
             onChange={(event) => setConfirmPassword(event.target.value)}
             required

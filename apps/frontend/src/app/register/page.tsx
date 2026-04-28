@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { AuthPanel } from "../../components/auth-panel";
+import { PasswordInput } from "../../components/password-input";
 import { StatusBanner } from "../../components/status-banner";
 import { apiFetch, getResolvedApiUrl } from "../../lib/api/client";
 
@@ -165,9 +166,8 @@ export default function RegisterPage() {
 
           <label className="block">
             <span className="field-label">Password</span>
-            <input
+            <PasswordInput
               className="field-input"
-              type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               required

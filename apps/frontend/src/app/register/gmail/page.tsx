@@ -4,6 +4,7 @@ import { Suspense, type FormEvent, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AuthPanel } from "../../../components/auth-panel";
+import { PasswordInput } from "../../../components/password-input";
 import { StatusBanner } from "../../../components/status-banner";
 import { apiFetch } from "../../../lib/api/client";
 import { setAuthCookie } from "../../../lib/auth/session";
@@ -160,9 +161,8 @@ function GmailRegistrationContent() {
 
         <label className="block">
           <span className="field-label">Create Password</span>
-          <input
+          <PasswordInput
             className="field-input"
-            type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             required

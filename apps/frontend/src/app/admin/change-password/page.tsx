@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ContentCard } from "../../../components/content-card";
 import { PageShell } from "../../../components/page-shell";
+import { PasswordInput } from "../../../components/password-input";
 import { StatusBanner } from "../../../components/status-banner";
 import { useRequireAuth } from "../../../hooks/use-require-auth";
 import { apiFetch } from "../../../lib/api/client";
@@ -111,8 +112,7 @@ export default function AdminChangePasswordPage() {
         <form className="space-y-4" onSubmit={onSubmit}>
           <label className="block">
             <span className="mb-2 block text-sm font-medium text-slate-800">New password</span>
-            <input
-              type="password"
+            <PasswordInput
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
@@ -122,8 +122,7 @@ export default function AdminChangePasswordPage() {
 
           <label className="block">
             <span className="mb-2 block text-sm font-medium text-slate-800">Confirm password</span>
-            <input
-              type="password"
+            <PasswordInput
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
               className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"

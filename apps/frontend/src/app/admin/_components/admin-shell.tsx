@@ -35,7 +35,7 @@ export function AdminShell({ title, description: _description, active, navItems,
   return (
     <main className="mx-auto w-full max-w-[96rem] px-4 py-5 sm:px-6 sm:py-7 lg:px-8 lg:py-8">
       <div className="grid gap-5 xl:grid-cols-[18rem_minmax(0,1fr)] xl:items-start">
-        <aside className="relative z-20 xl:sticky xl:top-6 xl:self-start">
+        <aside className="relative z-0 xl:sticky xl:top-6 xl:self-start">
           <div className="surface-card-strong relative overflow-visible rounded-[30px] p-5 sm:p-6">
             <p className="section-kicker">Admin</p>
             <div className="mt-3 flex items-start justify-between gap-4">
@@ -69,7 +69,7 @@ export function AdminShell({ title, description: _description, active, navItems,
         </aside>
 
         <section className="relative z-10 min-w-0 space-y-5">
-          <div className="surface-card-strong relative z-30 overflow-visible rounded-[30px] p-5 sm:p-6 lg:p-7">
+          <div className="surface-card-strong relative z-10 overflow-visible rounded-[30px] p-5 sm:p-6 lg:p-7">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
                 <p className="section-kicker">Admin</p>

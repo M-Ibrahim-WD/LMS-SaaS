@@ -40,6 +40,13 @@ export class HomepageService {
     });
   }
 
+  async assertHomepageAccess(currentUser: JwtPayload) {
+    await this.adminAccessService.assertAdminPermission(
+      currentUser,
+      AdminPermission.MANAGE_HOMEPAGE
+    );
+  }
+
   async getPublishedHomepage() {
     const record = await this.ensureHomepageRecord();
 
@@ -53,15 +60,16 @@ export class HomepageService {
   }
 
   async getDraftHomepage(currentUser: JwtPayload) {
-    await this.adminAccessService.assertAdminPermission(
-      currentUser,
-      AdminPermission.MANAGE_HOMEPAGE
-    );
+    await this.assertHomepageAccess(currentUser);
     const record = await this.ensureHomepageRecord();
 
     return {
       draftContent:
         (record.draftContent as HomepageContentPayload | null) ?? {
+          rows: []
+        },
+      publishedContent:
+        (record.publishedContent as HomepageContentPayload | null) ?? {
           rows: []
         },
       publishedAt: record.publishedAt,
@@ -70,10 +78,7 @@ export class HomepageService {
   }
 
   async saveDraftHomepage(currentUser: JwtPayload, content: HomepageContentPayload) {
-    await this.adminAccessService.assertAdminPermission(
-      currentUser,
-      AdminPermission.MANAGE_HOMEPAGE
-    );
+    await this.assertHomepageAccess(currentUser);
 
     const record = await this.ensureHomepageRecord();
 
@@ -90,10 +95,7 @@ export class HomepageService {
   }
 
   async publishDraftHomepage(currentUser: JwtPayload) {
-    await this.adminAccessService.assertAdminPermission(
-      currentUser,
-      AdminPermission.MANAGE_HOMEPAGE
-    );
+    await this.assertHomepageAccess(currentUser);
 
     const record = await this.ensureHomepageRecord();
 
@@ -111,10 +113,7 @@ export class HomepageService {
   }
 
   async getInstructorCatalog(currentUser: JwtPayload) {
-    await this.adminAccessService.assertAdminPermission(
-      currentUser,
-      AdminPermission.MANAGE_HOMEPAGE
-    );
+    await this.assertHomepageAccess(currentUser);
 
     const instructors = await this.prisma.user.findMany({
       where: {

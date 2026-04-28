@@ -5,6 +5,7 @@ import type { Dispatch, SetStateAction } from "react";
 import type { AdminPermission } from "../../../lib/auth/token";
 import { ContentCard } from "../../../components/content-card";
 import { EmptyState } from "../../../components/empty-state";
+import { PasswordInput } from "../../../components/password-input";
 import { StatusBanner } from "../../../components/status-banner";
 import type { ManagedAdmin } from "./admin-control-center.shared";
 import {
@@ -104,8 +105,7 @@ export function AdminAdminsSection({
           </div>
           <label className="block">
             <span className="mb-2 block text-sm font-medium text-slate-800">Temporary password</span>
-            <input
-              type="password"
+            <PasswordInput
               value={adminForm.password}
               onChange={(event) => setAdminForm((current) => ({ ...current, password: event.target.value }))}
               className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
@@ -316,8 +316,7 @@ export function AdminAdminsSection({
                       <div className="mt-4 rounded-2xl bg-slate-50 p-4">
                         <p className="text-sm font-medium text-slate-900">Reset delegated admin password</p>
                         <div className="mt-3 flex flex-wrap gap-3">
-                          <input
-                            type="password"
+                          <PasswordInput
                             value={adminPasswordDrafts[admin.id] ?? ""}
                             onChange={(event) =>
                               setAdminPasswordDrafts((current) => ({
