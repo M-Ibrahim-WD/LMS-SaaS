@@ -56,6 +56,11 @@ type SidebarSelection =
   | { kind: "row"; rowId: string }
   | { kind: "column"; rowId: string; columnId: string }
   | { kind: "widget"; rowId: string; columnId: string; widgetId: string };
+type SectionInsertTarget = { index: number } | null;
+type DeleteTarget =
+  | { kind: "row"; rowId: string }
+  | { kind: "widget"; rowId: string; columnId: string; widgetId: string }
+  | null;
 
 type WidgetCatalogItem = {
   type: HomepageCardType;
@@ -307,12 +312,14 @@ function IconActionButton({
   label,
   title,
   tone = "default",
+  size = "default",
   onClick,
   children
 }: {
   label: string;
   title?: string;
   tone?: "default" | "danger" | "warning" | "success";
+  size?: "default" | "small";
   onClick: () => void;
   children: React.ReactNode;
 }) {
@@ -331,7 +338,7 @@ function IconActionButton({
       aria-label={label}
       title={title ?? label}
       onClick={onClick}
-      className={`inline-flex h-10 w-10 items-center justify-center rounded-full border transition ${toneClass}`}
+      className={`inline-flex items-center justify-center rounded-full border transition ${size === "small" ? "h-8 w-8" : "h-10 w-10"} ${toneClass}`}
     >
       {children}
     </button>
@@ -831,6 +838,18 @@ function formatPresetLabel(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
+function getRowLabel(row: HomepageRow, rowIndex: number) {
+  return row.builderLabel?.trim() || `Section ${rowIndex + 1}`;
+}
+
+function getColumnLabel(column: HomepageColumn, columnIndex: number) {
+  return column.builderLabel?.trim() || `Column ${columnIndex + 1}`;
+}
+
+function getWidgetLabel(widget: HomepageCard) {
+  return widget.builderLabel?.trim() || widget.title || widget.type.replaceAll("_", " ");
+}
+
 function getCanvasRowClasses(selected: boolean) {
   return `group/section relative rounded-[18px] transition ${selected ? "ring-2 ring-slate-950 ring-offset-2 ring-offset-slate-50" : "hover:ring-1 hover:ring-slate-400"}`;
 }
@@ -878,6 +897,8 @@ export default function AdminHomepagePage() {
   const [featuredSelection, setFeaturedSelection] = useState<Record<string, string[]>>({});
   const [publishConfirmOpen, setPublishConfirmOpen] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
+  const [sectionInsertTarget, setSectionInsertTarget] = useState<SectionInsertTarget>(null);
   const [draggingRowId, setDraggingRowId] = useState<string | null>(null);
   const [draggingWidget, setDraggingWidget] = useState<{ rowId: string; columnId: string; widgetId: string } | null>(null);
   const [isMobileEditor, setIsMobileEditor] = useState(false);
@@ -1121,21 +1142,25 @@ export default function AdminHomepagePage() {
 
   function addRow(columns: 1 | 2) {
     setMessage(null);
-    const nextRows = [...workingDraft.rows, createRow(columns)];
+    addRowAt(columns, workingDraft.rows.length);
+  }
+
+  function addRowAt(columns: 1 | 2, index: number) {
+    setMessage(null);
+    const nextRow = createRow(columns);
+    const nextRows = [...workingDraft.rows];
+    nextRows.splice(index, 0, nextRow);
     updateRows(nextRows);
-    const nextRow = nextRows[nextRows.length - 1];
     const firstColumn = nextRow.columnsData?.[0];
     setSidebarSelection({ kind: "library", rowId: nextRow.id, columnId: firstColumn?.id });
+    setLibraryTab("ELEMENTS");
+    setSectionInsertTarget(null);
   }
 
   function removeRow(rowId: string) {
-    const row = findRow(workingDraft.rows, rowId);
-    const hasContent = Boolean(row?.columnsData?.some((column) => column.widgets.length > 0));
-    if (hasContent && typeof window !== "undefined" && !window.confirm("Delete this section and all widgets inside it?")) {
-      return;
-    }
     updateRows(workingDraft.rows.filter((row) => row.id !== rowId));
     setSidebarSelection({ kind: "library" });
+    setDeleteTarget(null);
   }
 
   function duplicateRow(rowId: string) {
@@ -1291,6 +1316,7 @@ export default function AdminHomepagePage() {
       widgets: column.widgets.filter((widget) => widget.id !== widgetId)
     }));
     setSidebarSelection({ kind: "column", rowId, columnId });
+    setDeleteTarget(null);
   }
 
   function toggleWidgetHidden(rowId: string, columnId: string, widgetId: string) {
@@ -1424,6 +1450,12 @@ export default function AdminHomepagePage() {
     item.subtitle.toLowerCase().includes(widgetSearchTerm);
   const baseWidgets = widgetCatalog.filter((item) => item.group === "Elements" && matchesSearch(item));
   const dynamicWidgets = widgetCatalog.filter((item) => item.group === "Dynamic" && matchesSearch(item));
+  const activeRowId = sidebarSelection.kind === "library" ? sidebarSelection.rowId : sidebarSelection.rowId;
+  const activeColumnId =
+    sidebarSelection.kind === "column" || sidebarSelection.kind === "widget" || sidebarSelection.kind === "library"
+      ? sidebarSelection.columnId
+      : undefined;
+  const activeWidgetId = sidebarSelection.kind === "widget" ? sidebarSelection.widgetId : undefined;
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.1),transparent_22%),radial-gradient(circle_at_92%_12%,rgba(16,185,129,0.1),transparent_18%),linear-gradient(180deg,#f8fafc_0%,#eff6ff_44%,#e2e8f0_100%)] text-slate-900">
@@ -1692,23 +1724,46 @@ export default function AdminHomepagePage() {
                     <div className="mt-4 space-y-3">
                       {workingDraft.rows.map((row, rowIndex) => (
                         <div key={row.id} className="rounded-[14px] border border-slate-200 bg-white p-3">
-                          <button
-                            type="button"
-                            onClick={() => selectRow(row.id)}
-                            className="flex w-full items-center justify-between rounded-[10px] px-3 py-2 text-left text-sm font-semibold text-slate-800 hover:bg-slate-50"
-                          >
-                            <span>{row.builderLabel || `Section ${rowIndex + 1}`}</span>
-                            <LayersIcon />
-                          </button>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => selectRow(row.id)}
+                              className={`min-w-0 flex-1 rounded-[10px] px-3 py-2 text-left text-sm font-semibold transition ${
+                                activeRowId === row.id && !activeColumnId
+                                  ? "bg-slate-950 text-white"
+                                  : "text-slate-800 hover:bg-slate-50"
+                              }`}
+                            >
+                              <span className="flex items-center gap-2">
+                                <LayersIcon />
+                                <span className="truncate">{getRowLabel(row, rowIndex)}</span>
+                              </span>
+                            </button>
+                            <IconActionButton label="Duplicate section" size="small" onClick={() => duplicateRow(row.id)}>
+                              <DuplicateIcon />
+                            </IconActionButton>
+                            <IconActionButton label={row.hidden ? "Show section" : "Hide section"} size="small" tone={row.hidden ? "success" : "warning"} onClick={() => toggleRowHidden(row.id)}>
+                              {row.hidden ? <EyeIcon /> : <EyeOffIcon />}
+                            </IconActionButton>
+                            <IconActionButton label="Delete section" size="small" tone="danger" onClick={() => setDeleteTarget({ kind: "row", rowId: row.id })}>
+                              <TrashIcon />
+                            </IconActionButton>
+                          </div>
                           <div className="mt-2 space-y-2 pl-3">
                             {(row.columnsData ?? []).map((column, columnIndex) => (
                               <div key={column.id}>
                                 <button
                                   type="button"
                                   onClick={() => selectColumn(row.id, column.id)}
-                                  className="flex w-full items-center justify-between rounded-[10px] px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                                  className={`flex w-full items-center justify-between rounded-[10px] px-3 py-2 text-left text-xs font-semibold transition ${
+                                    activeRowId === row.id &&
+                                    activeColumnId === column.id &&
+                                    !activeWidgetId
+                                      ? "bg-teal-50 text-teal-700"
+                                      : "text-slate-700 hover:bg-slate-50"
+                                  }`}
                                 >
-                                  <span>{column.builderLabel || `Column ${columnIndex + 1}`}</span>
+                                  <span>{getColumnLabel(column, columnIndex)}</span>
                                   <OneColumnIcon />
                                 </button>
                                 <div className="mt-1 space-y-1 pl-4">
@@ -1717,17 +1772,23 @@ export default function AdminHomepagePage() {
                                       <button
                                         type="button"
                                         onClick={() => selectWidget(row.id, column.id, widget.id)}
-                                        className="min-w-0 flex-1 rounded-[10px] px-3 py-2 text-left text-xs font-medium text-slate-600 hover:bg-slate-50"
+                                        className={`min-w-0 flex-1 rounded-[10px] px-3 py-2 text-left text-xs font-medium transition ${
+                                          activeRowId === row.id &&
+                                          activeColumnId === column.id &&
+                                          activeWidgetId === widget.id
+                                            ? "bg-sky-50 text-sky-700"
+                                            : "text-slate-600 hover:bg-slate-50"
+                                        }`}
                                       >
-                                        {widget.builderLabel || widget.title}
+                                        {getWidgetLabel(widget)}
                                       </button>
-                                      <IconActionButton label="Duplicate widget" onClick={() => duplicateWidget(row.id, column.id, widget.id)}>
+                                      <IconActionButton label="Duplicate widget" size="small" onClick={() => duplicateWidget(row.id, column.id, widget.id)}>
                                         <DuplicateIcon />
                                       </IconActionButton>
-                                      <IconActionButton label="Hide widget" tone={widget.hidden ? "success" : "warning"} onClick={() => toggleWidgetHidden(row.id, column.id, widget.id)}>
+                                      <IconActionButton label="Hide widget" size="small" tone={widget.hidden ? "success" : "warning"} onClick={() => toggleWidgetHidden(row.id, column.id, widget.id)}>
                                         {widget.hidden ? <EyeIcon /> : <EyeOffIcon />}
                                       </IconActionButton>
-                                      <IconActionButton label="Remove widget" tone="danger" onClick={() => removeWidget(row.id, column.id, widget.id)}>
+                                      <IconActionButton label="Remove widget" size="small" tone="danger" onClick={() => setDeleteTarget({ kind: "widget", rowId: row.id, columnId: column.id, widgetId: widget.id })}>
                                         <TrashIcon />
                                       </IconActionButton>
                                     </div>
@@ -1917,7 +1978,7 @@ export default function AdminHomepagePage() {
                       <IconActionButton label="Duplicate section" onClick={() => duplicateRow(selectedRow.id)}>
                         <DuplicateIcon />
                       </IconActionButton>
-                      <IconActionButton label="Delete section" tone="danger" onClick={() => removeRow(selectedRow.id)}>
+                      <IconActionButton label="Delete section" tone="danger" onClick={() => setDeleteTarget({ kind: "row", rowId: selectedRow.id })}>
                         <TrashIcon />
                       </IconActionButton>
                     </div>
@@ -2625,7 +2686,7 @@ export default function AdminHomepagePage() {
                       <IconActionButton label="Duplicate widget" onClick={() => duplicateWidget(sidebarSelection.rowId, sidebarSelection.columnId, sidebarSelection.widgetId)}>
                         <DuplicateIcon />
                       </IconActionButton>
-                      <IconActionButton label="Remove widget" tone="danger" onClick={() => removeWidget(sidebarSelection.rowId, sidebarSelection.columnId, sidebarSelection.widgetId)}>
+                      <IconActionButton label="Remove widget" tone="danger" onClick={() => setDeleteTarget({ kind: "widget", rowId: sidebarSelection.rowId, columnId: sidebarSelection.columnId, widgetId: sidebarSelection.widgetId })}>
                         <TrashIcon />
                       </IconActionButton>
                     </div>
@@ -2696,9 +2757,7 @@ export default function AdminHomepagePage() {
                               onClick={(event) => {
                                 event.stopPropagation();
                                 const index = workingDraft.rows.findIndex((entry) => entry.id === row.id);
-                                const nextRows = [...workingDraft.rows];
-                                nextRows.splice(index, 0, createRow(1));
-                                updateRows(nextRows);
+                                setSectionInsertTarget({ index });
                               }}
                               className="absolute left-1/2 top-0 z-10 hidden h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-slate-950 text-white shadow-lg group-hover/section:inline-flex"
                             >
@@ -2851,9 +2910,7 @@ export default function AdminHomepagePage() {
                               onClick={(event) => {
                                 event.stopPropagation();
                                 const index = workingDraft.rows.findIndex((entry) => entry.id === row.id);
-                                const nextRows = [...workingDraft.rows];
-                                nextRows.splice(index + 1, 0, createRow(1));
-                                updateRows(nextRows);
+                                setSectionInsertTarget({ index: index + 1 });
                               }}
                               className="absolute bottom-0 left-1/2 z-10 hidden h-7 w-7 -translate-x-1/2 translate-y-1/2 items-center justify-center rounded-full bg-slate-950 text-white shadow-lg group-hover/section:inline-flex"
                             >
@@ -2864,12 +2921,17 @@ export default function AdminHomepagePage() {
                       );
                     })
                   ) : (
-                    <ContentCard className="p-6">
-                      <EmptyState
-                        title="Start by adding a section"
-                        description="Use the left sidebar to add a single-column or two-column section, then select a column and start adding Elementor-style widgets."
-                      />
-                    </ContentCard>
+                    <div className="flex min-h-[320px] items-center justify-center rounded-[28px] border border-dashed border-slate-300 bg-white/55 p-8">
+                      <button
+                        type="button"
+                        onClick={() => setSectionInsertTarget({ index: 0 })}
+                        className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-slate-950 text-white shadow-xl transition hover:scale-105"
+                        aria-label="Add first section"
+                        title="Add first section"
+                      >
+                        <PlusIcon />
+                      </button>
+                    </div>
                   )}
                 </div>
 
@@ -2881,6 +2943,74 @@ export default function AdminHomepagePage() {
           </div>
         </section>
       </div>
+
+      {sectionInsertTarget ? (
+        <div className="fixed inset-0 z-[190] flex items-center justify-center bg-slate-950/20 px-4" onClick={() => setSectionInsertTarget(null)}>
+          <div
+            className="w-full max-w-sm rounded-[28px] border border-slate-200 bg-white p-5 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <p className="section-kicker">New section</p>
+            <h3 className="mt-2 text-xl font-semibold text-slate-950">Choose structure</h3>
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => addRowAt(1, sectionInsertTarget.index)}
+                className="flex min-h-28 flex-col items-center justify-center gap-3 rounded-[20px] border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-800 transition hover:border-slate-300 hover:bg-white"
+              >
+                <OneColumnIcon />
+                <span>1 column</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => addRowAt(2, sectionInsertTarget.index)}
+                className="flex min-h-28 flex-col items-center justify-center gap-3 rounded-[20px] border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-800 transition hover:border-slate-300 hover:bg-white"
+              >
+                <TwoColumnsIcon />
+                <span>2 columns</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {deleteTarget ? (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/50 px-4 py-8">
+          <div className="w-full max-w-lg rounded-[30px] bg-white p-6 shadow-2xl">
+            <p className="section-kicker">Confirm delete</p>
+            <h3 className="mt-2 text-2xl font-semibold text-slate-950">
+              {deleteTarget.kind === "row" ? "Delete this section?" : "Remove this widget?"}
+            </h3>
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              {deleteTarget.kind === "row"
+                ? "This will remove the section and every column/widget inside it. You can still use Undo after deleting."
+                : "This will remove the selected widget from its column. You can still use Undo after deleting."}
+            </p>
+            <div className="mt-6 flex flex-wrap justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                className="rounded-full border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (deleteTarget.kind === "row") {
+                    removeRow(deleteTarget.rowId);
+                    return;
+                  }
+                  removeWidget(deleteTarget.rowId, deleteTarget.columnId, deleteTarget.widgetId);
+                }}
+                className="rounded-full bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {publishConfirmOpen ? (
         <div className="fixed inset-0 z-[210] flex items-center justify-center bg-slate-950/60 px-4 py-8">
