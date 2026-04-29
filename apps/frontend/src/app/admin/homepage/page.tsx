@@ -646,6 +646,17 @@ export default function AdminHomepagePage() {
     return Object.fromEntries(selectedWidget.instructors.map((instructor) => [instructor.id, instructor.courses.map((course) => course.id)]));
   }, [selectedWidget]);
 
+  const catalogCourses = useMemo(
+    () =>
+      (catalogQuery.data ?? []).flatMap((instructor) =>
+        instructor.instructorCourses.map((course) => ({
+          ...course,
+          instructorName: instructor.fullName
+        }))
+      ),
+    [catalogQuery.data]
+  );
+
   useEffect(() => {
     if (selectedWidget?.type === "FEATURED_INSTRUCTORS") setFeaturedSelection(selectedFeatured);
   }, [selectedFeatured, selectedWidget?.id, selectedWidget?.type]);
@@ -722,6 +733,11 @@ export default function AdminHomepagePage() {
   }
 
   function addElement(element: HomepageElement) {
+    if (!isContainer(element) && !targetContainerId) {
+      setMessage({ type: "error", text: "Select a container first, then add the widget inside it." });
+      return;
+    }
+
     const next = addElementToContainer(workingDraft.containers ?? [], targetContainerId, element) as HomepageContainer[];
     updateContainers(next);
     setSelection({ kind: isContainer(element) ? "container" : "widget", id: element.id });
@@ -972,6 +988,90 @@ export default function AdminHomepagePage() {
       return <textarea value={selectedWidget.items.join("\n")} onChange={(event) => updateWidget(selectedWidget.id, { items: event.target.value.split("\n").filter(Boolean) })} rows={6} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" />;
     }
 
+    if (selectedWidget.type === "CARD") {
+      return (
+        <div className="space-y-4">
+          <input value={selectedWidget.title} onChange={(event) => updateWidget(selectedWidget.id, { title: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Card title" />
+          <input value={selectedWidget.subtitle ?? ""} onChange={(event) => updateWidget(selectedWidget.id, { subtitle: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Subtitle" />
+          <textarea value={selectedWidget.body ?? ""} onChange={(event) => updateWidget(selectedWidget.id, { body: event.target.value })} rows={5} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Body" />
+          <input value={selectedWidget.buttonLabel ?? ""} onChange={(event) => updateWidget(selectedWidget.id, { buttonLabel: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Button label" />
+          <input value={selectedWidget.buttonHref ?? ""} onChange={(event) => updateWidget(selectedWidget.id, { buttonHref: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="/courses" />
+        </div>
+      );
+    }
+
+    if (selectedWidget.type === "COURSE_LIST") {
+      return (
+        <div className="space-y-4">
+          <input value={selectedWidget.title} onChange={(event) => updateWidget(selectedWidget.id, { title: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Section title" />
+          <textarea value={selectedWidget.body ?? ""} onChange={(event) => updateWidget(selectedWidget.id, { body: event.target.value })} rows={3} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Optional intro text" />
+          <div className="space-y-2 rounded-2xl border border-slate-200 p-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Courses</p>
+            {catalogCourses.length ? catalogCourses.map((course) => {
+              const checked = selectedWidget.items.some((item) => item.id === course.id);
+              return (
+                <label key={course.id} className="flex items-start gap-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => {
+                      const nextItems = checked ? selectedWidget.items.filter((item) => item.id !== course.id) : [...selectedWidget.items, course];
+                      updateWidget(selectedWidget.id, { items: nextItems });
+                    }}
+                    className="mt-1"
+                  />
+                  <span>
+                    <span className="block font-semibold text-slate-900">{course.title}</span>
+                    <span className="text-xs text-slate-500">{course.instructorName}</span>
+                  </span>
+                </label>
+              );
+            }) : <p className="text-sm text-slate-500">No published instructor courses are available yet.</p>}
+          </div>
+        </div>
+      );
+    }
+
+    if (selectedWidget.type === "INSTRUCTOR_LIST") {
+      return (
+        <div className="space-y-4">
+          <input value={selectedWidget.title} onChange={(event) => updateWidget(selectedWidget.id, { title: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Section title" />
+          <input value={selectedWidget.subtitle ?? ""} onChange={(event) => updateWidget(selectedWidget.id, { subtitle: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Subtitle" />
+          <textarea value={selectedWidget.body ?? ""} onChange={(event) => updateWidget(selectedWidget.id, { body: event.target.value })} rows={3} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Optional intro text" />
+          <div className="space-y-2 rounded-2xl border border-slate-200 p-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Instructors</p>
+            {(catalogQuery.data ?? []).length ? (catalogQuery.data ?? []).map((instructor) => {
+              const checked = selectedWidget.instructors.some((item) => item.id === instructor.id);
+              return (
+                <label key={instructor.id} className="flex items-start gap-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => {
+                      const nextInstructor: HomepageInstructorEntry = {
+                        id: instructor.id,
+                        fullName: instructor.fullName,
+                        bio: instructor.bio,
+                        profileImage: instructor.profileImage,
+                        courses: instructor.instructorCourses
+                      };
+                      const nextInstructors = checked ? selectedWidget.instructors.filter((item) => item.id !== instructor.id) : [...selectedWidget.instructors, nextInstructor];
+                      updateWidget(selectedWidget.id, { instructors: nextInstructors });
+                    }}
+                    className="mt-1"
+                  />
+                  <span>
+                    <span className="block font-semibold text-slate-900">{instructor.fullName}</span>
+                    <span className="text-xs text-slate-500">{instructor.instructorCourses.length} published courses</span>
+                  </span>
+                </label>
+              );
+            }) : <p className="text-sm text-slate-500">No active instructors are available yet.</p>}
+          </div>
+        </div>
+      );
+    }
+
     if (selectedWidget.type === "FEATURED_INSTRUCTORS") {
       return (
         <div className="space-y-4">
@@ -1191,9 +1291,14 @@ export default function AdminHomepagePage() {
                       Container
                     </button>
                     <input value={widgetSearch} onChange={(event) => setWidgetSearch(event.target.value)} placeholder="Search widgets" className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm" />
+                    {!targetContainerId ? (
+                      <p className="rounded-2xl bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
+                        Select a container in the canvas or Navigator before adding widgets.
+                      </p>
+                    ) : null}
                     <div className="grid grid-cols-2 gap-3">
                       {filteredWidgets.map((item) => (
-                        <button key={item.type} type="button" onClick={() => addElement(createWidget(item.type))} className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white p-3 text-center text-xs font-semibold text-slate-800 hover:border-sky-300 hover:bg-sky-50">
+                        <button key={item.type} type="button" disabled={!targetContainerId} onClick={() => addElement(createWidget(item.type))} className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white p-3 text-center text-xs font-semibold text-slate-800 hover:border-sky-300 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-45">
                           {getWidgetIcon(item.type)}
                           {item.title}
                         </button>
@@ -1314,7 +1419,7 @@ export default function AdminHomepagePage() {
             <p className="mt-3 text-sm leading-6 text-slate-600">This will discard the current draft changes and replace them with the currently published homepage content.</p>
             <div className="mt-6 flex justify-end gap-3">
               <button type="button" onClick={() => setResetConfirmOpen(false)} className="rounded-full border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700">Cancel</button>
-              <button type="button" onClick={() => { const nextDraft = cloneContent(publishedPreview); setDraft(nextDraft); setSavedDraft(cloneContent(nextDraft)); setHasPendingDraftChanges(true); setResetConfirmOpen(false); }} className="rounded-full bg-amber-500 px-5 py-2.5 text-sm font-semibold text-white">Reset</button>
+              <button type="button" onClick={() => { const nextDraft = cloneContent(publishedPreview); setWorkingDraft(nextDraft); setSelection(null); setResetConfirmOpen(false); }} className="rounded-full bg-amber-500 px-5 py-2.5 text-sm font-semibold text-white">Reset</button>
             </div>
           </div>
         </div>

@@ -7,12 +7,14 @@ import { AdminAccessService } from "../admin/services/admin-access.service";
 const HOMEPAGE_KEY = "global-public-homepage";
 
 type HomepageContentPayload = {
-  rows: Prisma.JsonValue[];
+  rows?: Prisma.JsonValue[];
+  containers?: Prisma.JsonValue[];
   updatedAt?: string;
 };
 
 const EMPTY_HOMEPAGE_CONTENT: Prisma.InputJsonObject = {
-  rows: []
+  rows: [],
+  containers: []
 };
 
 @Injectable()

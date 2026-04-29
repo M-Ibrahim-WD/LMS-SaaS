@@ -36,7 +36,8 @@ export default function HomePage() {
     async function loadHomepage() {
       try {
         const response = await apiFetch<{ content: HomepageContent }>("/homepage/published");
-        if (!cancelled && response.content?.rows?.length) {
+        const hasPublishedContent = Boolean(response.content?.containers?.length || response.content?.rows?.length);
+        if (!cancelled && hasPublishedContent) {
           setContent(response.content);
         }
       } catch (loadError) {

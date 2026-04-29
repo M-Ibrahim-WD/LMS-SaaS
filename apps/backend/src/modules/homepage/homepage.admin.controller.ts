@@ -26,7 +26,7 @@ export class HomepageAdminController {
   @Put("draft")
   saveDraftHomepage(
     @CurrentUser() user: JwtPayload,
-    @Body() body: { rows: Prisma.JsonValue[]; updatedAt?: string }
+    @Body() body: { rows?: Prisma.JsonValue[]; containers?: Prisma.JsonValue[]; updatedAt?: string }
   ) {
     return this.homepageService.saveDraftHomepage(user, body);
   }
