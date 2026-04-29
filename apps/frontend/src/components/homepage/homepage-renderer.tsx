@@ -12,6 +12,12 @@ import type {
   HomepageCardBackgroundStyle,
   HomepageColumn,
   HomepageColumnAlign,
+  HomepageContainer,
+  HomepageContainerAlign,
+  HomepageContainerDirection,
+  HomepageContainerJustify,
+  HomepageElement,
+  HomepageLengthValue,
   HomepageContent,
   HomepageGapPreset,
   HomepageImageFit,
@@ -253,6 +259,100 @@ function getColumnAlignClasses(column: HomepageColumn) {
   return `${vertical[column.verticalAlign ?? "start"]} ${horizontal[column.horizontalAlign ?? "start"]}`;
 }
 
+function lengthToCss(length: HomepageLengthValue | undefined) {
+  if (typeof length?.value !== "number") return undefined;
+  return `${length.value}${length.unit ?? "px"}`;
+}
+
+function getResponsiveContainerValue<T>(
+  container: HomepageContainer,
+  viewport: HomepageRendererViewport,
+  field: "direction" | "width" | "maxWidth" | "minHeight",
+  fallback: T | undefined
+) {
+  if (viewport === "desktop" || viewport === "tablet" || viewport === "mobile") {
+    const deviceValue = container.responsive?.[viewport]?.[field] as T | undefined;
+    return deviceValue ?? fallback;
+  }
+  return fallback;
+}
+
+export function getContainerStyle(container: HomepageContainer, viewport: HomepageRendererViewport): CSSProperties {
+  const direction = getResponsiveContainerValue<HomepageContainerDirection>(container, viewport, "direction", container.direction ?? "column");
+  const width = getResponsiveContainerValue<HomepageLengthValue>(container, viewport, "width", container.width);
+  const maxWidth = getResponsiveContainerValue<HomepageLengthValue>(container, viewport, "maxWidth", container.maxWidth);
+  const minHeight = getResponsiveContainerValue<HomepageLengthValue>(container, viewport, "minHeight", container.minHeight);
+  const justifyMap: Record<HomepageContainerJustify, CSSProperties["justifyContent"]> = {
+    start: "flex-start",
+    center: "center",
+    end: "flex-end",
+    between: "space-between"
+  };
+  const alignMap: Record<HomepageContainerAlign, CSSProperties["alignItems"]> = {
+    stretch: "stretch",
+    start: "flex-start",
+    center: "center",
+    end: "flex-end"
+  };
+
+  return {
+    display: "flex",
+    flexDirection: direction,
+    flexWrap: container.wrap ?? "nowrap",
+    justifyContent: justifyMap[container.justify ?? "start"],
+    alignItems: alignMap[container.align ?? "stretch"],
+    gap: `${container.gap ?? 10}px`,
+    width: lengthToCss(width),
+    maxWidth: lengthToCss(maxWidth),
+    minHeight: lengthToCss(minHeight),
+    height: lengthToCss(container.height),
+    backgroundColor: transparentValue(container.background?.color),
+    backgroundImage: container.backgroundImage ? `url(${container.backgroundImage})` : undefined,
+    backgroundSize: container.backgroundImage ? "cover" : undefined,
+    backgroundPosition: container.backgroundImage ? "center" : undefined,
+    ...boxSpacingToStyle(container.spacing?.padding, "padding"),
+    ...boxSpacingToStyle(container.spacing?.margin, "margin"),
+    ...borderToStyle(container.border)
+  };
+}
+
+function rowToContainer(row: HomepageRow): HomepageContainer {
+  const columns = normalizeRowColumns(row);
+  return {
+    id: row.id,
+    type: "CONTAINER",
+    builderLabel: row.builderLabel,
+    hidden: row.hidden,
+    visibility: row.visibility,
+    direction: row.columns === 2 ? "row" : "column",
+    wrap: "wrap",
+    gap: row.gapPreset === "tight" ? 12 : row.gapPreset === "loose" ? 28 : 20,
+    spacing: row.spacing,
+    background: row.background ?? { color: row.backgroundColor ?? "transparent" },
+    backgroundImage: row.backgroundImage,
+    border: row.border,
+    children: columns.map((column) => ({
+      id: column.id,
+      type: "CONTAINER" as const,
+      builderLabel: column.builderLabel,
+      hidden: column.hidden,
+      visibility: column.visibility,
+      direction: "column",
+      gap: column.gapPreset === "tight" ? 12 : column.gapPreset === "loose" ? 28 : 20,
+      spacing: column.spacing,
+      background: column.background ?? { color: column.backgroundColor ?? "transparent" },
+      border: column.border,
+      width: row.columns === 2 ? { value: 50, unit: "%" } : { value: 100, unit: "%" },
+      children: column.widgets
+    }))
+  };
+}
+
+function getRenderableContainers(content: HomepageContent) {
+  if (content.containers?.length) return content.containers;
+  return content.rows.map(rowToContainer);
+}
+
 function getImageHeightClasses(imageHeightPreset: HomepageImageHeightPreset | undefined, viewport: HomepageRendererViewport) {
   const compact = viewport === "mobile" || viewport === "tablet";
   const map: Record<HomepageImageHeightPreset, string> = {
@@ -386,7 +486,7 @@ function renderBulletLines(card: HomepageCard) {
   );
 }
 
-function HomepageCardView({ card, viewport, mode }: { card: HomepageCard; viewport: HomepageRendererViewport; mode: HomepageRendererMode }) {
+export function HomepageCardView({ card, viewport, mode }: { card: HomepageCard; viewport: HomepageRendererViewport; mode: HomepageRendererMode }) {
   const textTagClasses = getTextTagClasses(viewport);
   const cardClasses = getCardClasses(card);
   const cardStyle = getCardStyle(card);
@@ -567,6 +667,34 @@ function HomepageCardView({ card, viewport, mode }: { card: HomepageCard; viewpo
   );
 }
 
+function HomepageElementView({
+  element,
+  viewport,
+  mode
+}: {
+  element: HomepageElement;
+  viewport: HomepageRendererViewport;
+  mode: HomepageRendererMode;
+}) {
+  if ("type" in element && element.type === "CONTAINER") {
+    if (!shouldDisplayOnViewport(element.hidden, element.visibility, viewport)) return null;
+    return (
+      <section className={getResponsiveVisibilityClass(element.visibility, viewport)} style={getContainerStyle(element, viewport)}>
+        {element.children.map((child) => (
+          <HomepageElementView key={child.id} element={child} viewport={viewport} mode={mode} />
+        ))}
+      </section>
+    );
+  }
+
+  if (!shouldDisplayOnViewport(element.hidden, element.visibility, viewport)) return null;
+  return (
+    <div className={getResponsiveVisibilityClass(element.visibility, viewport)}>
+      <HomepageCardView card={element} viewport={viewport} mode={mode} />
+    </div>
+  );
+}
+
 export function HomepageRenderer({
   content,
   viewport = "auto",
@@ -576,6 +704,17 @@ export function HomepageRenderer({
   viewport?: HomepageRendererViewport;
   mode?: HomepageRendererMode;
 }) {
+  const containers = getRenderableContainers(content);
+  if (containers.length) {
+    return (
+      <div className="space-y-6">
+        {containers.map((container) => (
+          <HomepageElementView key={container.id} element={container} viewport={viewport} mode={mode} />
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {content.rows.map((row) => {

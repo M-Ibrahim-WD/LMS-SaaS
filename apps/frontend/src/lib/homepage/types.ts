@@ -42,6 +42,11 @@ export type HomepageImagePosition = "center" | "top" | "bottom";
 export type HomepageColumnAlign = "start" | "center" | "end";
 export type HomepageStyleUnit = "px" | "%";
 export type HomepageBorderStyle = "solid" | "dashed" | "dotted";
+export type HomepageContainerDirection = "row" | "column";
+export type HomepageContainerWrap = "nowrap" | "wrap";
+export type HomepageContainerJustify = "start" | "center" | "end" | "between";
+export type HomepageContainerAlign = "stretch" | "start" | "center" | "end";
+export type HomepageLengthUnit = "px" | "%";
 
 export type HomepageBoxSpacing = {
   top: number;
@@ -76,6 +81,18 @@ export type HomepageButtonStyle = {
   hoverBackgroundColor?: string;
   hoverTextColor?: string;
   border?: HomepageBorder;
+};
+
+export type HomepageLengthValue = {
+  value?: number;
+  unit?: HomepageLengthUnit;
+};
+
+export type HomepageContainerResponsive = {
+  direction?: HomepageContainerDirection;
+  width?: HomepageLengthValue;
+  maxWidth?: HomepageLengthValue;
+  minHeight?: HomepageLengthValue;
 };
 
 export type HomepageInstructorCourse = {
@@ -235,8 +252,38 @@ export type HomepageRow = {
   columnsData?: HomepageColumn[];
 };
 
+export type HomepageContainer = {
+  id: string;
+  type: "CONTAINER";
+  builderLabel?: string;
+  hidden?: boolean;
+  visibility?: HomepageResponsiveVisibility;
+  direction?: HomepageContainerDirection;
+  wrap?: HomepageContainerWrap;
+  justify?: HomepageContainerJustify;
+  align?: HomepageContainerAlign;
+  gap?: number;
+  spacing?: HomepageElementSpacing;
+  background?: HomepageBackground;
+  backgroundImage?: string;
+  border?: HomepageBorder;
+  width?: HomepageLengthValue;
+  maxWidth?: HomepageLengthValue;
+  minHeight?: HomepageLengthValue;
+  height?: HomepageLengthValue;
+  responsive?: {
+    desktop?: HomepageContainerResponsive;
+    tablet?: HomepageContainerResponsive;
+    mobile?: HomepageContainerResponsive;
+  };
+  children: HomepageElement[];
+};
+
+export type HomepageElement = HomepageContainer | HomepageCard;
+
 export type HomepageContent = {
   rows: HomepageRow[];
+  containers?: HomepageContainer[];
   updatedAt?: string;
 };
 
