@@ -841,20 +841,43 @@ export default function AdminHomepagePage() {
     <div className="space-y-1">
       {elements.map((element) => {
         const active = selection?.id === element.id;
+        const elementSelection: Exclude<Selection, null> = { kind: isContainer(element) ? "container" : "widget", id: element.id };
+        const elementLabel = element.builderLabel || (isContainer(element) ? "Container" : element.title) || "Element";
         return (
           <div key={element.id}>
-            <button
-              type="button"
-              onClick={() => {
-                setSelection({ kind: isContainer(element) ? "container" : "widget", id: element.id });
-                setSidebarTab("CONTENT");
-              }}
-              className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition ${active ? "bg-slate-950 text-white" : "hover:bg-slate-100 text-slate-700"}`}
+            <div
+              className={`flex items-center gap-1 rounded-xl py-1 pr-1 transition ${active ? "bg-slate-950 text-white" : "text-slate-700 hover:bg-slate-100"}`}
               style={{ paddingLeft: `${12 + depth * 14}px` }}
             >
-              {isContainer(element) ? <BoxIcon /> : getWidgetIcon(element.type)}
-              <span className="min-w-0 flex-1 truncate">{element.builderLabel || (isContainer(element) ? "Container" : element.title) || "Element"}</span>
-            </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelection(elementSelection);
+                  setInsertionTargetContainerId(null);
+                  setSidebarTab("CONTENT");
+                }}
+                className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm"
+              >
+                {isContainer(element) ? <BoxIcon /> : getWidgetIcon(element.type)}
+                <span className="min-w-0 flex-1 truncate">{elementLabel}</span>
+              </button>
+              {active ? (
+                <div className="flex shrink-0 items-center gap-1">
+                  <IconButton
+                    label={element.hidden ? "Show" : "Hide"}
+                    tone={element.hidden ? "success" : "default"}
+                    onClick={() => {
+                      if (isContainer(element)) updateContainer(element.id, { hidden: !element.hidden });
+                      else updateWidget(element.id, { hidden: !element.hidden });
+                    }}
+                  >
+                    {element.hidden ? <EyeIcon /> : <EyeOffIcon />}
+                  </IconButton>
+                  <IconButton label="Duplicate" onClick={() => duplicateSelected(elementSelection)}><CopyIcon /></IconButton>
+                  <IconButton label="Delete" tone="danger" onClick={() => setDeleteTarget(elementSelection)}><TrashIcon /></IconButton>
+                </div>
+              ) : null}
+            </div>
             {isContainer(element) && element.children.length ? renderNavigatorItems(element.children, depth + 1) : null}
           </div>
         );
@@ -959,9 +982,22 @@ export default function AdminHomepagePage() {
 
     if (!selectedWidget) return null;
 
+    const widgetLabelControl = (
+      <label className="block">
+        <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Navigator label</span>
+        <input
+          value={selectedWidget.builderLabel ?? ""}
+          onChange={(event) => updateWidget(selectedWidget.id, { builderLabel: event.target.value })}
+          className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm"
+          placeholder={selectedWidget.title || "Widget"}
+        />
+      </label>
+    );
+
     if (selectedWidget.type === "HEADING") {
       return (
         <div className="space-y-4">
+          {widgetLabelControl}
           <select value={selectedWidget.textTag} onChange={(event) => updateWidget(selectedWidget.id, { textTag: event.target.value as Exclude<HomepageTextTag, "P"> })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm">
             {(["H1", "H2", "H3", "H4", "H5", "H6"] as const).map((tag) => <option key={tag} value={tag}>{tag}</option>)}
           </select>
@@ -971,12 +1007,18 @@ export default function AdminHomepagePage() {
     }
 
     if (selectedWidget.type === "TEXT") {
-      return <textarea value={selectedWidget.content} onChange={(event) => updateWidget(selectedWidget.id, { content: event.target.value })} rows={8} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" />;
+      return (
+        <div className="space-y-4">
+          {widgetLabelControl}
+          <textarea value={selectedWidget.content} onChange={(event) => updateWidget(selectedWidget.id, { content: event.target.value })} rows={8} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" />
+        </div>
+      );
     }
 
     if (selectedWidget.type === "BUTTON") {
       return (
         <div className="space-y-4">
+          {widgetLabelControl}
           <input value={selectedWidget.label} onChange={(event) => updateWidget(selectedWidget.id, { label: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Button label" />
           <input value={selectedWidget.href} onChange={(event) => updateWidget(selectedWidget.id, { href: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="/courses" />
         </div>
@@ -986,6 +1028,7 @@ export default function AdminHomepagePage() {
     if (selectedWidget.type === "IMAGE_BLOCK") {
       return (
         <div className="space-y-4">
+          {widgetLabelControl}
           <input type="file" accept="image/png,image/jpeg,image/jpg,image/webp" onChange={(event) => setHomepageImageFile(event.target.files?.[0] ?? null)} className="block w-full text-sm text-slate-700 file:mr-4 file:rounded-full file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white" />
           <button type="button" disabled={!homepageImageFile || uploadHomepageImageMutation.isPending} onClick={() => uploadHomepageImageMutation.mutate()} className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold disabled:opacity-50">
             {uploadHomepageImageMutation.isPending ? "Uploading..." : "Upload image"}
@@ -1000,6 +1043,7 @@ export default function AdminHomepagePage() {
     if (selectedWidget.type === "VIDEO") {
       return (
         <div className="space-y-4">
+          {widgetLabelControl}
           <input value={selectedWidget.videoUrl} onChange={(event) => updateWidget(selectedWidget.id, { videoUrl: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" />
           <textarea value={selectedWidget.caption ?? ""} onChange={(event) => updateWidget(selectedWidget.id, { caption: event.target.value })} rows={3} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" />
         </div>
@@ -1007,16 +1051,27 @@ export default function AdminHomepagePage() {
     }
 
     if (selectedWidget.type === "ICON") {
-      return <textarea value={selectedWidget.content} onChange={(event) => updateWidget(selectedWidget.id, { content: event.target.value })} rows={4} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" />;
+      return (
+        <div className="space-y-4">
+          {widgetLabelControl}
+          <textarea value={selectedWidget.content} onChange={(event) => updateWidget(selectedWidget.id, { content: event.target.value })} rows={4} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" />
+        </div>
+      );
     }
 
     if (selectedWidget.type === "LIST") {
-      return <textarea value={selectedWidget.items.join("\n")} onChange={(event) => updateWidget(selectedWidget.id, { items: event.target.value.split("\n").filter(Boolean) })} rows={6} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" />;
+      return (
+        <div className="space-y-4">
+          {widgetLabelControl}
+          <textarea value={selectedWidget.items.join("\n")} onChange={(event) => updateWidget(selectedWidget.id, { items: event.target.value.split("\n").filter(Boolean) })} rows={6} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" />
+        </div>
+      );
     }
 
     if (selectedWidget.type === "CARD") {
       return (
         <div className="space-y-4">
+          {widgetLabelControl}
           <input value={selectedWidget.title} onChange={(event) => updateWidget(selectedWidget.id, { title: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Card title" />
           <input value={selectedWidget.subtitle ?? ""} onChange={(event) => updateWidget(selectedWidget.id, { subtitle: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Subtitle" />
           <textarea value={selectedWidget.body ?? ""} onChange={(event) => updateWidget(selectedWidget.id, { body: event.target.value })} rows={5} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Body" />
@@ -1029,6 +1084,7 @@ export default function AdminHomepagePage() {
     if (selectedWidget.type === "COURSE_LIST") {
       return (
         <div className="space-y-4">
+          {widgetLabelControl}
           <input value={selectedWidget.title} onChange={(event) => updateWidget(selectedWidget.id, { title: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Section title" />
           <textarea value={selectedWidget.body ?? ""} onChange={(event) => updateWidget(selectedWidget.id, { body: event.target.value })} rows={3} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Optional intro text" />
           <div className="space-y-2 rounded-2xl border border-slate-200 p-3">
@@ -1061,6 +1117,7 @@ export default function AdminHomepagePage() {
     if (selectedWidget.type === "INSTRUCTOR_LIST") {
       return (
         <div className="space-y-4">
+          {widgetLabelControl}
           <input value={selectedWidget.title} onChange={(event) => updateWidget(selectedWidget.id, { title: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Section title" />
           <input value={selectedWidget.subtitle ?? ""} onChange={(event) => updateWidget(selectedWidget.id, { subtitle: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Subtitle" />
           <textarea value={selectedWidget.body ?? ""} onChange={(event) => updateWidget(selectedWidget.id, { body: event.target.value })} rows={3} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Optional intro text" />
@@ -1101,6 +1158,7 @@ export default function AdminHomepagePage() {
     if (selectedWidget.type === "FEATURED_INSTRUCTORS") {
       return (
         <div className="space-y-4">
+          {widgetLabelControl}
           <button type="button" onClick={applyFeaturedInstructors} className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white">Apply selection</button>
           {(catalogQuery.data ?? []).map((instructor) => (
             <div key={instructor.id} className="rounded-2xl border border-slate-200 p-3">
@@ -1131,6 +1189,7 @@ export default function AdminHomepagePage() {
 
     return (
       <div className="space-y-4">
+        {widgetLabelControl}
         <input value={selectedWidget.title} onChange={(event) => updateWidget(selectedWidget.id, { title: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Title" />
         <input value={selectedWidget.subtitle ?? ""} onChange={(event) => updateWidget(selectedWidget.id, { subtitle: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Subtitle" />
         <textarea value={selectedWidget.body ?? ""} onChange={(event) => updateWidget(selectedWidget.id, { body: event.target.value })} rows={5} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Body" />
