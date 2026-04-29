@@ -267,6 +267,23 @@ function UsersIcon() {
   );
 }
 
+function SearchIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
+      <circle cx="11" cy="11" r="6" />
+      <path strokeLinecap="round" d="m16 16 4 4" />
+    </svg>
+  );
+}
+
+function ChevronIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
+      <path strokeLinecap="round" strokeLinejoin="round" d="m8 10 4 4 4-4" />
+    </svg>
+  );
+}
+
 function DesktopOnlyMessage() {
   return (
     <main className="p-8">
@@ -279,6 +296,131 @@ function DesktopOnlyMessage() {
         />
       </ContentCard>
     </main>
+  );
+}
+
+function SidebarChrome({
+  kicker,
+  title,
+  description,
+  action
+}: {
+  kicker: string;
+  title: string;
+  description?: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-[26px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="section-kicker">{kicker}</p>
+          <h2 className="mt-2 truncate text-lg font-semibold text-slate-950">{title}</h2>
+          {description ? <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p> : null}
+        </div>
+        {action}
+      </div>
+    </div>
+  );
+}
+
+function SidebarSegmentButton({
+  active,
+  icon,
+  label,
+  onClick
+}: {
+  active: boolean;
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-[16px] text-[0.68rem] font-semibold uppercase tracking-[0.16em] transition ${
+        active ? "bg-slate-950 text-white shadow-sm" : "bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+      }`}
+    >
+      {icon}
+      <span>{label}</span>
+    </button>
+  );
+}
+
+function EditorTabButton({
+  active,
+  label,
+  onClick
+}: {
+  active: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex-1 rounded-[16px] px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition ${
+        active ? "bg-slate-950 text-white shadow-sm" : "bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
+function SidebarGroup({
+  title,
+  children,
+  defaultOpen = true
+}: {
+  title: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
+  return (
+    <details open={defaultOpen} className="group rounded-[22px] border border-slate-200 bg-white shadow-sm">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-slate-900">
+        <span>{title}</span>
+        <span className="text-slate-400 transition group-open:rotate-180">
+          <ChevronIcon />
+        </span>
+      </summary>
+      <div className="border-t border-slate-100 p-4">{children}</div>
+    </details>
+  );
+}
+
+function WidgetTile({
+  disabled,
+  icon,
+  title,
+  description,
+  onClick
+}: {
+  disabled?: boolean;
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      title={description}
+      className="group flex min-h-24 flex-col items-center justify-center gap-2 rounded-[18px] border border-slate-200 bg-white p-3 text-center text-xs font-semibold text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:border-sky-200 hover:bg-sky-50/60 hover:text-sky-800 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-y-0"
+    >
+      <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-700 transition group-hover:border-sky-200 group-hover:bg-white group-hover:text-sky-700">
+        {icon}
+      </span>
+      <span>{title}</span>
+    </button>
   );
 }
 
@@ -848,6 +990,17 @@ function getColumnLabel(column: HomepageColumn, columnIndex: number) {
 
 function getWidgetLabel(widget: HomepageCard) {
   return widget.builderLabel?.trim() || widget.title || widget.type.replaceAll("_", " ");
+}
+
+function getWidgetIcon(type: HomepageCardType) {
+  if (type === "HEADING") return <HeadingIcon />;
+  if (type === "TEXT" || type === "LIST") return <TextIcon />;
+  if (type === "BUTTON") return <ButtonIcon />;
+  if (type === "IMAGE_BLOCK") return <ImageIcon />;
+  if (type === "VIDEO") return <VideoIcon />;
+  if (type === "ICON" || type === "SPACER" || type === "DIVIDER") return <StarIcon />;
+  if (type === "FEATURED_INSTRUCTORS" || type === "INSTRUCTOR_LIST") return <UsersIcon />;
+  return <LayersIcon />;
 }
 
 function getCanvasRowClasses(selected: boolean) {
@@ -1572,63 +1725,54 @@ export default function AdminHomepagePage() {
 
       <div className="grid min-h-[calc(100vh-4.75rem)] xl:grid-cols-[23rem_minmax(0,1fr)]">
         <aside className="border-r border-slate-200 bg-white/94 backdrop-blur">
-          <div className="ui-scrollbar h-[calc(100vh-4.75rem)] overflow-y-auto px-4 py-5 sm:px-5">
-            <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-4">
-              <div className="flex items-center justify-between gap-3">
-                {sidebarSelection.kind === "library" ? (
-                  <div>
-                    <p className="section-kicker">Elements</p>
-                    <h2 className="mt-2 text-lg font-semibold text-slate-950">Widget library</h2>
-                    <p className="mt-2 text-sm leading-6 text-slate-600">
-                      {libraryReady ? "Choose an element to add into the selected column." : "Select a column on the canvas to start adding widgets."}
-                    </p>
-                  </div>
-                ) : (
-                  <div>
-                    <p className="section-kicker">
-                      {sidebarSelection.kind === "row" ? "Section" : sidebarSelection.kind === "column" ? "Column" : "Widget"}
-                    </p>
-                    <h2 className="mt-2 text-lg font-semibold text-slate-950">
-                      {sidebarSelection.kind === "row"
-                        ? "Edit section"
-                        : sidebarSelection.kind === "column"
-                          ? "Edit column"
-                          : selectedWidget?.title || "Edit widget"}
-                    </h2>
-                  </div>
-                )}
-
-                {sidebarSelection.kind !== "library" ? (
+          <div className="ui-scrollbar h-[calc(100vh-4.75rem)] overflow-y-auto bg-slate-50/70 px-4 py-5 sm:px-5">
+            {sidebarSelection.kind === "library" ? (
+              <SidebarChrome
+                kicker="Builder"
+                title="Add elements"
+                description={libraryReady ? "Choose an element for the selected column." : "Select a column on the canvas, then choose an element."}
+              />
+            ) : (
+              <SidebarChrome
+                kicker={sidebarSelection.kind === "row" ? "Section" : sidebarSelection.kind === "column" ? "Column" : "Widget"}
+                title={
+                  sidebarSelection.kind === "row"
+                    ? selectedRow ? getRowLabel(selectedRow, workingDraft.rows.findIndex((row) => row.id === selectedRow.id)) : "Edit section"
+                    : sidebarSelection.kind === "column"
+                      ? selectedColumn ? getColumnLabel(selectedColumn, selectedRow?.columnsData?.findIndex((column) => column.id === selectedColumn.id) ?? 0) : "Edit column"
+                      : selectedWidget ? getWidgetLabel(selectedWidget) : "Edit widget"
+                }
+                action={
                   <button
                     type="button"
-                    onClick={() => openLibraryTarget(
-                      sidebarSelection.kind === "row" ? sidebarSelection.rowId : sidebarSelection.rowId,
-                      sidebarSelection.kind === "row" ? selectedRow?.columnsData?.[0]?.id : sidebarSelection.columnId
-                    )}
-                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
+                    aria-label="Back to elements"
+                    title="Back to elements"
+                    onClick={() =>
+                      openLibraryTarget(
+                        sidebarSelection.rowId,
+                        sidebarSelection.kind === "row" ? selectedRow?.columnsData?.[0]?.id : sidebarSelection.columnId
+                      )
+                    }
+                    className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
                   >
                     <BackIcon />
                   </button>
-                ) : null}
-              </div>
+                }
+              />
+            )}
 
-              {sidebarSelection.kind !== "library" ? (
-                <div className="mt-4 flex gap-2">
-                  {(["CONTENT", "STYLE", "ADVANCED"] as const).map((tab) => (
-                    <button
-                      key={tab}
-                      type="button"
-                      onClick={() => setSidebarTab(tab)}
-                      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                        sidebarTab === tab ? "bg-slate-950 text-white" : "border border-slate-300 bg-white text-slate-700"
-                      }`}
-                    >
-                      {tab.toLowerCase()}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
+            {sidebarSelection.kind !== "library" ? (
+              <div className="mt-4 grid grid-cols-3 gap-2 rounded-[20px] border border-slate-200 bg-slate-100/70 p-1.5">
+                {(["CONTENT", "STYLE", "ADVANCED"] as const).map((tab) => (
+                  <EditorTabButton
+                    key={tab}
+                    active={sidebarTab === tab}
+                    label={tab.toLowerCase()}
+                    onClick={() => setSidebarTab(tab)}
+                  />
+                ))}
+              </div>
+            ) : null}
 
             {message ? (
               <div className="mt-4">
@@ -1643,24 +1787,14 @@ export default function AdminHomepagePage() {
 
             {sidebarSelection.kind === "library" ? (
               <div className="mt-5 space-y-5">
-                <div className="grid grid-cols-3 gap-2 rounded-[20px] border border-slate-200 bg-slate-50 p-1.5">
-                  {(["ELEMENTS", "SECTIONS", "NAVIGATOR"] as const).map((tab) => (
-                    <button
-                      key={tab}
-                      type="button"
-                      onClick={() => setLibraryTab(tab)}
-                      className={`rounded-[16px] px-2 py-2 text-xs font-semibold transition ${
-                        libraryTab === tab ? "bg-slate-950 text-white" : "bg-white text-slate-700"
-                      }`}
-                    >
-                      {tab.toLowerCase()}
-                    </button>
-                  ))}
+                <div className="grid grid-cols-3 gap-2 rounded-[20px] border border-slate-200 bg-slate-100/70 p-1.5">
+                  <SidebarSegmentButton active={libraryTab === "ELEMENTS"} icon={<PlusIcon />} label="Elements" onClick={() => setLibraryTab("ELEMENTS")} />
+                  <SidebarSegmentButton active={libraryTab === "SECTIONS"} icon={<TwoColumnsIcon />} label="Sections" onClick={() => setLibraryTab("SECTIONS")} />
+                  <SidebarSegmentButton active={libraryTab === "NAVIGATOR"} icon={<LayersIcon />} label="Layers" onClick={() => setLibraryTab("NAVIGATOR")} />
                 </div>
 
                 {libraryTab === "SECTIONS" ? (
-                  <ContentCard className="p-4">
-                    <p className="section-kicker">Sections</p>
+                  <SidebarGroup title="Section structures">
                     <div className="mt-4 grid grid-cols-2 gap-3">
                       <button type="button" onClick={() => addRow(1)} className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-[14px] border border-slate-200 bg-white text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50">
                         <OneColumnIcon />
@@ -1671,56 +1805,45 @@ export default function AdminHomepagePage() {
                         <span>2 columns</span>
                       </button>
                     </div>
-                  </ContentCard>
+                  </SidebarGroup>
                 ) : null}
 
                 {libraryTab === "ELEMENTS" ? (
                   <>
-                    <input
-                      value={widgetSearch}
-                      onChange={(event) => setWidgetSearch(event.target.value)}
-                      placeholder="Search elements"
-                      className="w-full rounded-[18px] border border-slate-300 bg-white px-4 py-3 text-sm"
-                    />
+                    <label className="flex items-center gap-3 rounded-[20px] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
+                      <SearchIcon />
+                      <input
+                        value={widgetSearch}
+                        onChange={(event) => setWidgetSearch(event.target.value)}
+                        placeholder="Search elements"
+                        className="min-w-0 flex-1 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                      />
+                    </label>
                     {[
                       { title: "Preset", items: sectionWidgets.filter(matchesSearch) },
                       { title: "Basic", items: baseWidgets },
                       { title: "Dynamic", items: dynamicWidgets }
                     ].map((group) => (
-                      <ContentCard key={group.title} className="p-4">
-                        <p className="section-kicker">{group.title}</p>
-                        <div className="mt-4 grid grid-cols-2 gap-3">
+                      <SidebarGroup key={group.title} title={group.title}>
+                        <div className="grid grid-cols-2 gap-3">
                           {group.items.map((item) => (
-                            <button
+                            <WidgetTile
                               key={item.type}
-                              type="button"
                               disabled={!libraryReady}
+                              icon={getWidgetIcon(item.type)}
+                              title={item.title}
+                              description={item.body}
                               onClick={() => addWidgetToTarget(item.type)}
-                              className="flex min-h-28 flex-col items-center justify-center gap-2 rounded-[14px] border border-slate-200 bg-white p-3 text-center text-xs font-semibold text-slate-800 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45"
-                              title={item.body}
-                            >
-                              <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-700">
-                                {item.type === "HEADING" ? <HeadingIcon /> : null}
-                                {item.type === "TEXT" || item.type === "LIST" ? <TextIcon /> : null}
-                                {item.type === "BUTTON" ? <ButtonIcon /> : null}
-                                {item.type === "IMAGE_BLOCK" ? <ImageIcon /> : null}
-                                {item.type === "VIDEO" ? <VideoIcon /> : null}
-                                {item.type === "ICON" || item.type === "SPACER" || item.type === "DIVIDER" ? <StarIcon /> : null}
-                                {item.type === "FEATURED_INSTRUCTORS" || item.type === "INSTRUCTOR_LIST" ? <UsersIcon /> : null}
-                                {item.type === "COURSE_LIST" || item.type === "CARD" || ["ABOUT_US", "WHY_US", "ABOUT_SITE", "TEXT_MEDIA"].includes(item.type) ? <LayersIcon /> : null}
-                              </span>
-                              <span>{item.title}</span>
-                            </button>
+                            />
                           ))}
                         </div>
-                      </ContentCard>
+                      </SidebarGroup>
                     ))}
                   </>
                 ) : null}
 
                 {libraryTab === "NAVIGATOR" ? (
-                  <ContentCard className="p-4">
-                    <p className="section-kicker">Navigator</p>
+                  <SidebarGroup title="Navigator">
                     <div className="mt-4 space-y-3">
                       {workingDraft.rows.map((row, rowIndex) => (
                         <div key={row.id} className="rounded-[14px] border border-slate-200 bg-white p-3">
@@ -1800,7 +1923,7 @@ export default function AdminHomepagePage() {
                         </div>
                       ))}
                     </div>
-                  </ContentCard>
+                  </SidebarGroup>
                 ) : null}
               </div>
             ) : sidebarSelection.kind === "row" && selectedRow ? (
