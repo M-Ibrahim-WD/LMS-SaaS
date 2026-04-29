@@ -1367,8 +1367,8 @@ export default function AdminHomepagePage() {
           </button>
         )}
 
-        <section className="ui-scrollbar h-[calc(100vh-4.75rem)] overflow-y-auto bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.14),transparent_24%),radial-gradient(circle_at_88%_16%,rgba(16,185,129,0.12),transparent_18%),linear-gradient(180deg,#f8fafc_0%,#eff6ff_44%,#e2e8f0_100%)] px-4 py-5 lg:px-8">
-          <div className={`mx-auto transition-all ${canvasViewport === "mobile" ? "max-w-[390px]" : canvasViewport === "tablet" ? "max-w-[820px]" : "max-w-6xl"}`} onClick={() => setSelection(null)}>
+        <section className="ui-scrollbar h-[calc(100vh-4.75rem)] overflow-y-auto bg-[var(--app-bg)]">
+          <div className={`mx-auto px-4 py-6 transition-all sm:px-6 lg:px-8 lg:py-10 ${canvasViewport === "mobile" ? "max-w-[390px]" : canvasViewport === "tablet" ? "max-w-[820px]" : "max-w-6xl"}`} onClick={() => setSelection(null)}>
             {showPreviewHeader ? <PublicHomepageHeader previewViewport={canvasViewport === "auto" ? "desktop" : canvasViewport} interactive={false} /> : null}
             <div className="mt-6 min-h-[360px]">
               {(workingDraft.containers ?? []).length ? (
@@ -1420,7 +1420,7 @@ export default function AdminHomepagePage() {
             <div className="mt-6 grid gap-6 xl:grid-cols-2">
               <div>
                 <h4 className="mb-3 text-lg font-semibold text-slate-950">Current live homepage</h4>
-                <div className="rounded-[32px] border border-slate-200 bg-slate-50 p-4">
+                <div className="rounded-[32px] border border-slate-200 bg-[var(--app-bg)] p-4">
                   {showPreviewHeader ? <PublicHomepageHeader previewViewport="desktop" interactive={false} /> : null}
                   <div className="mt-6">{homepageQuery.data?.hasPublishedContent ? <HomepageRenderer content={publishedPreview} viewport="desktop" mode="builder" /> : <div className="rounded-3xl bg-white p-8 text-center text-sm text-slate-500">Nothing is published yet.</div>}</div>
                   {showPreviewFooter ? <div className="mt-6"><SiteFooter interactive={false} previewViewport="desktop" /></div> : null}
@@ -1428,7 +1428,7 @@ export default function AdminHomepagePage() {
               </div>
               <div>
                 <h4 className="mb-3 text-lg font-semibold text-slate-950">Draft that will go live</h4>
-                <div className="rounded-[32px] border border-slate-200 bg-slate-50 p-4">
+                <div className="rounded-[32px] border border-slate-200 bg-[var(--app-bg)] p-4">
                   {showPreviewHeader ? <PublicHomepageHeader previewViewport="desktop" interactive={false} /> : null}
                   <div className="mt-6"><HomepageRenderer content={workingDraft} viewport="desktop" mode="builder" /></div>
                   {showPreviewFooter ? <div className="mt-6"><SiteFooter interactive={false} previewViewport="desktop" /></div> : null}
