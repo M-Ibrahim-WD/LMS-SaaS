@@ -40,6 +40,43 @@ export type HomepageWidthPreset = "auto" | "full" | "narrow";
 export type HomepageImageFit = "cover" | "contain";
 export type HomepageImagePosition = "center" | "top" | "bottom";
 export type HomepageColumnAlign = "start" | "center" | "end";
+export type HomepageStyleUnit = "px" | "%";
+export type HomepageBorderStyle = "solid" | "dashed" | "dotted";
+
+export type HomepageBoxSpacing = {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+  unit: HomepageStyleUnit;
+  linked?: boolean;
+};
+
+export type HomepageBackground = {
+  color?: string;
+};
+
+export type HomepageBorder = {
+  enabled?: boolean;
+  width?: number;
+  color?: string;
+  style?: HomepageBorderStyle;
+  radius?: number;
+  unit?: HomepageStyleUnit;
+};
+
+export type HomepageElementSpacing = {
+  padding?: HomepageBoxSpacing;
+  margin?: HomepageBoxSpacing;
+};
+
+export type HomepageButtonStyle = {
+  backgroundColor?: string;
+  textColor?: string;
+  hoverBackgroundColor?: string;
+  hoverTextColor?: string;
+  border?: HomepageBorder;
+};
 
 export type HomepageInstructorCourse = {
   id: string;
@@ -77,6 +114,10 @@ export type HomepageCardBase = {
   marginPreset?: HomepageSizePreset;
   widthPreset?: HomepageWidthPreset;
   borderPreset?: HomepageBorderPreset;
+  spacing?: HomepageElementSpacing;
+  background?: HomepageBackground;
+  border?: HomepageBorder;
+  buttonStyle?: HomepageButtonStyle;
 };
 
 export type HomepageCard =
@@ -157,11 +198,16 @@ export type HomepageCard =
 export type HomepageColumn = {
   id: string;
   builderLabel?: string;
+  hidden?: boolean;
+  visibility?: HomepageResponsiveVisibility;
   backgroundColor?: string;
   paddingPreset?: HomepagePaddingPreset;
   gapPreset?: HomepageGapPreset;
   verticalAlign?: HomepageColumnAlign;
   horizontalAlign?: HomepageColumnAlign;
+  spacing?: HomepageElementSpacing;
+  background?: HomepageBackground;
+  border?: HomepageBorder;
   widgets: HomepageCard[];
 };
 
@@ -182,6 +228,9 @@ export type HomepageRow = {
   borderPreset?: HomepageBorderPreset;
   radiusPreset?: HomepageRadiusPreset;
   gapPreset?: HomepageGapPreset;
+  spacing?: HomepageElementSpacing;
+  background?: HomepageBackground;
+  border?: HomepageBorder;
   slots?: Array<HomepageCard | null>;
   columnsData?: HomepageColumn[];
 };

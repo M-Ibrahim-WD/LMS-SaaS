@@ -16,8 +16,13 @@ import { apiFetch } from "../../../lib/api/client";
 import { AdminSiteMenu } from "../_components/admin-site-menu";
 import type {
   HomepageAlign,
+  HomepageBackground,
+  HomepageBorder,
   HomepageBorderPreset,
+  HomepageBorderStyle,
+  HomepageBoxSpacing,
   HomepageButtonVariant,
+  HomepageButtonStyle,
   HomepageCard,
   HomepageCardBackgroundStyle,
   HomepageColumnAlign,
@@ -38,6 +43,7 @@ import type {
   HomepageRowOrder,
   HomepageSizePreset,
   HomepageSpacingPreset,
+  HomepageStyleUnit,
   HomepageTextTag,
   HomepageVideoAspectRatio
 } from "../../../lib/homepage/types";
@@ -59,6 +65,7 @@ type SidebarSelection =
 type SectionInsertTarget = { index: number } | null;
 type DeleteTarget =
   | { kind: "row"; rowId: string }
+  | { kind: "column"; rowId: string; columnId: string }
   | { kind: "widget"; rowId: string; columnId: string; widgetId: string }
   | null;
 
@@ -424,6 +431,161 @@ function WidgetTile({
   );
 }
 
+function ColorControl({
+  label,
+  value,
+  onChange,
+  allowTransparent = true
+}: {
+  label: string;
+  value?: string;
+  onChange: (value: string) => void;
+  allowTransparent?: boolean;
+}) {
+  const normalized = value && value !== "transparent" ? value : "#ffffff";
+  return (
+    <label className="block">
+      <span className="mb-2 block text-sm font-medium text-slate-800">{label}</span>
+      <div className="flex items-center gap-2">
+        <input
+          type="color"
+          value={/^#[0-9a-fA-F]{6}$/.test(normalized) ? normalized : "#ffffff"}
+          onChange={(event) => onChange(event.target.value)}
+          className="h-11 w-12 rounded-xl border border-slate-300 bg-white p-1"
+        />
+        <input
+          value={value ?? ""}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={allowTransparent ? "transparent or #000000" : "#000000"}
+          className="min-w-0 flex-1 rounded-2xl border border-slate-300 px-4 py-3 text-sm"
+        />
+        {allowTransparent ? (
+          <button
+            type="button"
+            onClick={() => onChange("transparent")}
+            className="rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
+          >
+            Clear
+          </button>
+        ) : null}
+      </div>
+    </label>
+  );
+}
+
+function BoxSpacingControl({
+  label,
+  value,
+  onChange
+}: {
+  label: string;
+  value?: HomepageBoxSpacing;
+  onChange: (value: HomepageBoxSpacing) => void;
+}) {
+  const box = value ?? createZeroBox();
+  const updateSide = (side: "top" | "right" | "bottom" | "left", nextValue: number) => {
+    if (box.linked) {
+      onChange({ ...box, top: nextValue, right: nextValue, bottom: nextValue, left: nextValue });
+      return;
+    }
+    onChange({ ...box, [side]: nextValue });
+  };
+
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <p className="text-sm font-medium text-slate-800">{label}</p>
+        <div className="flex items-center gap-2">
+          <select
+            value={box.unit}
+            onChange={(event) => onChange({ ...box, unit: event.target.value as HomepageStyleUnit })}
+            className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold"
+          >
+            {styleUnitOptions.map((unit) => (
+              <option key={unit} value={unit}>{unit}</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={() => onChange({ ...box, linked: !box.linked })}
+            className={`rounded-full px-3 py-1.5 text-xs font-semibold ${box.linked ? "bg-slate-950 text-white" : "border border-slate-300 bg-white text-slate-700"}`}
+          >
+            {box.linked ? "Linked" : "Unlinked"}
+          </button>
+        </div>
+      </div>
+      <div className="grid grid-cols-4 gap-2">
+        {(["top", "right", "bottom", "left"] as const).map((side) => (
+          <label key={side} className="block">
+            <span className="mb-1 block text-center text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-slate-500">{side}</span>
+            <input
+              type="number"
+              value={box[side]}
+              onChange={(event) => updateSide(side, Number(event.target.value))}
+              className="w-full rounded-xl border border-slate-300 px-2 py-2 text-center text-sm"
+            />
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function BorderControl({
+  value,
+  onChange
+}: {
+  value?: HomepageBorder;
+  onChange: (value: HomepageBorder) => void;
+}) {
+  const border = value ?? createNoBorder();
+  return (
+    <div className="space-y-4">
+      <label className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+        <span className="text-sm font-medium text-slate-800">Border</span>
+        <input
+          type="checkbox"
+          checked={border.enabled ?? false}
+          onChange={(event) => onChange({ ...border, enabled: event.target.checked, width: event.target.checked ? border.width || 1 : 0 })}
+        />
+      </label>
+      <div className="grid grid-cols-2 gap-3">
+        <label className="block">
+          <span className="mb-2 block text-sm font-medium text-slate-800">Width</span>
+          <input
+            type="number"
+            value={border.width ?? 0}
+            onChange={(event) => onChange({ ...border, width: Number(event.target.value) })}
+            className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
+          />
+        </label>
+        <label className="block">
+          <span className="mb-2 block text-sm font-medium text-slate-800">Radius</span>
+          <input
+            type="number"
+            value={border.radius ?? 0}
+            onChange={(event) => onChange({ ...border, radius: Number(event.target.value) })}
+            className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
+          />
+        </label>
+      </div>
+      <ColorControl label="Border color" value={border.color ?? "#000000"} allowTransparent={false} onChange={(color) => onChange({ ...border, color })} />
+      <label className="block">
+        <span className="mb-2 block text-sm font-medium text-slate-800">Border style</span>
+        <select
+          value={border.style ?? "solid"}
+          onChange={(event) => onChange({ ...border, style: event.target.value as HomepageBorderStyle })}
+          className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
+        >
+          {borderStyleOptions.map((option) => (
+            <option key={option} value={option}>{formatPresetLabel(option)}</option>
+          ))}
+        </select>
+      </label>
+    </div>
+  );
+}
+
 function VisibilityToggle({
   active,
   icon,
@@ -504,6 +666,8 @@ const widthOptions = ["auto", "full", "narrow"] as const;
 const columnAlignOptions: HomepageColumnAlign[] = ["start", "center", "end"];
 const imageFitOptions: HomepageImageFit[] = ["cover", "contain"];
 const imagePositionOptions: HomepageImagePosition[] = ["center", "top", "bottom"];
+const styleUnitOptions: HomepageStyleUnit[] = ["px", "%"];
+const borderStyleOptions: HomepageBorderStyle[] = ["solid", "dashed", "dotted"];
 
 const widgetCatalog: WidgetCatalogItem[] = [
   {
@@ -635,9 +799,43 @@ function createVisibility(): HomepageResponsiveVisibility {
   return { desktop: true, tablet: true, mobile: true };
 }
 
+function createZeroBox(unit: HomepageStyleUnit = "px"): HomepageBoxSpacing {
+  return { top: 0, right: 0, bottom: 0, left: 0, unit, linked: true };
+}
+
+function createNeutralBackground(): HomepageBackground {
+  return { color: "transparent" };
+}
+
+function createNoBorder(): HomepageBorder {
+  return { enabled: false, width: 0, color: "#000000", style: "solid", radius: 0, unit: "px" };
+}
+
+function createNeutralSpacing() {
+  return {
+    padding: createZeroBox(),
+    margin: createZeroBox()
+  };
+}
+
+function createNeutralButtonStyle(): HomepageButtonStyle {
+  return {
+    backgroundColor: "#020617",
+    textColor: "#ffffff",
+    hoverBackgroundColor: "#0f172a",
+    hoverTextColor: "#ffffff",
+    border: createNoBorder()
+  };
+}
+
 function createColumn(): HomepageColumn {
   return {
     id: createId("column"),
+    hidden: false,
+    visibility: createVisibility(),
+    background: createNeutralBackground(),
+    border: createNoBorder(),
+    spacing: createNeutralSpacing(),
     widgets: []
   };
 }
@@ -649,10 +847,21 @@ function createRow(columns: 1 | 2): HomepageRow {
     mobileOrder: "FIRST_SLOT_FIRST",
     tabletOrder: "FIRST_SLOT_FIRST",
     backgroundStyle: "plain",
-    paddingPreset: "comfortable",
+    background: createNeutralBackground(),
+    border: createNoBorder(),
+    spacing: createNeutralSpacing(),
     gapPreset: "normal",
     visibility: createVisibility(),
     columnsData: Array.from({ length: columns }, () => createColumn())
+  };
+}
+
+function neutralWidgetBase() {
+  return {
+    background: createNeutralBackground(),
+    border: createNoBorder(),
+    spacing: createNeutralSpacing(),
+    visibility: createVisibility()
   };
 }
 
@@ -668,7 +877,7 @@ function createWidget(type: HomepageCardType): HomepageCard {
       backgroundStyle: "surface",
       radiusPreset: "rounded",
       spacingPreset: "comfortable",
-      visibility: createVisibility()
+      ...neutralWidgetBase()
     };
   }
 
@@ -682,7 +891,7 @@ function createWidget(type: HomepageCardType): HomepageCard {
       backgroundStyle: "surface",
       radiusPreset: "rounded",
       spacingPreset: "comfortable",
-      visibility: createVisibility()
+      ...neutralWidgetBase()
     };
   }
 
@@ -698,7 +907,8 @@ function createWidget(type: HomepageCardType): HomepageCard {
       backgroundStyle: "surface",
       radiusPreset: "rounded",
       spacingPreset: "compact",
-      visibility: createVisibility()
+      buttonStyle: createNeutralButtonStyle(),
+      ...neutralWidgetBase()
     };
   }
 
@@ -714,7 +924,7 @@ function createWidget(type: HomepageCardType): HomepageCard {
       backgroundStyle: "surface",
       radiusPreset: "rounded",
       spacingPreset: "compact",
-      visibility: createVisibility()
+      ...neutralWidgetBase()
     };
   }
 
@@ -729,7 +939,7 @@ function createWidget(type: HomepageCardType): HomepageCard {
       backgroundStyle: "surface",
       radiusPreset: "rounded",
       spacingPreset: "compact",
-      visibility: createVisibility()
+      ...neutralWidgetBase()
     };
   }
 
@@ -744,7 +954,7 @@ function createWidget(type: HomepageCardType): HomepageCard {
       backgroundStyle: "surface",
       radiusPreset: "rounded",
       spacingPreset: "comfortable",
-      visibility: createVisibility()
+      ...neutralWidgetBase()
     };
   }
 
@@ -759,7 +969,7 @@ function createWidget(type: HomepageCardType): HomepageCard {
       backgroundStyle: "surface",
       radiusPreset: "rounded",
       spacingPreset: "comfortable",
-      visibility: createVisibility()
+      ...neutralWidgetBase()
     };
   }
 
@@ -772,7 +982,7 @@ function createWidget(type: HomepageCardType): HomepageCard {
       backgroundStyle: "surface",
       radiusPreset: "soft",
       spacingPreset: "compact",
-      visibility: createVisibility()
+      ...neutralWidgetBase()
     };
   }
 
@@ -786,7 +996,7 @@ function createWidget(type: HomepageCardType): HomepageCard {
       backgroundStyle: "surface",
       radiusPreset: "soft",
       spacingPreset: "compact",
-      visibility: createVisibility()
+      ...neutralWidgetBase()
     };
   }
 
@@ -799,7 +1009,7 @@ function createWidget(type: HomepageCardType): HomepageCard {
       backgroundStyle: "surface",
       radiusPreset: "rounded",
       spacingPreset: "comfortable",
-      visibility: createVisibility()
+      ...neutralWidgetBase()
     };
   }
 
@@ -815,7 +1025,8 @@ function createWidget(type: HomepageCardType): HomepageCard {
       backgroundStyle: "surface",
       radiusPreset: "rounded",
       spacingPreset: "comfortable",
-      visibility: createVisibility()
+      buttonStyle: createNeutralButtonStyle(),
+      ...neutralWidgetBase()
     };
   }
 
@@ -828,7 +1039,7 @@ function createWidget(type: HomepageCardType): HomepageCard {
       backgroundStyle: "surface",
       radiusPreset: "rounded",
       spacingPreset: "comfortable",
-      visibility: createVisibility()
+      ...neutralWidgetBase()
     };
   }
 
@@ -841,7 +1052,7 @@ function createWidget(type: HomepageCardType): HomepageCard {
       backgroundStyle: "surface",
       radiusPreset: "rounded",
       spacingPreset: "comfortable",
-      visibility: createVisibility()
+      ...neutralWidgetBase()
     };
   }
 
@@ -856,7 +1067,7 @@ function createWidget(type: HomepageCardType): HomepageCard {
       backgroundStyle: "surface",
       radiusPreset: "rounded",
       spacingPreset: "comfortable",
-      visibility: createVisibility()
+      ...neutralWidgetBase()
     };
   }
 
@@ -875,7 +1086,7 @@ function createWidget(type: HomepageCardType): HomepageCard {
       backgroundStyle: "surface",
       radiusPreset: "rounded",
       spacingPreset: "comfortable",
-      visibility: createVisibility()
+      ...neutralWidgetBase()
     };
   }
 
@@ -889,7 +1100,7 @@ function createWidget(type: HomepageCardType): HomepageCard {
       backgroundStyle: "surface",
       radiusPreset: "rounded",
       spacingPreset: "comfortable",
-      visibility: createVisibility()
+      ...neutralWidgetBase()
     };
   }
 
@@ -903,7 +1114,7 @@ function createWidget(type: HomepageCardType): HomepageCard {
     backgroundStyle: "surface",
     radiusPreset: "rounded",
     spacingPreset: "comfortable",
-    visibility: createVisibility()
+    ...neutralWidgetBase()
   };
 }
 
@@ -1056,6 +1267,7 @@ export default function AdminHomepagePage() {
   const [draggingWidget, setDraggingWidget] = useState<{ rowId: string; columnId: string; widgetId: string } | null>(null);
   const [isMobileEditor, setIsMobileEditor] = useState(false);
   const [canvasViewport, setCanvasViewport] = useState<"desktop" | "tablet" | "mobile">("desktop");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const canManageHomepage =
     Boolean(user?.isSuperAdmin) || Boolean(user?.adminPermissions?.includes("MANAGE_HOMEPAGE"));
@@ -1394,10 +1606,65 @@ export default function AdminHomepagePage() {
   function updateColumnStyleField(
     rowId: string,
     columnId: string,
-    field: "builderLabel" | "backgroundColor" | "paddingPreset" | "gapPreset" | "verticalAlign" | "horizontalAlign",
+    field: "builderLabel" | "backgroundColor" | "paddingPreset" | "gapPreset" | "verticalAlign" | "horizontalAlign" | "hidden",
     value: string
   ) {
     updateColumn(rowId, columnId, (column) => ({ ...column, [field]: value }));
+  }
+
+  function updateColumnVisibility(rowId: string, columnId: string, key: keyof HomepageResponsiveVisibility, value: boolean) {
+    updateColumn(rowId, columnId, (column) => ({
+      ...column,
+      visibility: {
+        ...createVisibility(),
+        ...column.visibility,
+        [key]: value
+      }
+    }));
+  }
+
+  function toggleColumnHidden(rowId: string, columnId: string) {
+    updateColumn(rowId, columnId, (column) => ({ ...column, hidden: !column.hidden }));
+  }
+
+  function duplicateColumn(rowId: string, columnId: string) {
+    updateRow(rowId, (row) => {
+      if (row.columns !== 1 || (row.columnsData?.length ?? 0) >= 2) return row;
+      const source = row.columnsData?.find((column) => column.id === columnId);
+      if (!source) return row;
+      return {
+        ...row,
+        columns: 2,
+        columnsData: [
+          source,
+          {
+            ...source,
+            id: createId("column"),
+            hidden: false,
+            widgets: source.widgets.map((widget) => ({ ...cloneWidget(widget), id: createId("widget"), hidden: false }))
+          }
+        ]
+      };
+    });
+  }
+
+  function removeColumn(rowId: string, columnId: string) {
+    updateRow(rowId, (row) => {
+      if (row.columns !== 2 || (row.columnsData?.length ?? 0) < 2) return row;
+      const remaining = (row.columnsData ?? []).filter((column) => column.id !== columnId);
+      return {
+        ...row,
+        columns: 1,
+        columnsData: [
+          {
+            ...(remaining[0] ?? createColumn()),
+            widgets: remaining.flatMap((column) => column.widgets)
+          }
+        ]
+      };
+    });
+    setSidebarSelection({ kind: "row", rowId });
+    setDeleteTarget(null);
   }
 
   function updateRowVisibility(rowId: string, key: keyof HomepageResponsiveVisibility, value: boolean) {
@@ -1545,8 +1812,8 @@ export default function AdminHomepagePage() {
   }
 
   function updateWidgetStyleField(
-    field: "backgroundStyle" | "radiusPreset" | "spacingPreset" | "backgroundColor" | "textColor" | "marginPreset" | "widthPreset" | "borderPreset",
-    value: HomepageCardBackgroundStyle | HomepageRadiusPreset | HomepageSpacingPreset | HomepageSizePreset | HomepageBorderPreset | string
+    field: "backgroundStyle" | "radiusPreset" | "spacingPreset" | "backgroundColor" | "textColor" | "marginPreset" | "widthPreset" | "borderPreset" | "buttonStyle",
+    value: HomepageCardBackgroundStyle | HomepageRadiusPreset | HomepageSpacingPreset | HomepageSizePreset | HomepageBorderPreset | HomepageButtonStyle | string
   ) {
     if (sidebarSelection.kind !== "widget" || !selectedWidget) {
       return;
@@ -1723,7 +1990,19 @@ export default function AdminHomepagePage() {
         </div>
       </header>
 
-      <div className="grid min-h-[calc(100vh-4.75rem)] xl:grid-cols-[23rem_minmax(0,1fr)]">
+      <div className={`relative grid min-h-[calc(100vh-4.75rem)] ${sidebarOpen ? "xl:grid-cols-[20rem_minmax(0,1fr)]" : "xl:grid-cols-1"}`}>
+        {!sidebarOpen ? (
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            className="fixed left-4 top-28 z-40 inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-lg transition hover:bg-slate-50"
+            aria-label="Open builder sidebar"
+            title="Open builder sidebar"
+          >
+            <LayersIcon />
+          </button>
+        ) : null}
+        {sidebarOpen ? (
         <aside className="border-r border-slate-200 bg-white/94 backdrop-blur">
           <div className="ui-scrollbar h-[calc(100vh-4.75rem)] overflow-y-auto bg-slate-50/70 px-4 py-5 sm:px-5">
             {sidebarSelection.kind === "library" ? (
@@ -1731,6 +2010,17 @@ export default function AdminHomepagePage() {
                 kicker="Builder"
                 title="Add elements"
                 description={libraryReady ? "Choose an element for the selected column." : "Select a column on the canvas, then choose an element."}
+                action={
+                  <button
+                    type="button"
+                    onClick={() => setSidebarOpen(false)}
+                    className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
+                    aria-label="Close builder sidebar"
+                    title="Close builder sidebar"
+                  >
+                    <BackIcon />
+                  </button>
+                }
               />
             ) : (
               <SidebarChrome
@@ -1996,15 +2286,11 @@ export default function AdminHomepagePage() {
 
                 {sidebarTab === "STYLE" ? (
                   <ContentCard className="space-y-4 p-4">
-                    <label className="block">
-                      <span className="mb-2 block text-sm font-medium text-slate-800">Background color</span>
-                      <input
-                        value={selectedRow.backgroundColor ?? ""}
-                        onChange={(event) => updateRowStyleField(selectedRow.id, "backgroundColor", event.target.value)}
-                        placeholder="#ffffff"
-                        className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-                      />
-                    </label>
+                    <ColorControl
+                      label="Background color"
+                      value={selectedRow.background?.color ?? selectedRow.backgroundColor ?? "transparent"}
+                      onChange={(color) => updateRow(selectedRow.id, (row) => ({ ...row, background: { ...(row.background ?? {}), color } }))}
+                    />
                     <label className="block">
                       <span className="mb-2 block text-sm font-medium text-slate-800">Background image URL</span>
                       <input
@@ -2013,30 +2299,16 @@ export default function AdminHomepagePage() {
                         className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
                       />
                     </label>
-                    <label className="block">
-                      <span className="mb-2 block text-sm font-medium text-slate-800">Background style</span>
-                      <select
-                        value={selectedRow.backgroundStyle ?? "plain"}
-                        onChange={(event) => updateRowStyleField(selectedRow.id, "backgroundStyle", event.target.value as HomepageRowBackgroundStyle)}
-                        className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-                      >
-                        {rowBackgroundOptions.map((option) => (
-                          <option key={option} value={option}>{formatPresetLabel(option)}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="block">
-                      <span className="mb-2 block text-sm font-medium text-slate-800">Padding</span>
-                      <select
-                        value={selectedRow.paddingPreset ?? "comfortable"}
-                        onChange={(event) => updateRowStyleField(selectedRow.id, "paddingPreset", event.target.value as HomepagePaddingPreset)}
-                        className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-                      >
-                        {rowPaddingOptions.map((option) => (
-                          <option key={option} value={option}>{formatPresetLabel(option)}</option>
-                        ))}
-                      </select>
-                    </label>
+                    <BoxSpacingControl
+                      label="Padding"
+                      value={selectedRow.spacing?.padding}
+                      onChange={(padding) => updateRow(selectedRow.id, (row) => ({ ...row, spacing: { ...(row.spacing ?? {}), padding } }))}
+                    />
+                    <BoxSpacingControl
+                      label="Margin"
+                      value={selectedRow.spacing?.margin}
+                      onChange={(margin) => updateRow(selectedRow.id, (row) => ({ ...row, spacing: { ...(row.spacing ?? {}), margin } }))}
+                    />
                     <label className="block">
                       <span className="mb-2 block text-sm font-medium text-slate-800">Column gap</span>
                       <select
@@ -2050,16 +2322,6 @@ export default function AdminHomepagePage() {
                       </select>
                     </label>
                     <label className="block">
-                      <span className="mb-2 block text-sm font-medium text-slate-800">Margin</span>
-                      <select
-                        value={selectedRow.marginPreset ?? "none"}
-                        onChange={(event) => updateRowStyleField(selectedRow.id, "marginPreset", event.target.value as HomepageSizePreset)}
-                        className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-                      >
-                        {sizeOptions.map((option) => <option key={option} value={option}>{formatPresetLabel(option)}</option>)}
-                      </select>
-                    </label>
-                    <label className="block">
                       <span className="mb-2 block text-sm font-medium text-slate-800">Min height</span>
                       <select
                         value={selectedRow.minHeightPreset ?? "none"}
@@ -2069,26 +2331,7 @@ export default function AdminHomepagePage() {
                         {sizeOptions.map((option) => <option key={option} value={option}>{formatPresetLabel(option)}</option>)}
                       </select>
                     </label>
-                    <label className="block">
-                      <span className="mb-2 block text-sm font-medium text-slate-800">Border</span>
-                      <select
-                        value={selectedRow.borderPreset ?? "soft"}
-                        onChange={(event) => updateRowStyleField(selectedRow.id, "borderPreset", event.target.value as HomepageBorderPreset)}
-                        className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-                      >
-                        {borderOptions.map((option) => <option key={option} value={option}>{formatPresetLabel(option)}</option>)}
-                      </select>
-                    </label>
-                    <label className="block">
-                      <span className="mb-2 block text-sm font-medium text-slate-800">Radius</span>
-                      <select
-                        value={selectedRow.radiusPreset ?? "rounded"}
-                        onChange={(event) => updateRowStyleField(selectedRow.id, "radiusPreset", event.target.value as HomepageRadiusPreset)}
-                        className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-                      >
-                        {cardRadiusOptions.map((option) => <option key={option} value={option}>{formatPresetLabel(option)}</option>)}
-                      </select>
-                    </label>
+                    <BorderControl value={selectedRow.border} onChange={(border) => updateRow(selectedRow.id, (row) => ({ ...row, border }))} />
                   </ContentCard>
                 ) : null}
 
@@ -2149,25 +2392,21 @@ export default function AdminHomepagePage() {
 
                 {sidebarTab === "STYLE" ? (
                   <ContentCard className="space-y-4 p-4">
-                    <label className="block">
-                      <span className="mb-2 block text-sm font-medium text-slate-800">Background color</span>
-                      <input
-                        value={selectedColumn.backgroundColor ?? ""}
-                        onChange={(event) => updateColumnStyleField(selectedRow!.id, selectedColumn.id, "backgroundColor", event.target.value)}
-                        placeholder="#ffffff"
-                        className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-                      />
-                    </label>
-                    <label className="block">
-                      <span className="mb-2 block text-sm font-medium text-slate-800">Padding</span>
-                      <select
-                        value={selectedColumn.paddingPreset ?? "comfortable"}
-                        onChange={(event) => updateColumnStyleField(selectedRow!.id, selectedColumn.id, "paddingPreset", event.target.value as HomepagePaddingPreset)}
-                        className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-                      >
-                        {rowPaddingOptions.map((option) => <option key={option} value={option}>{formatPresetLabel(option)}</option>)}
-                      </select>
-                    </label>
+                    <ColorControl
+                      label="Background color"
+                      value={selectedColumn.background?.color ?? selectedColumn.backgroundColor ?? "transparent"}
+                      onChange={(color) => updateColumn(selectedRow!.id, selectedColumn.id, (column) => ({ ...column, background: { ...(column.background ?? {}), color } }))}
+                    />
+                    <BoxSpacingControl
+                      label="Padding"
+                      value={selectedColumn.spacing?.padding}
+                      onChange={(padding) => updateColumn(selectedRow!.id, selectedColumn.id, (column) => ({ ...column, spacing: { ...(column.spacing ?? {}), padding } }))}
+                    />
+                    <BoxSpacingControl
+                      label="Margin"
+                      value={selectedColumn.spacing?.margin}
+                      onChange={(margin) => updateColumn(selectedRow!.id, selectedColumn.id, (column) => ({ ...column, spacing: { ...(column.spacing ?? {}), margin } }))}
+                    />
                     <label className="block">
                       <span className="mb-2 block text-sm font-medium text-slate-800">Widget gap</span>
                       <select
@@ -2198,12 +2437,31 @@ export default function AdminHomepagePage() {
                         {columnAlignOptions.map((option) => <option key={option} value={option}>{formatPresetLabel(option)}</option>)}
                       </select>
                     </label>
+                    <BorderControl value={selectedColumn.border} onChange={(border) => updateColumn(selectedRow!.id, selectedColumn.id, (column) => ({ ...column, border }))} />
                   </ContentCard>
                 ) : null}
 
                 {sidebarTab === "ADVANCED" ? (
-                  <ContentCard className="p-4">
-                    <p className="text-sm leading-6 text-slate-600">Select a widget inside this column if you want to control visibility, duplication, or removal.</p>
+                  <ContentCard className="space-y-5 p-4">
+                    <div className="flex items-center gap-3">
+                      <IconActionButton label="Hide column" title={selectedColumn.hidden ? "Show column" : "Hide column"} tone={selectedColumn.hidden ? "success" : "warning"} onClick={() => toggleColumnHidden(selectedRow!.id, selectedColumn.id)}>
+                        {selectedColumn.hidden ? <EyeIcon /> : <EyeOffIcon />}
+                      </IconActionButton>
+                      <IconActionButton label="Duplicate column" onClick={() => duplicateColumn(selectedRow!.id, selectedColumn.id)}>
+                        <DuplicateIcon />
+                      </IconActionButton>
+                      <IconActionButton label="Delete column" tone="danger" onClick={() => setDeleteTarget({ kind: "column", rowId: selectedRow!.id, columnId: selectedColumn.id })}>
+                        <TrashIcon />
+                      </IconActionButton>
+                    </div>
+                    <div>
+                      <p className="mb-3 text-sm font-medium text-slate-800">Device visibility</p>
+                      <div className="flex items-center gap-2">
+                        <VisibilityToggle active={selectedColumn.visibility?.desktop ?? true} icon={<MonitorIcon />} label="Desktop visibility" onClick={() => updateColumnVisibility(selectedRow!.id, selectedColumn.id, "desktop", !(selectedColumn.visibility?.desktop ?? true))} />
+                        <VisibilityToggle active={selectedColumn.visibility?.tablet ?? true} icon={<TabletIcon />} label="Tablet visibility" onClick={() => updateColumnVisibility(selectedRow!.id, selectedColumn.id, "tablet", !(selectedColumn.visibility?.tablet ?? true))} />
+                        <VisibilityToggle active={selectedColumn.visibility?.mobile ?? true} icon={<PhoneIcon />} label="Mobile visibility" onClick={() => updateColumnVisibility(selectedRow!.id, selectedColumn.id, "mobile", !(selectedColumn.visibility?.mobile ?? true))} />
+                      </div>
+                    </div>
                   </ContentCard>
                 ) : null}
               </div>
@@ -2677,70 +2935,22 @@ export default function AdminHomepagePage() {
 
                 {sidebarTab === "STYLE" ? (
                   <ContentCard className="space-y-4 p-4">
-                    <label className="block">
-                      <span className="mb-2 block text-sm font-medium text-slate-800">Background color</span>
-                      <input
-                        value={selectedWidget.backgroundColor ?? ""}
-                        onChange={(event) => updateWidgetStyleField("backgroundColor", event.target.value)}
-                        placeholder="#ffffff"
-                        className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-                      />
-                    </label>
-                    <label className="block">
-                      <span className="mb-2 block text-sm font-medium text-slate-800">Text color</span>
-                      <input
-                        value={selectedWidget.textColor ?? ""}
-                        onChange={(event) => updateWidgetStyleField("textColor", event.target.value)}
-                        placeholder="#0f172a"
-                        className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-                      />
-                    </label>
-                    <label className="block">
-                      <span className="mb-2 block text-sm font-medium text-slate-800">Background</span>
-                      <select
-                        value={selectedWidget.backgroundStyle ?? "surface"}
-                        onChange={(event) => updateWidgetStyleField("backgroundStyle", event.target.value as HomepageCardBackgroundStyle)}
-                        className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-                      >
-                        {cardBackgroundOptions.map((option) => (
-                          <option key={option} value={option}>{formatPresetLabel(option)}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="block">
-                      <span className="mb-2 block text-sm font-medium text-slate-800">Radius</span>
-                      <select
-                        value={selectedWidget.radiusPreset ?? "rounded"}
-                        onChange={(event) => updateWidgetStyleField("radiusPreset", event.target.value as HomepageRadiusPreset)}
-                        className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-                      >
-                        {cardRadiusOptions.map((option) => (
-                          <option key={option} value={option}>{formatPresetLabel(option)}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="block">
-                      <span className="mb-2 block text-sm font-medium text-slate-800">Spacing</span>
-                      <select
-                        value={selectedWidget.spacingPreset ?? "comfortable"}
-                        onChange={(event) => updateWidgetStyleField("spacingPreset", event.target.value as HomepageSpacingPreset)}
-                        className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-                      >
-                        {cardSpacingOptions.map((option) => (
-                          <option key={option} value={option}>{formatPresetLabel(option)}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="block">
-                      <span className="mb-2 block text-sm font-medium text-slate-800">Margin</span>
-                      <select
-                        value={selectedWidget.marginPreset ?? "none"}
-                        onChange={(event) => updateWidgetStyleField("marginPreset", event.target.value as HomepageSizePreset)}
-                        className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-                      >
-                        {sizeOptions.map((option) => <option key={option} value={option}>{formatPresetLabel(option)}</option>)}
-                      </select>
-                    </label>
+                    <ColorControl
+                      label="Background color"
+                      value={selectedWidget.background?.color ?? selectedWidget.backgroundColor ?? "transparent"}
+                      onChange={(color) => updateWidget(sidebarSelection.rowId, sidebarSelection.columnId, sidebarSelection.widgetId, { background: { ...(selectedWidget.background ?? {}), color } })}
+                    />
+                    <ColorControl label="Text color" value={selectedWidget.textColor ?? ""} onChange={(color) => updateWidgetStyleField("textColor", color)} allowTransparent={false} />
+                    <BoxSpacingControl
+                      label="Padding"
+                      value={selectedWidget.spacing?.padding}
+                      onChange={(padding) => updateWidget(sidebarSelection.rowId, sidebarSelection.columnId, sidebarSelection.widgetId, { spacing: { ...(selectedWidget.spacing ?? {}), padding } })}
+                    />
+                    <BoxSpacingControl
+                      label="Margin"
+                      value={selectedWidget.spacing?.margin}
+                      onChange={(margin) => updateWidget(sidebarSelection.rowId, sidebarSelection.columnId, sidebarSelection.widgetId, { spacing: { ...(selectedWidget.spacing ?? {}), margin } })}
+                    />
                     <label className="block">
                       <span className="mb-2 block text-sm font-medium text-slate-800">Width</span>
                       <select
@@ -2751,16 +2961,16 @@ export default function AdminHomepagePage() {
                         {widthOptions.map((option) => <option key={option} value={option}>{formatPresetLabel(option)}</option>)}
                       </select>
                     </label>
-                    <label className="block">
-                      <span className="mb-2 block text-sm font-medium text-slate-800">Border</span>
-                      <select
-                        value={selectedWidget.borderPreset ?? "soft"}
-                        onChange={(event) => updateWidgetStyleField("borderPreset", event.target.value as HomepageBorderPreset)}
-                        className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-                      >
-                        {borderOptions.map((option) => <option key={option} value={option}>{formatPresetLabel(option)}</option>)}
-                      </select>
-                    </label>
+                    <BorderControl value={selectedWidget.border} onChange={(border) => updateWidget(sidebarSelection.rowId, sidebarSelection.columnId, sidebarSelection.widgetId, { border })} />
+                    {selectedWidget.type === "BUTTON" || selectedWidget.type === "CARD" ? (
+                      <SidebarGroup title="Button style">
+                        <ColorControl label="Button background" value={selectedWidget.buttonStyle?.backgroundColor ?? "#020617"} onChange={(color) => updateWidget(sidebarSelection.rowId, sidebarSelection.columnId, sidebarSelection.widgetId, { buttonStyle: { ...(selectedWidget.buttonStyle ?? createNeutralButtonStyle()), backgroundColor: color } })} allowTransparent={false} />
+                        <ColorControl label="Button text" value={selectedWidget.buttonStyle?.textColor ?? "#ffffff"} onChange={(color) => updateWidget(sidebarSelection.rowId, sidebarSelection.columnId, sidebarSelection.widgetId, { buttonStyle: { ...(selectedWidget.buttonStyle ?? createNeutralButtonStyle()), textColor: color } })} allowTransparent={false} />
+                        <ColorControl label="Hover background" value={selectedWidget.buttonStyle?.hoverBackgroundColor ?? "#0f172a"} onChange={(color) => updateWidget(sidebarSelection.rowId, sidebarSelection.columnId, sidebarSelection.widgetId, { buttonStyle: { ...(selectedWidget.buttonStyle ?? createNeutralButtonStyle()), hoverBackgroundColor: color } })} allowTransparent={false} />
+                        <ColorControl label="Hover text" value={selectedWidget.buttonStyle?.hoverTextColor ?? "#ffffff"} onChange={(color) => updateWidget(sidebarSelection.rowId, sidebarSelection.columnId, sidebarSelection.widgetId, { buttonStyle: { ...(selectedWidget.buttonStyle ?? createNeutralButtonStyle()), hoverTextColor: color } })} allowTransparent={false} />
+                        <BorderControl value={selectedWidget.buttonStyle?.border} onChange={(border) => updateWidget(sidebarSelection.rowId, sidebarSelection.columnId, sidebarSelection.widgetId, { buttonStyle: { ...(selectedWidget.buttonStyle ?? createNeutralButtonStyle()), border } })} />
+                      </SidebarGroup>
+                    ) : null}
                     {selectedWidget.type === "IMAGE_BLOCK" ? (
                       <>
                         <label className="block">
@@ -2828,6 +3038,7 @@ export default function AdminHomepagePage() {
             ) : null}
           </div>
         </aside>
+        ) : null}
 
         <section className="ui-scrollbar h-[calc(100vh-4.75rem)] overflow-y-auto px-4 py-5 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-[92rem]">
@@ -2940,7 +3151,7 @@ export default function AdminHomepagePage() {
                                               sidebarSelection.columnId === column.id &&
                                               sidebarSelection.widgetId === widget.id;
                                             return (
-                                              <div key={widget.id}>
+                                              <div key={widget.id} className="relative">
                                                 <button
                                                   type="button"
                                                   aria-label="Insert widget here"
@@ -2949,7 +3160,7 @@ export default function AdminHomepagePage() {
                                                     event.stopPropagation();
                                                     openLibraryTarget(row.id, column.id, widgetIndex);
                                                   }}
-                                                  className="mx-auto mb-2 hidden h-7 w-7 items-center justify-center rounded-full bg-sky-600 text-white shadow-lg hover:bg-sky-700 group-hover/column:flex"
+                                                  className="absolute left-1/2 top-0 z-20 hidden h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-sky-600 text-white shadow-lg hover:bg-sky-700 group-hover/column:flex"
                                                 >
                                                   <PlusIcon />
                                                 </button>
@@ -2987,7 +3198,7 @@ export default function AdminHomepagePage() {
                                                   <span className="absolute left-3 top-0 z-10 hidden -translate-y-1/2 rounded-full bg-sky-600 px-2 py-1 text-white shadow-lg group-hover/widget:inline-flex">
                                                     <DragIcon />
                                                   </span>
-                                                  <HomepageRenderer content={{ rows: [{ ...createRow(1), id: row.id, columns: 1, columnsData: [{ id: column.id, widgets: [widget] }] }] }} viewport={canvasViewport} />
+                                                  <HomepageRenderer content={{ rows: [{ ...createRow(1), id: row.id, columns: 1, columnsData: [{ id: column.id, widgets: [widget] }] }] }} viewport={canvasViewport} mode="builder" />
                                                 </div>
                                               </div>
                                             );
@@ -3015,7 +3226,7 @@ export default function AdminHomepagePage() {
                                               event.stopPropagation();
                                               openLibraryTarget(row.id, column.id, column.widgets.length);
                                             }}
-                                            className="mx-auto hidden h-7 w-7 items-center justify-center rounded-full bg-sky-600 text-white shadow-lg hover:bg-sky-700 group-hover/column:flex"
+                                            className="absolute bottom-2 left-1/2 z-20 hidden h-7 w-7 -translate-x-1/2 items-center justify-center rounded-full bg-sky-600 text-white shadow-lg hover:bg-sky-700 group-hover/column:flex"
                                           >
                                             <PlusIcon />
                                           </button>
@@ -3102,12 +3313,14 @@ export default function AdminHomepagePage() {
           <div className="w-full max-w-lg rounded-[30px] bg-white p-6 shadow-2xl">
             <p className="section-kicker">Confirm delete</p>
             <h3 className="mt-2 text-2xl font-semibold text-slate-950">
-              {deleteTarget.kind === "row" ? "Delete this section?" : "Remove this widget?"}
+              {deleteTarget.kind === "row" ? "Delete this section?" : deleteTarget.kind === "column" ? "Delete this column?" : "Remove this widget?"}
             </h3>
             <p className="mt-3 text-sm leading-6 text-slate-600">
               {deleteTarget.kind === "row"
                 ? "This will remove the section and every column/widget inside it. You can still use Undo after deleting."
-                : "This will remove the selected widget from its column. You can still use Undo after deleting."}
+                : deleteTarget.kind === "column"
+                  ? "This will convert the section to one column and keep the remaining column content. You can still use Undo after deleting."
+                  : "This will remove the selected widget from its column. You can still use Undo after deleting."}
             </p>
             <div className="mt-6 flex flex-wrap justify-end gap-3">
               <button
@@ -3122,6 +3335,10 @@ export default function AdminHomepagePage() {
                 onClick={() => {
                   if (deleteTarget.kind === "row") {
                     removeRow(deleteTarget.rowId);
+                    return;
+                  }
+                  if (deleteTarget.kind === "column") {
+                    removeColumn(deleteTarget.rowId, deleteTarget.columnId);
                     return;
                   }
                   removeWidget(deleteTarget.rowId, deleteTarget.columnId, deleteTarget.widgetId);
@@ -3165,7 +3382,7 @@ export default function AdminHomepagePage() {
                   <PublicHomepageHeader previewViewport="desktop" interactive={false} />
                   <div className="mt-6">
                     {homepageQuery.data?.hasPublishedContent ? (
-                      <HomepageRenderer content={publishedPreview} viewport="desktop" />
+                      <HomepageRenderer content={publishedPreview} viewport="desktop" mode="builder" />
                     ) : (
                       <div className="surface-card flex min-h-[220px] items-center justify-center rounded-[28px] p-6 text-center text-sm text-slate-500">
                         Nothing is published yet.
@@ -3186,7 +3403,7 @@ export default function AdminHomepagePage() {
                 <div className="rounded-[32px] border border-slate-200 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.14),transparent_24%),radial-gradient(circle_at_88%_16%,rgba(16,185,129,0.12),transparent_18%),linear-gradient(180deg,#f8fafc_0%,#eff6ff_44%,#e2e8f0_100%)] p-4 sm:p-6">
                   <PublicHomepageHeader previewViewport="desktop" interactive={false} />
                   <div className="mt-6">
-                    <HomepageRenderer content={workingDraft} viewport="desktop" />
+                    <HomepageRenderer content={workingDraft} viewport="desktop" mode="builder" />
                   </div>
                   <div className="mt-6">
                     <SiteFooter interactive={false} previewViewport="desktop" />

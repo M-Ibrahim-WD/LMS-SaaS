@@ -4,7 +4,9 @@ import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
 import type {
   HomepageAlign,
+  HomepageBorder,
   HomepageBorderPreset,
+  HomepageBoxSpacing,
   HomepageButtonVariant,
   HomepageCard,
   HomepageCardBackgroundStyle,
@@ -29,8 +31,10 @@ import type {
 } from "../../lib/homepage/types";
 
 export type HomepageRendererViewport = "auto" | "desktop" | "tablet" | "mobile";
+type HomepageRendererMode = "public" | "builder";
 
 const colorValue = (value?: string) => (value?.trim() ? value.trim() : undefined);
+const transparentValue = (value?: string) => (value === "transparent" ? "transparent" : colorValue(value));
 
 function getTextTagClasses(viewport: HomepageRendererViewport): Record<HomepageTextTag, string> {
   const compact = viewport === "mobile" || viewport === "tablet";
@@ -107,6 +111,28 @@ function getPaddingClasses(padding: HomepagePaddingPreset | undefined) {
   return map[padding ?? "comfortable"];
 }
 
+function boxSpacingToStyle(box: HomepageBoxSpacing | undefined, prefix: "padding" | "margin"): CSSProperties {
+  if (!box) return {};
+  const unit = box.unit ?? "px";
+  return {
+    [`${prefix}Top`]: `${box.top ?? 0}${unit}`,
+    [`${prefix}Right`]: `${box.right ?? 0}${unit}`,
+    [`${prefix}Bottom`]: `${box.bottom ?? 0}${unit}`,
+    [`${prefix}Left`]: `${box.left ?? 0}${unit}`
+  } as CSSProperties;
+}
+
+function borderToStyle(border: HomepageBorder | undefined): CSSProperties {
+  if (!border?.enabled) return {};
+  const unit = border.unit ?? "px";
+  return {
+    borderWidth: `${border.width ?? 1}px`,
+    borderColor: colorValue(border.color) ?? "#cbd5e1",
+    borderStyle: border.style ?? "solid",
+    borderRadius: `${border.radius ?? 0}${unit}`
+  };
+}
+
 function getMarginClasses(margin: HomepageSizePreset | undefined) {
   const map: Record<HomepageSizePreset, string> = {
     none: "",
@@ -148,7 +174,13 @@ function getRowClasses(row: HomepageRow) {
     medium: "min-h-[360px]",
     large: "min-h-[520px]"
   };
-  return `${getRadiusClasses(row.radiusPreset)} ${getBorderClasses(row.borderPreset)} ${background[row.backgroundStyle ?? "plain"]} ${getPaddingClasses(row.paddingPreset)} ${getMarginClasses(row.marginPreset)} ${minHeight[row.minHeightPreset ?? "none"]}`;
+  const usesExplicitStyle = Boolean(row.spacing || row.background || row.border);
+  const radius = usesExplicitStyle ? "" : getRadiusClasses(row.radiusPreset);
+  const border = usesExplicitStyle ? "" : getBorderClasses(row.borderPreset);
+  const padding = row.spacing?.padding ? "" : getPaddingClasses(row.paddingPreset);
+  const margin = row.spacing?.margin ? "" : getMarginClasses(row.marginPreset);
+  const backgroundClass = row.background ? "" : background[row.backgroundStyle ?? "plain"];
+  return `${radius} ${border} ${backgroundClass} ${padding} ${margin} ${minHeight[row.minHeightPreset ?? "none"]}`;
 }
 
 function getCardClasses(card: HomepageCard) {
@@ -167,28 +199,43 @@ function getCardClasses(card: HomepageCard) {
     full: "w-full",
     narrow: "mx-auto max-w-2xl"
   };
-  return `${background[card.backgroundStyle ?? "surface"]} ${getRadiusClasses(card.radiusPreset)} ${getBorderClasses(card.borderPreset)} ${spacing[card.spacingPreset ?? "comfortable"]} ${getMarginClasses(card.marginPreset)} ${width[card.widthPreset ?? "auto"]}`;
+  const usesExplicitStyle = Boolean(card.spacing || card.background || card.border);
+  const backgroundClass = usesExplicitStyle ? "" : background[card.backgroundStyle ?? "surface"];
+  const radius = usesExplicitStyle ? "" : getRadiusClasses(card.radiusPreset);
+  const border = usesExplicitStyle ? "" : getBorderClasses(card.borderPreset);
+  const padding = card.spacing?.padding ? "" : spacing[card.spacingPreset ?? "comfortable"];
+  const margin = card.spacing?.margin ? "" : getMarginClasses(card.marginPreset);
+  return `${backgroundClass} ${radius} ${border} ${padding} ${margin} ${width[card.widthPreset ?? "auto"]}`;
 }
 
 function getCardStyle(card: HomepageCard): CSSProperties {
   return {
-    backgroundColor: colorValue(card.backgroundColor),
-    color: colorValue(card.textColor)
+    backgroundColor: transparentValue(card.background?.color ?? card.backgroundColor),
+    color: colorValue(card.textColor),
+    ...boxSpacingToStyle(card.spacing?.padding, "padding"),
+    ...boxSpacingToStyle(card.spacing?.margin, "margin"),
+    ...borderToStyle(card.border)
   };
 }
 
 function getRowStyle(row: HomepageRow): CSSProperties {
   return {
-    backgroundColor: colorValue(row.backgroundColor),
+    backgroundColor: transparentValue(row.background?.color ?? row.backgroundColor),
     backgroundImage: row.backgroundImage ? `url(${row.backgroundImage})` : undefined,
     backgroundSize: row.backgroundImage ? "cover" : undefined,
-    backgroundPosition: row.backgroundImage ? "center" : undefined
+    backgroundPosition: row.backgroundImage ? "center" : undefined,
+    ...boxSpacingToStyle(row.spacing?.padding, "padding"),
+    ...boxSpacingToStyle(row.spacing?.margin, "margin"),
+    ...borderToStyle(row.border)
   };
 }
 
 function getColumnStyle(column: HomepageColumn): CSSProperties {
   return {
-    backgroundColor: colorValue(column.backgroundColor)
+    backgroundColor: transparentValue(column.background?.color ?? column.backgroundColor),
+    ...boxSpacingToStyle(column.spacing?.padding, "padding"),
+    ...boxSpacingToStyle(column.spacing?.margin, "margin"),
+    ...borderToStyle(column.border)
   };
 }
 
@@ -236,6 +283,44 @@ function getButtonClasses(variant: HomepageButtonVariant | undefined) {
   if (variant === "secondary") return "border border-slate-300 bg-white text-slate-900 hover:bg-slate-50";
   if (variant === "ghost") return "border border-transparent bg-slate-100 text-slate-800 hover:bg-slate-200";
   return "bg-slate-950 text-white hover:bg-slate-800";
+}
+
+function getButtonStyle(card: HomepageCard): CSSProperties {
+  return {
+    backgroundColor: colorValue(card.buttonStyle?.backgroundColor),
+    color: colorValue(card.buttonStyle?.textColor),
+    "--homepage-button-hover-bg": colorValue(card.buttonStyle?.hoverBackgroundColor) ?? colorValue(card.buttonStyle?.backgroundColor),
+    "--homepage-button-hover-text": colorValue(card.buttonStyle?.hoverTextColor) ?? colorValue(card.buttonStyle?.textColor),
+    ...borderToStyle(card.buttonStyle?.border)
+  } as CSSProperties;
+}
+
+function ButtonLikeLink({
+  href,
+  className,
+  style,
+  mode,
+  children
+}: {
+  href: string;
+  className: string;
+  style?: CSSProperties;
+  mode: HomepageRendererMode;
+  children: ReactNode;
+}) {
+  if (mode === "builder") {
+    return (
+      <span aria-disabled="true" className={`${className} pointer-events-none select-none`} style={style}>
+        {children}
+      </span>
+    );
+  }
+
+  return (
+    <Link href={href} className={className} style={style}>
+      {children}
+    </Link>
+  );
 }
 
 function normalizeRowColumns(row: HomepageRow): HomepageColumn[] {
@@ -301,7 +386,7 @@ function renderBulletLines(card: HomepageCard) {
   );
 }
 
-function HomepageCardView({ card, viewport }: { card: HomepageCard; viewport: HomepageRendererViewport }) {
+function HomepageCardView({ card, viewport, mode }: { card: HomepageCard; viewport: HomepageRendererViewport; mode: HomepageRendererMode }) {
   const textTagClasses = getTextTagClasses(viewport);
   const cardClasses = getCardClasses(card);
   const cardStyle = getCardStyle(card);
@@ -342,9 +427,9 @@ function HomepageCardView({ card, viewport }: { card: HomepageCard; viewport: Ho
     return (
       <article className={cardClasses} style={cardStyle}>
         <AlignWrap align={card.textAlign}>
-          <Link href={card.href || "#"} className={`inline-flex min-h-[3rem] items-center justify-center rounded-full px-6 py-3 text-sm font-semibold transition ${getButtonClasses(card.variant)}`}>
+          <ButtonLikeLink href={card.href || "#"} mode={mode} style={getButtonStyle(card)} className={`inline-flex min-h-[3rem] items-center justify-center rounded-full px-6 py-3 text-sm font-semibold transition hover:bg-[var(--homepage-button-hover-bg)] hover:text-[var(--homepage-button-hover-text)] ${getButtonClasses(card.variant)}`}>
             {card.label}
-          </Link>
+          </ButtonLikeLink>
         </AlignWrap>
       </article>
     );
@@ -418,9 +503,9 @@ function HomepageCardView({ card, viewport }: { card: HomepageCard; viewport: Ho
         {card.title ? <h3 className="mt-3 text-2xl font-semibold text-slate-950">{card.title}</h3> : null}
         {card.body ? <p className="mt-4 text-base leading-8 text-slate-600">{card.body}</p> : null}
         {card.buttonLabel ? (
-          <Link href={card.buttonHref || "#"} className="mt-5 inline-flex rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white">
+          <ButtonLikeLink href={card.buttonHref || "#"} mode={mode} style={getButtonStyle(card)} className="mt-5 inline-flex rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white hover:bg-[var(--homepage-button-hover-bg)] hover:text-[var(--homepage-button-hover-text)]">
             {card.buttonLabel}
-          </Link>
+          </ButtonLikeLink>
         ) : null}
       </article>
     );
@@ -482,7 +567,15 @@ function HomepageCardView({ card, viewport }: { card: HomepageCard; viewport: Ho
   );
 }
 
-export function HomepageRenderer({ content, viewport = "auto" }: { content: HomepageContent; viewport?: HomepageRendererViewport }) {
+export function HomepageRenderer({
+  content,
+  viewport = "auto",
+  mode = "public"
+}: {
+  content: HomepageContent;
+  viewport?: HomepageRendererViewport;
+  mode?: HomepageRendererMode;
+}) {
   return (
     <div className="space-y-6">
       {content.rows.map((row) => {
@@ -496,21 +589,23 @@ export function HomepageRenderer({ content, viewport = "auto" }: { content: Home
           <section key={row.id} className={rowVisibilityClass}>
             <div className={getRowClasses(row)} style={getRowStyle(row)}>
               <div className={`grid ${getGapClasses(row.gapPreset)} ${desktopGrid ? "grid-cols-2" : "grid-cols-1"}`}>
-                {orderedColumns.map(({ column }) => (
-                  <div
-                    key={column.id}
-                    className={`flex min-w-0 flex-col ${getStackGapClasses(column.gapPreset)} ${getPaddingClasses(column.paddingPreset)} ${getColumnAlignClasses(column)}`}
-                    style={getColumnStyle(column)}
-                  >
-                    {column.widgets
-                      .filter((widget) => shouldDisplayOnViewport(widget.hidden, widget.visibility, viewport))
-                      .map((widget) => (
-                        <div key={widget.id} className={getResponsiveVisibilityClass(widget.visibility, viewport)}>
-                          <HomepageCardView card={widget} viewport={viewport} />
-                        </div>
-                      ))}
-                  </div>
-                ))}
+                {orderedColumns
+                  .filter(({ column }) => shouldDisplayOnViewport(column.hidden, column.visibility, viewport))
+                  .map(({ column }) => (
+                    <div
+                      key={column.id}
+                      className={`flex min-w-0 flex-col ${getStackGapClasses(column.gapPreset)} ${column.spacing?.padding ? "" : getPaddingClasses(column.paddingPreset)} ${getColumnAlignClasses(column)}`}
+                      style={getColumnStyle(column)}
+                    >
+                      {column.widgets
+                        .filter((widget) => shouldDisplayOnViewport(widget.hidden, widget.visibility, viewport))
+                        .map((widget) => (
+                          <div key={widget.id} className={getResponsiveVisibilityClass(widget.visibility, viewport)}>
+                            <HomepageCardView card={widget} viewport={viewport} mode={mode} />
+                          </div>
+                        ))}
+                    </div>
+                  ))}
               </div>
             </div>
           </section>
