@@ -584,6 +584,7 @@ export default function AdminHomepagePage() {
   const [hasPendingDraftChanges, setHasPendingDraftChanges] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [selection, setSelection] = useState<Selection>(null);
+  const [insertionTargetContainerId, setInsertionTargetContainerId] = useState<string | null>(null);
   const [sidebarMode, setSidebarMode] = useState<SidebarMode>("ELEMENTS");
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>("CONTENT");
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -625,7 +626,11 @@ export default function AdminHomepagePage() {
   const selectedElement = findElement(workingDraft.containers ?? [], selection?.id);
   const selectedContainer = selectedElement && isContainer(selectedElement) ? selectedElement : null;
   const selectedWidget = selectedElement && !isContainer(selectedElement) ? selectedElement : null;
-  const targetContainerId = selection?.kind === "container" ? selection.id : selection?.kind === "widget" ? getParentContainerId(workingDraft.containers ?? [], selection.id) : null;
+  const selectedTargetContainerId = selection?.kind === "container" ? selection.id : selection?.kind === "widget" ? getParentContainerId(workingDraft.containers ?? [], selection.id) : null;
+  const targetContainerId = insertionTargetContainerId ?? selectedTargetContainerId;
+  const targetContainer = findElement(workingDraft.containers ?? [], targetContainerId ?? undefined);
+  const canInsertIntoTarget = Boolean(targetContainerId && targetContainer && isContainer(targetContainer));
+  const targetContainerLabel = targetContainer && isContainer(targetContainer) ? targetContainer.builderLabel || "Container" : "Container";
 
   const filteredWidgets = useMemo(() => {
     const query = widgetSearch.trim().toLowerCase();
@@ -741,6 +746,7 @@ export default function AdminHomepagePage() {
     const next = addElementToContainer(workingDraft.containers ?? [], targetContainerId, element) as HomepageContainer[];
     updateContainers(next);
     setSelection({ kind: isContainer(element) ? "container" : "widget", id: element.id });
+    setInsertionTargetContainerId(null);
     setSidebarTab("CONTENT");
   }
 
@@ -748,6 +754,7 @@ export default function AdminHomepagePage() {
     const container = createContainer();
     updateContainers([...(workingDraft.containers ?? []), container]);
     setSelection({ kind: "container", id: container.id });
+    setInsertionTargetContainerId(null);
     setSidebarTab("ADVANCED");
   }
 
@@ -765,7 +772,16 @@ export default function AdminHomepagePage() {
     if (!target) return;
     updateContainers(removeElementList(workingDraft.containers ?? [], target.id) as HomepageContainer[]);
     setSelection(null);
+    setInsertionTargetContainerId(null);
     setDeleteTarget(null);
+  }
+
+  function openElementsForContainer(containerId: string) {
+    setInsertionTargetContainerId(containerId);
+    setSelection(null);
+    setSidebarMode("ELEMENTS");
+    setSidebarOpen(true);
+    setMessage(null);
   }
 
   function undo() {
@@ -871,13 +887,23 @@ export default function AdminHomepagePage() {
           <span className="pointer-events-none absolute left-2 top-0 z-20 hidden -translate-y-1/2 rounded-full bg-teal-600 px-2 py-1 text-[0.62rem] font-semibold uppercase tracking-[0.12em] text-white shadow group-hover/container:inline-flex">
             Container
           </span>
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              openElementsForContainer(element.id);
+            }}
+            className="absolute right-2 top-2 z-20 hidden h-8 w-8 items-center justify-center rounded-full bg-slate-950 text-white shadow-lg transition hover:scale-105 group-hover/container:inline-flex"
+            title="Add inside container"
+          >
+            <PlusIcon />
+          </button>
           {element.children.length ? element.children.map(renderCanvasElement) : (
             <button
               type="button"
               onClick={(event) => {
                 event.stopPropagation();
-                setSelection({ kind: "container", id: element.id });
-                setSidebarMode("ELEMENTS");
+                openElementsForContainer(element.id);
               }}
               className="flex min-h-24 w-full items-center justify-center rounded-2xl border border-dashed border-slate-300 text-slate-400 hover:border-sky-400 hover:text-sky-600"
               title="Add element"
@@ -923,7 +949,7 @@ export default function AdminHomepagePage() {
             <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Navigator label</span>
             <input value={selectedContainer.builderLabel ?? ""} onChange={(event) => updateContainer(selectedContainer.id, { builderLabel: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" />
           </label>
-          <button type="button" onClick={() => setSidebarMode("ELEMENTS")} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white">
+          <button type="button" onClick={() => openElementsForContainer(selectedContainer.id)} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white">
             <PlusIcon />
             Add inside this container
           </button>
@@ -1286,19 +1312,27 @@ export default function AdminHomepagePage() {
                 </div>
                 {sidebarMode === "ELEMENTS" ? (
                   <div className="mt-4 space-y-4">
+                    {canInsertIntoTarget ? (
+                      <div className="rounded-2xl border border-teal-100 bg-teal-50 px-3 py-2 text-xs leading-5 text-teal-900">
+                        Adding inside: <span className="font-semibold">{targetContainerLabel}</span>
+                        <button type="button" onClick={() => setInsertionTargetContainerId(null)} className="ml-2 font-semibold text-teal-700 underline">
+                          clear
+                        </button>
+                      </div>
+                    ) : null}
                     <button type="button" onClick={() => addElement(createContainer())} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white">
                       <BoxIcon />
-                      Container
+                      {canInsertIntoTarget ? "Container inside target" : "Root container"}
                     </button>
                     <input value={widgetSearch} onChange={(event) => setWidgetSearch(event.target.value)} placeholder="Search widgets" className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm" />
-                    {!targetContainerId ? (
+                    {!canInsertIntoTarget ? (
                       <p className="rounded-2xl bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
                         Select a container in the canvas or Navigator before adding widgets.
                       </p>
                     ) : null}
                     <div className="grid grid-cols-2 gap-3">
                       {filteredWidgets.map((item) => (
-                        <button key={item.type} type="button" disabled={!targetContainerId} onClick={() => addElement(createWidget(item.type))} className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white p-3 text-center text-xs font-semibold text-slate-800 hover:border-sky-300 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-45">
+                        <button key={item.type} type="button" disabled={!canInsertIntoTarget} onClick={() => addElement(createWidget(item.type))} className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white p-3 text-center text-xs font-semibold text-slate-800 hover:border-sky-300 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-45">
                           {getWidgetIcon(item.type)}
                           {item.title}
                         </button>
@@ -1321,7 +1355,7 @@ export default function AdminHomepagePage() {
                 <div className="mt-4 rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
                   {sidebarTab === "CONTENT" ? renderContentTab() : sidebarTab === "STYLE" ? renderStyleTab() : renderAdvancedTab()}
                 </div>
-                <button type="button" onClick={() => { setSelection(null); setSidebarMode("ELEMENTS"); }} className="mt-4 w-full rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">
+                <button type="button" onClick={() => { setSelection(null); setInsertionTargetContainerId(null); setSidebarMode("ELEMENTS"); }} className="mt-4 w-full rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">
                   Back to elements
                 </button>
               </>
