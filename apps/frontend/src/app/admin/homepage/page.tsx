@@ -20,6 +20,7 @@ import type {
   HomepageBorder,
   HomepageBorderStyle,
   HomepageBoxSpacing,
+  HomepageButtonVariant,
   HomepageButtonStyle,
   HomepageCard,
   HomepageCardType,
@@ -40,8 +41,10 @@ import type {
   HomepageLengthValue,
   HomepageResponsiveVisibility,
   HomepageRow,
+  HomepageSizePreset,
   HomepageStyleUnit,
   HomepageTextTag,
+  HomepageTypography,
   HomepageVideoAspectRatio
 } from "../../../lib/homepage/types";
 
@@ -53,9 +56,11 @@ type DraftResponse = {
 };
 
 type SidebarTab = "CONTENT" | "STYLE" | "ADVANCED";
-type SidebarMode = "ELEMENTS" | "NAVIGATOR";
 type Selection = { kind: "container"; id: string } | { kind: "widget"; id: string } | null;
 type DeleteTarget = Selection;
+type CanvasInsertionPoint = { siblingId: string; position: "before" | "after"; parentContainerId: string | null } | null;
+type HomepageContentSummary = { containers: number; widgets: number; hidden: number };
+type NavigatorDragState = { startX: number; startY: number; originX: number; originY: number } | null;
 
 type WidgetCatalogItem = {
   type: HomepageCardType;
@@ -99,8 +104,16 @@ function BoxIcon() {
   return <SvgIcon><rect x="4" y="5" width="16" height="14" rx="2" /><path strokeLinecap="round" d="M8 9h8M8 13h8" /></SvgIcon>;
 }
 
+function ContainerIcon() {
+  return <SvgIcon><rect x="3.5" y="5" width="17" height="14" rx="2.5" /><path strokeLinecap="round" d="M8 5v14M16 5v14" /></SvgIcon>;
+}
+
 function TextIcon() {
   return <SvgIcon><path strokeLinecap="round" d="M5 7h14M5 12h14M5 17h10" /></SvgIcon>;
+}
+
+function HeadingIcon() {
+  return <SvgIcon><path strokeLinecap="round" d="M5 6v12M19 6v12M5 12h14" /><path strokeLinecap="round" d="M12 18h6" /></SvgIcon>;
 }
 
 function ButtonIcon() {
@@ -115,6 +128,58 @@ function StarIcon() {
   return <SvgIcon><path strokeLinecap="round" strokeLinejoin="round" d="m12 3 2.8 5.67 6.26.91-4.53 4.42 1.07 6.25L12 17.27l-5.6 2.95 1.07-6.25L2.94 9.58l6.26-.91L12 3Z" /></SvgIcon>;
 }
 
+function PlayIcon() {
+  return <SvgIcon><rect x="4" y="5" width="16" height="14" rx="2" /><path fill="currentColor" stroke="none" d="m10 9 5 3-5 3V9Z" /></SvgIcon>;
+}
+
+function SparkIcon() {
+  return <SvgIcon><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v4M12 17v4M4.2 4.2 7 7M17 17l2.8 2.8M3 12h4M17 12h4M4.2 19.8 7 17M17 7l2.8-2.8" /></SvgIcon>;
+}
+
+function SpacerIcon() {
+  return <SvgIcon><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16M8 8l4-4 4 4M8 16l4 4 4-4" /></SvgIcon>;
+}
+
+function DividerIcon() {
+  return <SvgIcon><path strokeLinecap="round" d="M4 12h16" /><path strokeLinecap="round" d="M7 8h10M7 16h10" opacity=".55" /></SvgIcon>;
+}
+
+function ListIcon() {
+  return <SvgIcon><path strokeLinecap="round" d="M9 7h11M9 12h11M9 17h11" /><circle cx="5" cy="7" r="1" fill="currentColor" stroke="none" /><circle cx="5" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="5" cy="17" r="1" fill="currentColor" stroke="none" /></SvgIcon>;
+}
+
+function CardIcon() {
+  return <SvgIcon><rect x="4" y="5" width="16" height="14" rx="2" /><path strokeLinecap="round" d="M7 9h10M7 13h6" /></SvgIcon>;
+}
+
+function BookIcon() {
+  return <SvgIcon><path strokeLinecap="round" strokeLinejoin="round" d="M5 5.5A2.5 2.5 0 0 1 7.5 3H20v16H7.5A2.5 2.5 0 0 0 5 21V5.5Z" /><path strokeLinecap="round" d="M9 7h7M9 11h6" /></SvgIcon>;
+}
+
+function UsersIcon() {
+  return <SvgIcon><circle cx="9" cy="8" r="3" /><path strokeLinecap="round" strokeLinejoin="round" d="M3.5 19a5.5 5.5 0 0 1 11 0" /><path strokeLinecap="round" d="M16 11a2.5 2.5 0 0 0 0-5M18 18a4 4 0 0 0-3-3.8" /></SvgIcon>;
+}
+
+function InfoIcon() {
+  return <SvgIcon><circle cx="12" cy="12" r="9" /><path strokeLinecap="round" d="M12 11v5M12 8h.01" /></SvgIcon>;
+}
+
+function CheckIcon() {
+  return <SvgIcon><path strokeLinecap="round" strokeLinejoin="round" d="m5 13 4 4L19 7" /><circle cx="12" cy="12" r="9" opacity=".35" /></SvgIcon>;
+}
+
+function QuestionIcon() {
+  return <SvgIcon><circle cx="12" cy="12" r="9" /><path strokeLinecap="round" strokeLinejoin="round" d="M9.5 9a2.7 2.7 0 1 1 4.1 2.3c-.9.6-1.6 1.1-1.6 2.2" /><path strokeLinecap="round" d="M12 17h.01" /></SvgIcon>;
+}
+
+function QuoteIcon() {
+  return <SvgIcon><path strokeLinecap="round" strokeLinejoin="round" d="M8 8H5v5h3v3c0 1.7-1 3-3 3M19 8h-3v5h3v3c0 1.7-1 3-3 3" /></SvgIcon>;
+}
+
+function ChartIcon() {
+  return <SvgIcon><path strokeLinecap="round" d="M5 19V9M12 19V5M19 19v-7" /><path strokeLinecap="round" d="M3 19h18" /></SvgIcon>;
+}
+
 function EyeIcon() {
   return <SvgIcon><path strokeLinecap="round" strokeLinejoin="round" d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" /><circle cx="12" cy="12" r="2.5" /></SvgIcon>;
 }
@@ -127,6 +192,10 @@ function CopyIcon() {
   return <SvgIcon><rect x="8" y="8" width="10" height="10" rx="2" /><path strokeLinecap="round" strokeLinejoin="round" d="M6 14H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v1" /></SvgIcon>;
 }
 
+function ClipboardIcon() {
+  return <SvgIcon><path strokeLinecap="round" strokeLinejoin="round" d="M9 4h6l1 2h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2l1-2Z" /><path strokeLinecap="round" d="M9 10h6M9 14h6" /></SvgIcon>;
+}
+
 function TrashIcon() {
   return <SvgIcon><path strokeLinecap="round" d="M4 7h16M10 11v6M14 11v6" /><path strokeLinecap="round" strokeLinejoin="round" d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" /></SvgIcon>;
 }
@@ -137,6 +206,18 @@ function UndoIcon() {
 
 function RedoIcon() {
   return <SvgIcon><path strokeLinecap="round" strokeLinejoin="round" d="m15 14 5-5-5-5M20 9H10a6 6 0 0 0 0 12h3" /></SvgIcon>;
+}
+
+function ChevronIcon() {
+  return <SvgIcon><path strokeLinecap="round" strokeLinejoin="round" d="m8 10 4 4 4-4" /></SvgIcon>;
+}
+
+function UpIcon() {
+  return <SvgIcon><path strokeLinecap="round" strokeLinejoin="round" d="m7 14 5-5 5 5" /></SvgIcon>;
+}
+
+function DownIcon() {
+  return <SvgIcon><path strokeLinecap="round" strokeLinejoin="round" d="m7 10 5 5 5-5" /></SvgIcon>;
 }
 
 function isContainer(element: HomepageElement): element is HomepageContainer {
@@ -159,6 +240,50 @@ function createVisibility(): HomepageResponsiveVisibility {
   return { desktop: true, tablet: true, mobile: true };
 }
 
+function summarizeElements(elements: HomepageElement[]): HomepageContentSummary {
+  return elements.reduce(
+    (summary: HomepageContentSummary, element): HomepageContentSummary => {
+      const hidden = element.hidden ? 1 : 0;
+      if (isContainer(element)) {
+        const childSummary = summarizeElements(element.children);
+        return {
+          containers: summary.containers + 1 + childSummary.containers,
+          widgets: summary.widgets + childSummary.widgets,
+          hidden: summary.hidden + hidden + childSummary.hidden
+        };
+      }
+      return {
+        containers: summary.containers,
+        widgets: summary.widgets + 1,
+        hidden: summary.hidden + hidden
+      };
+    },
+    { containers: 0, widgets: 0, hidden: 0 }
+  );
+}
+
+function summarizeContent(content: HomepageContent) {
+  const containerSummary = summarizeElements(content.containers ?? []);
+  const legacyWidgetCount = content.rows.reduce((count, row) => count + (row.columnsData?.reduce((columnCount, column) => columnCount + column.widgets.length, 0) ?? row.slots?.filter(Boolean).length ?? 0), 0);
+  return {
+    containers: containerSummary.containers || content.rows.length,
+    widgets: containerSummary.widgets || legacyWidgetCount,
+    hidden: containerSummary.hidden
+  };
+}
+
+function hasHomepageContent(content: HomepageContent) {
+  const summary = summarizeContent(content);
+  return summary.containers > 0 || summary.widgets > 0;
+}
+
+function formatBuilderTimestamp(value?: string | null) {
+  if (!value) return "Not saved yet";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Saved draft";
+  return date.toLocaleString();
+}
+
 function createButtonStyle(): HomepageButtonStyle {
   return {
     backgroundColor: "#020617",
@@ -169,23 +294,36 @@ function createButtonStyle(): HomepageButtonStyle {
   };
 }
 
-function createContainer(children: HomepageElement[] = []): HomepageContainer {
+function createContainer(
+  children: HomepageElement[] = [],
+  overrides: Partial<Omit<HomepageContainer, "id" | "type" | "children">> = {}
+): HomepageContainer {
   return {
     id: createId("container"),
     type: "CONTAINER",
     builderLabel: "Container",
-    direction: "column",
-    wrap: "wrap",
-    justify: "start",
-    align: "stretch",
-    gap: 10,
-    visibility: createVisibility(),
-    spacing: { padding: createBox(10), margin: createBox(10) },
-    background: { color: "transparent" },
-    border: createNoBorder(),
-    width: { value: 100, unit: "%" },
+    direction: overrides.direction ?? "column",
+    wrap: overrides.wrap ?? "wrap",
+    justify: overrides.justify ?? "start",
+    align: overrides.align ?? "stretch",
+    gap: overrides.gap ?? 10,
+    visibility: overrides.visibility ?? createVisibility(),
+    spacing: overrides.spacing ?? { padding: createBox(10), margin: createBox(10) },
+    background: overrides.background ?? { color: "transparent" },
+    backgroundImage: overrides.backgroundImage,
+    border: overrides.border ?? createNoBorder(),
+    width: overrides.width ?? { value: 100, unit: "%" },
+    maxWidth: overrides.maxWidth,
+    minHeight: overrides.minHeight,
+    height: overrides.height,
+    responsive: overrides.responsive,
+    hidden: overrides.hidden,
     children
   };
+}
+
+function getEvenContainerWidth(count: number): HomepageLengthValue {
+  return { value: Math.round((100 / count) * 100) / 100, unit: "%" };
 }
 
 function createWidget(type: HomepageCardType): HomepageCard {
@@ -224,6 +362,40 @@ function createWidget(type: HomepageCardType): HomepageCard {
   if (type === "CARD") return { ...base, type, title: "Card", subtitle: "Subtitle", body: "Card content.", buttonLabel: "", buttonHref: "" };
   if (type === "COURSE_LIST") return { ...base, type, title: "Course List", items: [] };
   if (type === "INSTRUCTOR_LIST") return { ...base, type, title: "Instructor List", instructors: [] };
+  if (type === "TESTIMONIAL") {
+    return {
+      ...base,
+      type,
+      title: "Testimonial",
+      quote: "This learning experience made everything clearer and easier to follow.",
+      authorName: "Student name",
+      authorRole: "Course student",
+      avatarUrl: ""
+    };
+  }
+  if (type === "STATS") {
+    return {
+      ...base,
+      type,
+      title: "Stats",
+      stats: [
+        { id: createId("stat"), value: "120+", label: "Students", description: "Active learners" },
+        { id: createId("stat"), value: "24", label: "Courses", description: "Published programs" },
+        { id: createId("stat"), value: "98%", label: "Satisfaction", description: "Positive feedback" }
+      ]
+    };
+  }
+  if (type === "FAQ") {
+    return {
+      ...base,
+      type,
+      title: "FAQ",
+      faqs: [
+        { id: createId("faq"), question: "How do I start?", answer: "Create an account, choose a course, and begin learning at your own pace." },
+        { id: createId("faq"), question: "Can instructors publish courses?", answer: "Yes. Instructors can build and manage their own courses from the platform." }
+      ]
+    };
+  }
   if (type === "FEATURED_INSTRUCTORS") return { ...base, type, title: "Featured Instructors", instructors: [] };
   return {
     ...base,
@@ -320,6 +492,51 @@ function addElementToContainer(elements: HomepageElement[], containerId: string 
   });
 }
 
+function addElementsToContainer(elements: HomepageElement[], containerId: string, children: HomepageElement[]): HomepageElement[] {
+  return elements.map((element) => {
+    if (isContainer(element) && element.id === containerId) return { ...element, children: [...element.children, ...children] };
+    if (isContainer(element)) return { ...element, children: addElementsToContainer(element.children, containerId, children) };
+    return element;
+  });
+}
+
+function insertElementNearSibling(
+  elements: HomepageElement[],
+  siblingId: string,
+  position: "before" | "after",
+  child: HomepageElement
+): HomepageElement[] {
+  const index = elements.findIndex((element) => element.id === siblingId);
+  if (index >= 0) {
+    const next = [...elements];
+    next.splice(position === "before" ? index : index + 1, 0, child);
+    return next;
+  }
+
+  return elements.map((element) => (
+    isContainer(element)
+      ? { ...element, children: insertElementNearSibling(element.children, siblingId, position, child) }
+      : element
+  ));
+}
+
+function moveElementList(elements: HomepageElement[], id: string, direction: -1 | 1): HomepageElement[] {
+  const index = elements.findIndex((element) => element.id === id);
+  if (index >= 0) {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= elements.length) return elements;
+    const next = [...elements];
+    [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
+    return next;
+  }
+
+  return elements.map((element) => (
+    isContainer(element)
+      ? { ...element, children: moveElementList(element.children, id, direction) }
+      : element
+  ));
+}
+
 function findElement(elements: HomepageElement[], id: string | undefined): HomepageElement | null {
   if (!id) return null;
   for (const element of elements) {
@@ -344,11 +561,29 @@ function getParentContainerId(elements: HomepageElement[], id: string): string |
 }
 
 function getWidgetIcon(type: HomepageCardType) {
-  if (type === "HEADING") return <TextIcon />;
-  if (type === "TEXT" || type === "LIST") return <TextIcon />;
-  if (type === "BUTTON") return <ButtonIcon />;
-  if (type === "IMAGE_BLOCK") return <ImageIcon />;
-  return <StarIcon />;
+  const icons: Record<HomepageCardType, React.ReactNode> = {
+    ABOUT_US: <UsersIcon />,
+    WHY_US: <CheckIcon />,
+    ABOUT_SITE: <InfoIcon />,
+    TEXT_MEDIA: <ContainerIcon />,
+    HEADING: <HeadingIcon />,
+    TEXT: <TextIcon />,
+    BUTTON: <ButtonIcon />,
+    IMAGE_BLOCK: <ImageIcon />,
+    VIDEO: <PlayIcon />,
+    ICON: <SparkIcon />,
+    FEATURED_INSTRUCTORS: <StarIcon />,
+    SPACER: <SpacerIcon />,
+    DIVIDER: <DividerIcon />,
+    LIST: <ListIcon />,
+    CARD: <CardIcon />,
+    COURSE_LIST: <BookIcon />,
+    INSTRUCTOR_LIST: <UsersIcon />,
+    TESTIMONIAL: <QuoteIcon />,
+    STATS: <ChartIcon />,
+    FAQ: <QuestionIcon />
+  };
+  return icons[type];
 }
 
 function formatLabel(value: string) {
@@ -496,6 +731,80 @@ function BorderControl({ value, onChange }: { value?: HomepageBorder; onChange: 
   );
 }
 
+function TypographyControl({
+  value,
+  onChange
+}: {
+  value?: HomepageTypography;
+  onChange: (value: HomepageTypography) => void;
+}) {
+  const typography = value ?? {};
+  return (
+    <div className="space-y-3 rounded-2xl border border-slate-200 p-3">
+      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Typography</p>
+      <LengthControl
+        label="Font size"
+        value={typography.fontSize}
+        onChange={(fontSize) => onChange({ ...typography, fontSize })}
+      />
+      <div className="grid grid-cols-2 gap-2">
+        <label>
+          <span className="mb-1 block text-xs text-slate-500">Weight</span>
+          <select
+            value={typography.fontWeight ?? "600"}
+            onChange={(event) => onChange({ ...typography, fontWeight: event.target.value as HomepageTypography["fontWeight"] })}
+            className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+          >
+            <option value="300">Light</option>
+            <option value="400">Regular</option>
+            <option value="500">Medium</option>
+            <option value="600">Semi bold</option>
+            <option value="700">Bold</option>
+            <option value="800">Extra bold</option>
+          </select>
+        </label>
+        <label>
+          <span className="mb-1 block text-xs text-slate-500">Transform</span>
+          <select
+            value={typography.textTransform ?? "none"}
+            onChange={(event) => onChange({ ...typography, textTransform: event.target.value as HomepageTypography["textTransform"] })}
+            className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+          >
+            <option value="none">None</option>
+            <option value="uppercase">Uppercase</option>
+            <option value="lowercase">Lowercase</option>
+            <option value="capitalize">Capitalize</option>
+          </select>
+        </label>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <label>
+          <span className="mb-1 block text-xs text-slate-500">Line height</span>
+          <input
+            type="number"
+            step="0.1"
+            value={typography.lineHeight ?? ""}
+            onChange={(event) => onChange({ ...typography, lineHeight: event.target.value === "" ? undefined : Number(event.target.value) })}
+            className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+            placeholder="Auto"
+          />
+        </label>
+        <label>
+          <span className="mb-1 block text-xs text-slate-500">Letter spacing</span>
+          <input
+            type="number"
+            step="0.1"
+            value={typography.letterSpacing ?? ""}
+            onChange={(event) => onChange({ ...typography, letterSpacing: event.target.value === "" ? undefined : Number(event.target.value) })}
+            className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+            placeholder="0"
+          />
+        </label>
+      </div>
+    </div>
+  );
+}
+
 function IconButton({
   label,
   children,
@@ -511,11 +820,62 @@ function IconButton({
   tone?: "default" | "danger" | "success";
   disabled?: boolean;
 }) {
-  const toneClass = tone === "danger" ? "text-rose-600 hover:bg-rose-50" : tone === "success" ? "text-emerald-700 hover:bg-emerald-50" : "text-slate-700 hover:bg-slate-100";
+  const toneClass = tone === "danger" ? "border-rose-100 bg-white text-rose-600 hover:bg-rose-50" : tone === "success" ? "border-emerald-100 bg-white text-emerald-700 hover:bg-emerald-50" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-100";
+  const activeClass = "border-teal-500 bg-teal-600 text-white shadow-sm ring-2 ring-teal-100 hover:bg-teal-700";
   return (
-    <button type="button" aria-label={label} title={label} disabled={disabled} onClick={onClick} className={`inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white transition disabled:opacity-40 ${active ? "bg-slate-950 text-white" : toneClass}`}>
+    <button type="button" aria-label={label} title={label} disabled={disabled} onClick={onClick} className={`inline-flex h-9 w-9 items-center justify-center rounded-full border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 disabled:opacity-40 ${active ? activeClass : toneClass}`}>
       {children}
     </button>
+  );
+}
+
+function DeviceVisibilityButton({
+  label,
+  visible,
+  onClick,
+  children
+}: {
+  label: string;
+  visible: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={`${label}: ${visible ? "visible" : "hidden"}`}
+      title={`${label}: ${visible ? "visible" : "hidden"}`}
+      onClick={onClick}
+      className={`inline-flex h-10 w-10 items-center justify-center rounded-full border-2 transition hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 ${
+        visible
+          ? "border-teal-500 bg-teal-600 text-white shadow-sm ring-2 ring-teal-100"
+          : "border-slate-300 bg-slate-100 text-slate-500 opacity-90"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function EditorSection({
+  title,
+  children,
+  defaultOpen = true
+}: {
+  title: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
+  return (
+    <details open={defaultOpen} className="group rounded-[18px] border border-slate-200 bg-white shadow-sm">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-slate-600">
+        {title}
+        <span className="text-slate-400 transition group-open:rotate-180">⌄</span>
+      </summary>
+      <div className="border-t border-slate-100 p-3">
+        {children}
+      </div>
+    </details>
   );
 }
 
@@ -532,9 +892,9 @@ function VisibilityControls({
     <div>
       <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Device visibility</p>
       <div className="flex gap-2">
-        <IconButton label="Desktop" active={current.desktop ?? true} onClick={() => toggle("desktop")}><MonitorIcon /></IconButton>
-        <IconButton label="Tablet" active={current.tablet ?? true} onClick={() => toggle("tablet")}><TabletIcon /></IconButton>
-        <IconButton label="Mobile" active={current.mobile ?? true} onClick={() => toggle("mobile")}><PhoneIcon /></IconButton>
+        <DeviceVisibilityButton label="Desktop" visible={current.desktop ?? true} onClick={() => toggle("desktop")}><MonitorIcon /></DeviceVisibilityButton>
+        <DeviceVisibilityButton label="Tablet" visible={current.tablet ?? true} onClick={() => toggle("tablet")}><TabletIcon /></DeviceVisibilityButton>
+        <DeviceVisibilityButton label="Mobile" visible={current.mobile ?? true} onClick={() => toggle("mobile")}><PhoneIcon /></DeviceVisibilityButton>
       </div>
     </div>
   );
@@ -557,8 +917,23 @@ const widgetCatalog: WidgetCatalogItem[] = [
   { type: "CARD", title: "Card", description: "Text card" },
   { type: "COURSE_LIST", title: "Courses", description: "Course list" },
   { type: "INSTRUCTOR_LIST", title: "Instructors", description: "Instructor list" },
+  { type: "TESTIMONIAL", title: "Testimonial", description: "Quote and author" },
+  { type: "STATS", title: "Stats", description: "Counters and metrics" },
+  { type: "FAQ", title: "FAQ", description: "Questions and answers" },
   { type: "FEATURED_INSTRUCTORS", title: "Featured", description: "Featured instructors" }
 ];
+
+const iconSymbolOptions = ["*", "✓", "★", "→", "↗", "∞", "⚡", "●", "◆", "▲", "1", "A"];
+const contentSectionWidgetTypes: HomepageCardType[] = ["ABOUT_US", "WHY_US", "ABOUT_SITE", "TEXT_MEDIA"];
+
+function getVideoUrlStatus(value: string) {
+  const url = value.trim();
+  if (!url) return { tone: "error" as const, label: "Add a video URL." };
+  if (url.includes("youtube.com/watch?v=") || url.includes("youtu.be/")) return { tone: "success" as const, label: "YouTube video detected." };
+  if (url.includes("vimeo.com/")) return { tone: "success" as const, label: "Vimeo video detected." };
+  if (/^https?:\/\//i.test(url)) return { tone: "warning" as const, label: "Direct embed URL. Make sure this provider allows iframe embeds." };
+  return { tone: "error" as const, label: "Use a full URL that starts with http:// or https://." };
+}
 
 function DesktopOnlyMessage() {
   return (
@@ -585,9 +960,17 @@ export default function AdminHomepagePage() {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [selection, setSelection] = useState<Selection>(null);
   const [insertionTargetContainerId, setInsertionTargetContainerId] = useState<string | null>(null);
-  const [sidebarMode, setSidebarMode] = useState<SidebarMode>("ELEMENTS");
+  const [canvasInsertionPoint, setCanvasInsertionPoint] = useState<CanvasInsertionPoint>(null);
+  const [collapsedNavigatorIds, setCollapsedNavigatorIds] = useState<Set<string>>(new Set());
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>("CONTENT");
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [navigatorOpen, setNavigatorOpen] = useState(false);
+  const [navigatorPosition, setNavigatorPosition] = useState({ x: 24, y: 96 });
+  const [navigatorSize, setNavigatorSize] = useState({ width: 360, height: 520 });
+  const [navigatorDrag, setNavigatorDrag] = useState<NavigatorDragState>(null);
+  const [navigatorEditingId, setNavigatorEditingId] = useState<string | null>(null);
+  const [navigatorEditingValue, setNavigatorEditingValue] = useState("");
+  const [hoveredCanvasElementId, setHoveredCanvasElementId] = useState<string | null>(null);
   const [canvasViewport, setCanvasViewport] = useState<HomepageRendererViewport>("desktop");
   const [widgetSearch, setWidgetSearch] = useState("");
   const [showPreviewHeader, setShowPreviewHeader] = useState(true);
@@ -595,6 +978,7 @@ export default function AdminHomepagePage() {
   const [publishConfirmOpen, setPublishConfirmOpen] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
+  const [copiedElement, setCopiedElement] = useState<HomepageElement | null>(null);
   const [homepageImageFile, setHomepageImageFile] = useState<File | null>(null);
   const [featuredSelection, setFeaturedSelection] = useState<Record<string, string[]>>({});
 
@@ -623,14 +1007,29 @@ export default function AdminHomepagePage() {
 
   const workingDraft = draft ?? savedDraft ?? cloneContent(homepageQuery.data?.draftContent ?? { rows: [], containers: [] });
   const publishedPreview = cloneContent(homepageQuery.data?.publishedContent ?? { rows: [], containers: [] });
+  const workingDraftSummary = summarizeContent(workingDraft);
+  const savedDraftSummary = summarizeContent(savedDraft ?? workingDraft);
+  const publishedSummary = summarizeContent(publishedPreview);
+  const publishPreviewContent = savedDraft ?? workingDraft;
+  const canOpenPublishReview = Boolean(savedDraft && !hasPendingDraftChanges && hasHomepageContent(savedDraft));
+  const draftSaveLabel = savedDraft?.updatedAt ? formatBuilderTimestamp(savedDraft.updatedAt) : "Not saved yet";
   const selectedElement = findElement(workingDraft.containers ?? [], selection?.id);
   const selectedContainer = selectedElement && isContainer(selectedElement) ? selectedElement : null;
   const selectedWidget = selectedElement && !isContainer(selectedElement) ? selectedElement : null;
   const selectedTargetContainerId = selection?.kind === "container" ? selection.id : selection?.kind === "widget" ? getParentContainerId(workingDraft.containers ?? [], selection.id) : null;
-  const targetContainerId = insertionTargetContainerId ?? selectedTargetContainerId;
+  const targetContainerId = canvasInsertionPoint ? canvasInsertionPoint.parentContainerId : insertionTargetContainerId ?? selectedTargetContainerId;
   const targetContainer = findElement(workingDraft.containers ?? [], targetContainerId ?? undefined);
   const canInsertIntoTarget = Boolean(targetContainerId && targetContainer && isContainer(targetContainer));
-  const targetContainerLabel = targetContainer && isContainer(targetContainer) ? targetContainer.builderLabel || "Container" : "Container";
+  const targetContainerLabel = canvasInsertionPoint
+    ? targetContainer && isContainer(targetContainer) ? targetContainer.builderLabel || "Container" : "Page root"
+    : targetContainer && isContainer(targetContainer) ? targetContainer.builderLabel || "Container" : "Container";
+  const hoveredParentContainerId = hoveredCanvasElementId ? getParentContainerId(workingDraft.containers ?? [], hoveredCanvasElementId) : null;
+  const isDeviceHiddenInCanvas = (element: HomepageElement) => (
+    canvasViewport !== "auto" && element.visibility?.[canvasViewport] === false
+  );
+  const shouldShowCanvasChrome = (elementId: string) => (
+    selection?.id === elementId || hoveredCanvasElementId === elementId || hoveredParentContainerId === elementId
+  );
 
   const filteredWidgets = useMemo(() => {
     const query = widgetSearch.trim().toLowerCase();
@@ -743,11 +1142,39 @@ export default function AdminHomepagePage() {
       return;
     }
 
-    const next = addElementToContainer(workingDraft.containers ?? [], targetContainerId, element) as HomepageContainer[];
+    const next = canvasInsertionPoint
+      ? insertElementNearSibling(workingDraft.containers ?? [], canvasInsertionPoint.siblingId, canvasInsertionPoint.position, element) as HomepageContainer[]
+      : addElementToContainer(workingDraft.containers ?? [], targetContainerId, element) as HomepageContainer[];
     updateContainers(next);
     setSelection({ kind: isContainer(element) ? "container" : "widget", id: element.id });
     setInsertionTargetContainerId(null);
+    setCanvasInsertionPoint(null);
     setSidebarTab("CONTENT");
+  }
+
+  function addChildContainerSet(containerId: string, count: number) {
+    const width = getEvenContainerWidth(count);
+    const children = Array.from({ length: count }, (_, index) =>
+      createContainer([], {
+        builderLabel: count === 1 ? "Container" : `Container ${index + 1}`,
+        width: count === 1 ? { value: 100, unit: "%" } : width
+      })
+    );
+    const nextContainers = addElementsToContainer(workingDraft.containers ?? [], containerId, children) as HomepageContainer[];
+    updateContainers(updateElementList(nextContainers, containerId, (element) =>
+      isContainer(element)
+        ? {
+            ...element,
+            direction: count === 1 ? element.direction ?? "column" : "row",
+            wrap: count === 1 ? element.wrap ?? "wrap" : "wrap",
+            align: element.align ?? "stretch",
+            gap: element.gap ?? 10
+          }
+        : element
+    ) as HomepageContainer[]);
+    setSelection({ kind: "container", id: children[0].id });
+    setInsertionTargetContainerId(null);
+    setSidebarTab("ADVANCED");
   }
 
   function addRootContainer() {
@@ -755,6 +1182,7 @@ export default function AdminHomepagePage() {
     updateContainers([...(workingDraft.containers ?? []), container]);
     setSelection({ kind: "container", id: container.id });
     setInsertionTargetContainerId(null);
+    setCanvasInsertionPoint(null);
     setSidebarTab("ADVANCED");
   }
 
@@ -768,18 +1196,117 @@ export default function AdminHomepagePage() {
     setSelection({ kind: isContainer(cloned) ? "container" : "widget", id: cloned.id });
   }
 
+  function copySelected(target: Selection) {
+    if (!target) return;
+    const element = findElement(workingDraft.containers ?? [], target.id);
+    if (!element) return;
+    setCopiedElement(JSON.parse(JSON.stringify(element)) as HomepageElement);
+    setMessage({ type: "success", text: `${isContainer(element) ? "Container" : "Widget"} copied. Select where to paste it, then use Paste.` });
+  }
+
+  function pasteCopiedElement() {
+    if (!copiedElement) {
+      setMessage({ type: "error", text: "Copy a container or widget first." });
+      return;
+    }
+    const cloned = cloneElement(copiedElement);
+    const pasteTargetContainerId = selectedContainer
+      ? selectedContainer.id
+      : selectedWidget
+        ? getParentContainerId(workingDraft.containers ?? [], selectedWidget.id)
+        : insertionTargetContainerId ?? null;
+
+    if (!isContainer(cloned) && !pasteTargetContainerId) {
+      setMessage({ type: "error", text: "Select a container before pasting a widget." });
+      return;
+    }
+
+    updateContainers(addElementToContainer(workingDraft.containers ?? [], pasteTargetContainerId, cloned) as HomepageContainer[]);
+    setSelection({ kind: isContainer(cloned) ? "container" : "widget", id: cloned.id });
+    setInsertionTargetContainerId(null);
+    setCanvasInsertionPoint(null);
+    setSidebarOpen(true);
+    setSidebarTab("CONTENT");
+  }
+
+  function selectParentElement() {
+    if (!selection) return;
+    const parentId = getParentContainerId(workingDraft.containers ?? [], selection.id);
+    if (!parentId) {
+      setSelection(null);
+      return;
+    }
+    setSelection({ kind: "container", id: parentId });
+    setSidebarTab("ADVANCED");
+  }
+
+  function openPublishReview() {
+    if (hasPendingDraftChanges) {
+      setMessage({ type: "error", text: "Save the draft before publishing. The public homepage only publishes the saved draft." });
+      return;
+    }
+    if (!savedDraft) {
+      setMessage({ type: "error", text: "Create and save a draft before publishing." });
+      return;
+    }
+    if (!hasHomepageContent(savedDraft)) {
+      setMessage({ type: "error", text: "Add at least one container or widget before publishing." });
+      return;
+    }
+    setPublishConfirmOpen(true);
+  }
+
   function removeSelected(target: Selection) {
     if (!target) return;
     updateContainers(removeElementList(workingDraft.containers ?? [], target.id) as HomepageContainer[]);
     setSelection(null);
     setInsertionTargetContainerId(null);
+    setCanvasInsertionPoint(null);
     setDeleteTarget(null);
+  }
+
+  function moveElement(id: string, direction: -1 | 1) {
+    updateContainers(moveElementList(workingDraft.containers ?? [], id, direction) as HomepageContainer[]);
+  }
+
+  function toggleNavigatorCollapse(id: string) {
+    setCollapsedNavigatorIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function startNavigatorRename(element: HomepageElement) {
+    setNavigatorEditingId(element.id);
+    setNavigatorEditingValue(element.builderLabel || (isContainer(element) ? "Container" : element.title) || "Element");
+  }
+
+  function commitNavigatorRename(element: HomepageElement) {
+    const nextLabel = navigatorEditingValue.trim();
+    if (isContainer(element)) updateContainer(element.id, { builderLabel: nextLabel || "Container" });
+    else updateWidget(element.id, { builderLabel: nextLabel || element.title });
+    setNavigatorEditingId(null);
+    setNavigatorEditingValue("");
   }
 
   function openElementsForContainer(containerId: string) {
     setInsertionTargetContainerId(containerId);
+    setCanvasInsertionPoint(null);
     setSelection(null);
-    setSidebarMode("ELEMENTS");
+    setSidebarOpen(true);
+    setMessage(null);
+  }
+
+  function openElementsAtCanvasPoint(siblingId: string, position: "before" | "after") {
+    setCanvasInsertionPoint({
+      siblingId,
+      position,
+      parentContainerId: getParentContainerId(workingDraft.containers ?? [], siblingId)
+    });
+    setInsertionTargetContainerId(null);
+    setSelection(null);
     setSidebarOpen(true);
     setMessage(null);
   }
@@ -806,11 +1333,10 @@ export default function AdminHomepagePage() {
     });
   }
 
-  function applyFeaturedInstructors() {
-    if (selectedWidget?.type !== "FEATURED_INSTRUCTORS") return;
-    const instructors = (catalogQuery.data ?? [])
+  function buildFeaturedInstructors(selectionMap: Record<string, string[]>) {
+    return (catalogQuery.data ?? [])
       .map((instructor) => {
-        const courseIds = featuredSelection[instructor.id] ?? [];
+        const courseIds = selectionMap[instructor.id] ?? [];
         if (!courseIds.length) return null;
         return {
           id: instructor.id,
@@ -821,8 +1347,98 @@ export default function AdminHomepagePage() {
         } satisfies HomepageInstructorEntry;
       })
       .filter(Boolean) as HomepageInstructorEntry[];
-    updateWidget(selectedWidget.id, { instructors });
   }
+
+  function updateFeaturedSelection(nextSelection: Record<string, string[]>) {
+    setFeaturedSelection(nextSelection);
+    if (selectedWidget?.type === "FEATURED_INSTRUCTORS") {
+      updateWidget(selectedWidget.id, { instructors: buildFeaturedInstructors(nextSelection) });
+    }
+  }
+
+  useEffect(() => {
+    const isTypingTarget = (target: EventTarget | null) => {
+      if (!(target instanceof HTMLElement)) return false;
+      return ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) || target.isContentEditable;
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (isTypingTarget(event.target)) return;
+      const modifier = event.ctrlKey || event.metaKey;
+
+      if (modifier && event.key.toLowerCase() === "z") {
+        event.preventDefault();
+        if (event.shiftKey) redo();
+        else undo();
+        return;
+      }
+
+      if (modifier && event.key.toLowerCase() === "y") {
+        event.preventDefault();
+        redo();
+        return;
+      }
+
+      if (modifier && event.key.toLowerCase() === "c") {
+        event.preventDefault();
+        copySelected(selection);
+        return;
+      }
+
+      if (modifier && event.key.toLowerCase() === "v") {
+        event.preventDefault();
+        pasteCopiedElement();
+        return;
+      }
+
+      if (event.key === "Delete" || event.key === "Backspace") {
+        if (selection) {
+          event.preventDefault();
+          setDeleteTarget(selection);
+        }
+        return;
+      }
+
+      if (event.key === "Escape") {
+        setSelection(null);
+        setInsertionTargetContainerId(null);
+        setCanvasInsertionPoint(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selection, copiedElement, workingDraft, selectedContainer, selectedWidget, insertionTargetContainerId, undoStack, redoStack]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!hasPendingDraftChanges) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasPendingDraftChanges]);
+
+  useEffect(() => {
+    if (!navigatorDrag) return;
+
+    const handleMouseMove = (event: MouseEvent) => {
+      setNavigatorPosition({
+        x: Math.max(8, navigatorDrag.originX + event.clientX - navigatorDrag.startX),
+        y: Math.max(84, navigatorDrag.originY + event.clientY - navigatorDrag.startY)
+      });
+    };
+    const handleMouseUp = () => setNavigatorDrag(null);
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [navigatorDrag]);
 
   if (!hasHydrated || !isAuthorized) return null;
   if (typeof window !== "undefined" && window.innerWidth < 1024) return <DesktopOnlyMessage />;
@@ -843,26 +1459,70 @@ export default function AdminHomepagePage() {
         const active = selection?.id === element.id;
         const elementSelection: Exclude<Selection, null> = { kind: isContainer(element) ? "container" : "widget", id: element.id };
         const elementLabel = element.builderLabel || (isContainer(element) ? "Container" : element.title) || "Element";
+        const hasChildren = isContainer(element) && element.children.length > 0;
+        const collapsed = collapsedNavigatorIds.has(element.id);
+        const editing = navigatorEditingId === element.id;
         return (
           <div key={element.id}>
             <div
-              className={`flex items-center gap-1 rounded-xl py-1 pr-1 transition ${active ? "bg-slate-950 text-white" : "text-slate-700 hover:bg-slate-100"}`}
+              className={`group/navitem flex items-center gap-1 rounded-xl py-1 pr-1 transition ${
+                active ? "bg-slate-950 text-white" : element.hidden ? "text-slate-400 opacity-75 hover:bg-slate-100" : "text-slate-700 hover:bg-slate-100"
+              }`}
               style={{ paddingLeft: `${12 + depth * 14}px` }}
             >
-              <button
-                type="button"
-                onClick={() => {
-                  setSelection(elementSelection);
-                  setInsertionTargetContainerId(null);
-                  setSidebarTab("CONTENT");
-                }}
-                className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm"
-              >
-                {isContainer(element) ? <BoxIcon /> : getWidgetIcon(element.type)}
-                <span className="min-w-0 flex-1 truncate">{elementLabel}</span>
-              </button>
-              {active ? (
-                <div className="flex shrink-0 items-center gap-1">
+              {isContainer(element) ? (
+                <button
+                  type="button"
+                  onClick={() => toggleNavigatorCollapse(element.id)}
+                  disabled={!hasChildren}
+                  className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition disabled:opacity-25 ${collapsed ? "-rotate-90" : ""}`}
+                  title={collapsed ? "Expand" : "Collapse"}
+                >
+                  <ChevronIcon />
+                </button>
+              ) : (
+                <span className="h-7 w-7 shrink-0" />
+              )}
+              {editing ? (
+                <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-sm">
+                  {isContainer(element) ? <ContainerIcon /> : getWidgetIcon(element.type)}
+                  <input
+                    autoFocus
+                    value={navigatorEditingValue}
+                    onChange={(event) => {
+                      setNavigatorEditingValue(event.target.value);
+                    }}
+                    onBlur={() => commitNavigatorRename(element)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") commitNavigatorRename(element);
+                      if (event.key === "Escape") {
+                        setNavigatorEditingId(null);
+                        setNavigatorEditingValue("");
+                      }
+                    }}
+                    placeholder={elementLabel}
+                    className="min-w-0 flex-1 rounded-md border border-white/20 bg-white px-2 py-1 text-xs font-semibold text-slate-950"
+                  />
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelection(elementSelection);
+                    setInsertionTargetContainerId(null);
+                    setSidebarTab("CONTENT");
+                  }}
+                  onDoubleClick={() => startNavigatorRename(element)}
+                  className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm"
+                >
+                  {isContainer(element) ? <ContainerIcon /> : getWidgetIcon(element.type)}
+                  <span className="min-w-0 flex-1 truncate">{elementLabel}</span>
+                  {element.hidden ? <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-[0.1em] text-slate-500">Hidden</span> : null}
+                </button>
+              )}
+              <div className={`flex shrink-0 items-center gap-1 transition ${active ? "opacity-100" : "opacity-0 group-hover/navitem:opacity-100"}`}>
+                  <IconButton label="Move up" onClick={() => moveElement(element.id, -1)}><UpIcon /></IconButton>
+                  <IconButton label="Move down" onClick={() => moveElement(element.id, 1)}><DownIcon /></IconButton>
                   <IconButton
                     label={element.hidden ? "Show" : "Hide"}
                     tone={element.hidden ? "success" : "default"}
@@ -875,24 +1535,46 @@ export default function AdminHomepagePage() {
                   </IconButton>
                   <IconButton label="Duplicate" onClick={() => duplicateSelected(elementSelection)}><CopyIcon /></IconButton>
                   <IconButton label="Delete" tone="danger" onClick={() => setDeleteTarget(elementSelection)}><TrashIcon /></IconButton>
-                </div>
-              ) : null}
+              </div>
             </div>
-            {isContainer(element) && element.children.length ? renderNavigatorItems(element.children, depth + 1) : null}
+            {hasChildren && !collapsed ? renderNavigatorItems(element.children, depth + 1) : null}
           </div>
         );
       })}
     </div>
   );
 
+  const renderCanvasInsertionButton = (elementId: string, position: "before" | "after", tone: "container" | "widget", visible: boolean) => (
+    <button
+      type="button"
+      onClick={(event) => {
+        event.stopPropagation();
+        openElementsAtCanvasPoint(elementId, position);
+      }}
+      className={`absolute left-1/2 z-30 h-7 w-7 -translate-x-1/2 items-center justify-center rounded-full text-white shadow-lg transition hover:scale-110 ${visible ? "inline-flex" : "hidden"} ${position === "before" ? "top-0 -translate-y-1/2" : "bottom-0 translate-y-1/2"} ${tone === "container" ? "bg-teal-600" : "bg-sky-600"}`}
+      title={`Add ${position}`}
+    >
+      <PlusIcon />
+    </button>
+  );
+
   const renderCanvasElement = (element: HomepageElement): React.ReactNode => {
     const active = selection?.id === element.id;
+    if (element.hidden) return null;
+    const chromeVisible = shouldShowCanvasChrome(element.id);
+    const deviceHidden = isDeviceHiddenInCanvas(element);
+    const deviceHiddenClass = deviceHidden ? "opacity-45 blur-[1.5px] grayscale" : "";
     if (isContainer(element)) {
       return (
         <div
           key={element.id}
           role="button"
           tabIndex={0}
+          onPointerMove={(event) => {
+            event.stopPropagation();
+            if (hoveredCanvasElementId !== element.id) setHoveredCanvasElementId(element.id);
+          }}
+          onPointerLeave={() => setHoveredCanvasElementId((current) => current === element.id ? null : current)}
           onClick={(event) => {
             event.stopPropagation();
             setSelection({ kind: "container", id: element.id });
@@ -904,10 +1586,12 @@ export default function AdminHomepagePage() {
               setSelection({ kind: "container", id: element.id });
             }
           }}
-          className={`group/container relative min-h-[44px] outline-offset-2 transition ${active ? "outline outline-2 outline-teal-500" : "hover:outline hover:outline-1 hover:outline-teal-300"}`}
+          className={`relative min-h-[44px] outline-offset-2 transition ${deviceHiddenClass} ${active ? "outline outline-2 outline-teal-500" : chromeVisible ? "outline outline-1 outline-teal-300" : ""}`}
           style={getContainerStyle(element, canvasViewport)}
         >
-          <span className="pointer-events-none absolute left-2 top-0 z-20 hidden -translate-y-1/2 rounded-full bg-teal-600 px-2 py-1 text-[0.62rem] font-semibold uppercase tracking-[0.12em] text-white shadow group-hover/container:inline-flex">
+          {renderCanvasInsertionButton(element.id, "before", "container", chromeVisible)}
+          {renderCanvasInsertionButton(element.id, "after", "container", chromeVisible)}
+          <span className={`pointer-events-none absolute left-2 top-0 z-20 -translate-y-1/2 rounded-full bg-teal-600 px-2 py-1 text-[0.62rem] font-semibold uppercase tracking-[0.12em] text-white shadow ${chromeVisible ? "inline-flex" : "hidden"}`}>
             Container
           </span>
           <button
@@ -916,7 +1600,7 @@ export default function AdminHomepagePage() {
               event.stopPropagation();
               openElementsForContainer(element.id);
             }}
-            className="absolute right-2 top-2 z-20 hidden h-8 w-8 items-center justify-center rounded-full bg-slate-950 text-white shadow-lg transition hover:scale-105 group-hover/container:inline-flex"
+            className={`absolute right-2 top-2 z-20 h-8 w-8 items-center justify-center rounded-full bg-slate-950 text-white shadow-lg transition hover:scale-105 ${chromeVisible ? "inline-flex" : "hidden"}`}
             title="Add inside container"
           >
             <PlusIcon />
@@ -943,6 +1627,11 @@ export default function AdminHomepagePage() {
         key={element.id}
         role="button"
         tabIndex={0}
+        onPointerMove={(event) => {
+          event.stopPropagation();
+          if (hoveredCanvasElementId !== element.id) setHoveredCanvasElementId(element.id);
+        }}
+        onPointerLeave={() => setHoveredCanvasElementId((current) => current === element.id ? null : current)}
         onClick={(event) => {
           event.stopPropagation();
           setSelection({ kind: "widget", id: element.id });
@@ -954,12 +1643,16 @@ export default function AdminHomepagePage() {
             setSelection({ kind: "widget", id: element.id });
           }
         }}
-        className={`group/widget relative outline-offset-2 transition ${active ? "outline outline-2 outline-sky-500" : "hover:outline hover:outline-1 hover:outline-sky-300"}`}
+        className={`relative outline-offset-2 transition ${deviceHiddenClass} ${active ? "outline outline-2 outline-sky-500" : chromeVisible ? "outline outline-1 outline-sky-300" : ""}`}
       >
-        <span className="pointer-events-none absolute left-2 top-0 z-20 hidden -translate-y-1/2 rounded-full bg-sky-600 px-2 py-1 text-[0.62rem] font-semibold uppercase tracking-[0.12em] text-white shadow group-hover/widget:inline-flex">
+        {renderCanvasInsertionButton(element.id, "before", "widget", chromeVisible)}
+        {renderCanvasInsertionButton(element.id, "after", "widget", chromeVisible)}
+        <span className={`pointer-events-none absolute left-2 top-0 z-20 -translate-y-1/2 rounded-full bg-sky-600 px-2 py-1 text-[0.62rem] font-semibold uppercase tracking-[0.12em] text-white shadow ${chromeVisible ? "inline-flex" : "hidden"}`}>
           Widget
         </span>
-        <HomepageCardView card={element} viewport={canvasViewport} mode="builder" />
+        <div className="pointer-events-none select-none">
+          <HomepageCardView card={element} viewport={canvasViewport} mode="builder" />
+        </div>
       </div>
     );
   };
@@ -976,6 +1669,21 @@ export default function AdminHomepagePage() {
             <PlusIcon />
             Add inside this container
           </button>
+          <div className="rounded-2xl border border-slate-200 p-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Add child containers</p>
+            <div className="mt-3 grid grid-cols-4 gap-2">
+              {[1, 2, 3, 4].map((count) => (
+                <button
+                  key={count}
+                  type="button"
+                  onClick={() => addChildContainerSet(selectedContainer.id, count)}
+                  className="rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs font-semibold text-slate-700 transition hover:border-teal-300 hover:bg-teal-50 hover:text-teal-800"
+                >
+                  {count}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       );
     }
@@ -998,10 +1706,16 @@ export default function AdminHomepagePage() {
       return (
         <div className="space-y-4">
           {widgetLabelControl}
-          <select value={selectedWidget.textTag} onChange={(event) => updateWidget(selectedWidget.id, { textTag: event.target.value as Exclude<HomepageTextTag, "P"> })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm">
-            {(["H1", "H2", "H3", "H4", "H5", "H6"] as const).map((tag) => <option key={tag} value={tag}>{tag}</option>)}
-          </select>
-          <textarea value={selectedWidget.content} onChange={(event) => updateWidget(selectedWidget.id, { content: event.target.value })} rows={5} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" />
+          <label className="block">
+            <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Heading level</span>
+            <select value={selectedWidget.textTag} onChange={(event) => updateWidget(selectedWidget.id, { textTag: event.target.value as Exclude<HomepageTextTag, "P"> })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm">
+              {(["H1", "H2", "H3", "H4", "H5", "H6"] as const).map((tag) => <option key={tag} value={tag}>{tag}</option>)}
+            </select>
+          </label>
+          <label className="block">
+            <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Heading text</span>
+            <textarea value={selectedWidget.content} onChange={(event) => updateWidget(selectedWidget.id, { content: event.target.value })} rows={4} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Write a strong homepage heading" />
+          </label>
         </div>
       );
     }
@@ -1020,7 +1734,15 @@ export default function AdminHomepagePage() {
         <div className="space-y-4">
           {widgetLabelControl}
           <input value={selectedWidget.label} onChange={(event) => updateWidget(selectedWidget.id, { label: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Button label" />
-          <input value={selectedWidget.href} onChange={(event) => updateWidget(selectedWidget.id, { href: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="/courses" />
+          <input value={selectedWidget.href} onChange={(event) => updateWidget(selectedWidget.id, { href: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="/courses or https://example.com" />
+          <select value={selectedWidget.variant ?? "primary"} onChange={(event) => updateWidget(selectedWidget.id, { variant: event.target.value as HomepageButtonVariant })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm">
+            <option value="primary">Primary button</option>
+            <option value="secondary">Secondary button</option>
+            <option value="ghost">Ghost button</option>
+          </select>
+          <p className="rounded-2xl bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-500">
+            Buttons are disabled inside the builder canvas and clickable only on the public homepage.
+          </p>
         </div>
       );
     }
@@ -1034,18 +1756,48 @@ export default function AdminHomepagePage() {
             {uploadHomepageImageMutation.isPending ? "Uploading..." : "Upload image"}
           </button>
           {selectedImagePreviewUrl ? <img src={selectedImagePreviewUrl} alt="Preview" className="h-40 w-full rounded-2xl object-cover" /> : null}
+          <input value={selectedWidget.imageUrl} onChange={(event) => updateWidget(selectedWidget.id, { imageUrl: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Image URL or uploaded path" />
           <input value={selectedWidget.altText ?? ""} onChange={(event) => updateWidget(selectedWidget.id, { altText: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Alt text" />
           <textarea value={selectedWidget.caption ?? ""} onChange={(event) => updateWidget(selectedWidget.id, { caption: event.target.value })} rows={3} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Caption" />
         </div>
       );
     }
 
-    if (selectedWidget.type === "VIDEO") {
+    if (selectedWidget.type === "SPACER") {
       return (
         <div className="space-y-4">
           {widgetLabelControl}
-          <input value={selectedWidget.videoUrl} onChange={(event) => updateWidget(selectedWidget.id, { videoUrl: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" />
-          <textarea value={selectedWidget.caption ?? ""} onChange={(event) => updateWidget(selectedWidget.id, { caption: event.target.value })} rows={3} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" />
+          <p className="rounded-2xl bg-slate-50 px-3 py-2 text-sm leading-6 text-slate-600">
+            Spacer creates vertical breathing room between widgets. Control the height from Style.
+          </p>
+        </div>
+      );
+    }
+
+    if (selectedWidget.type === "DIVIDER") {
+      return (
+        <div className="space-y-4">
+          {widgetLabelControl}
+          <p className="rounded-2xl bg-slate-50 px-3 py-2 text-sm leading-6 text-slate-600">
+            Divider adds a visual separator line. Control color, width, and style from Style.
+          </p>
+        </div>
+      );
+    }
+
+    if (selectedWidget.type === "VIDEO") {
+      const status = getVideoUrlStatus(selectedWidget.videoUrl);
+      return (
+        <div className="space-y-4">
+          {widgetLabelControl}
+          <label className="block">
+            <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Video URL</span>
+            <input value={selectedWidget.videoUrl} onChange={(event) => updateWidget(selectedWidget.id, { videoUrl: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="YouTube, Vimeo, or direct embed URL" />
+          </label>
+          <p className={`rounded-2xl px-3 py-2 text-xs leading-5 ${status.tone === "success" ? "bg-teal-50 text-teal-800" : status.tone === "warning" ? "bg-amber-50 text-amber-800" : "bg-rose-50 text-rose-700"}`}>
+            {status.label}
+          </p>
+          <textarea value={selectedWidget.caption ?? ""} onChange={(event) => updateWidget(selectedWidget.id, { caption: event.target.value })} rows={3} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Optional caption" />
         </div>
       );
     }
@@ -1054,6 +1806,22 @@ export default function AdminHomepagePage() {
       return (
         <div className="space-y-4">
           {widgetLabelControl}
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Icon symbol</p>
+            <div className="grid grid-cols-6 gap-2">
+              {iconSymbolOptions.map((symbol) => (
+                <button
+                  key={symbol}
+                  type="button"
+                  onClick={() => updateWidget(selectedWidget.id, { iconSymbol: symbol })}
+                  className={`flex h-10 items-center justify-center rounded-2xl border text-lg font-semibold transition ${selectedWidget.iconSymbol === symbol ? "border-teal-500 bg-teal-600 text-white" : "border-slate-200 bg-white text-slate-700 hover:border-teal-200 hover:bg-teal-50"}`}
+                >
+                  {symbol}
+                </button>
+              ))}
+            </div>
+          </div>
+          <input value={selectedWidget.iconSymbol} onChange={(event) => updateWidget(selectedWidget.id, { iconSymbol: event.target.value.slice(0, 3) })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Custom icon symbol" />
           <textarea value={selectedWidget.content} onChange={(event) => updateWidget(selectedWidget.id, { content: event.target.value })} rows={4} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" />
         </div>
       );
@@ -1063,7 +1831,19 @@ export default function AdminHomepagePage() {
       return (
         <div className="space-y-4">
           {widgetLabelControl}
-          <textarea value={selectedWidget.items.join("\n")} onChange={(event) => updateWidget(selectedWidget.id, { items: event.target.value.split("\n").filter(Boolean) })} rows={6} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" />
+          <input value={selectedWidget.title} onChange={(event) => updateWidget(selectedWidget.id, { title: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="List title" />
+          <div className="space-y-2">
+            {selectedWidget.items.map((item, index) => (
+              <div key={`${selectedWidget.id}-item-${index}`} className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-2">
+                <input value={item} onChange={(event) => updateWidget(selectedWidget.id, { items: selectedWidget.items.map((current, currentIndex) => currentIndex === index ? event.target.value : current) })} className="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm" placeholder={`Item ${index + 1}`} />
+                <IconButton label="Remove item" tone="danger" onClick={() => updateWidget(selectedWidget.id, { items: selectedWidget.items.filter((_, currentIndex) => currentIndex !== index) })}><TrashIcon /></IconButton>
+              </div>
+            ))}
+          </div>
+          <button type="button" onClick={() => updateWidget(selectedWidget.id, { items: [...selectedWidget.items, "New item"] })} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
+            <PlusIcon />
+            Add list item
+          </button>
         </div>
       );
     }
@@ -1077,6 +1857,69 @@ export default function AdminHomepagePage() {
           <textarea value={selectedWidget.body ?? ""} onChange={(event) => updateWidget(selectedWidget.id, { body: event.target.value })} rows={5} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Body" />
           <input value={selectedWidget.buttonLabel ?? ""} onChange={(event) => updateWidget(selectedWidget.id, { buttonLabel: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Button label" />
           <input value={selectedWidget.buttonHref ?? ""} onChange={(event) => updateWidget(selectedWidget.id, { buttonHref: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="/courses" />
+        </div>
+      );
+    }
+
+    if (selectedWidget.type === "TESTIMONIAL") {
+      return (
+        <div className="space-y-4">
+          {widgetLabelControl}
+          <textarea value={selectedWidget.quote} onChange={(event) => updateWidget(selectedWidget.id, { quote: event.target.value })} rows={5} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Quote" />
+          <input value={selectedWidget.authorName} onChange={(event) => updateWidget(selectedWidget.id, { authorName: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Author name" />
+          <input value={selectedWidget.authorRole ?? ""} onChange={(event) => updateWidget(selectedWidget.id, { authorRole: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Author role" />
+          <input value={selectedWidget.avatarUrl ?? ""} onChange={(event) => updateWidget(selectedWidget.id, { avatarUrl: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Avatar URL" />
+        </div>
+      );
+    }
+
+    if (selectedWidget.type === "STATS") {
+      return (
+        <div className="space-y-4">
+          {widgetLabelControl}
+          <input value={selectedWidget.title} onChange={(event) => updateWidget(selectedWidget.id, { title: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Section title" />
+          <div className="space-y-3">
+            {selectedWidget.stats.map((item, index) => (
+              <div key={item.id} className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Stat {index + 1}</p>
+                  <IconButton label="Remove stat" tone="danger" onClick={() => updateWidget(selectedWidget.id, { stats: selectedWidget.stats.filter((stat) => stat.id !== item.id) })}><TrashIcon /></IconButton>
+                </div>
+                <input value={item.value} onChange={(event) => updateWidget(selectedWidget.id, { stats: selectedWidget.stats.map((stat) => stat.id === item.id ? { ...stat, value: event.target.value } : stat) })} className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm" placeholder="Value, e.g. 120+" />
+                <input value={item.label} onChange={(event) => updateWidget(selectedWidget.id, { stats: selectedWidget.stats.map((stat) => stat.id === item.id ? { ...stat, label: event.target.value } : stat) })} className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm" placeholder="Label" />
+                <textarea value={item.description ?? ""} onChange={(event) => updateWidget(selectedWidget.id, { stats: selectedWidget.stats.map((stat) => stat.id === item.id ? { ...stat, description: event.target.value } : stat) })} rows={2} className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm" placeholder="Optional description" />
+              </div>
+            ))}
+          </div>
+          <button type="button" onClick={() => updateWidget(selectedWidget.id, { stats: [...selectedWidget.stats, { id: createId("stat"), value: "0", label: "New stat", description: "" }] })} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
+            <PlusIcon />
+            Add stat
+          </button>
+        </div>
+      );
+    }
+
+    if (selectedWidget.type === "FAQ") {
+      return (
+        <div className="space-y-4">
+          {widgetLabelControl}
+          <input value={selectedWidget.title} onChange={(event) => updateWidget(selectedWidget.id, { title: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Section title" />
+          <div className="space-y-3">
+            {selectedWidget.faqs.map((item, index) => (
+              <div key={item.id} className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Question {index + 1}</p>
+                  <IconButton label="Remove question" tone="danger" onClick={() => updateWidget(selectedWidget.id, { faqs: selectedWidget.faqs.filter((faq) => faq.id !== item.id) })}><TrashIcon /></IconButton>
+                </div>
+                <input value={item.question} onChange={(event) => updateWidget(selectedWidget.id, { faqs: selectedWidget.faqs.map((faq) => faq.id === item.id ? { ...faq, question: event.target.value } : faq) })} className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm" placeholder="Question" />
+                <textarea value={item.answer} onChange={(event) => updateWidget(selectedWidget.id, { faqs: selectedWidget.faqs.map((faq) => faq.id === item.id ? { ...faq, answer: event.target.value } : faq) })} rows={3} className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm" placeholder="Answer" />
+              </div>
+            ))}
+          </div>
+          <button type="button" onClick={() => updateWidget(selectedWidget.id, { faqs: [...selectedWidget.faqs, { id: createId("faq"), question: "New question", answer: "Answer goes here." }] })} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
+            <PlusIcon />
+            Add question
+          </button>
         </div>
       );
     }
@@ -1159,7 +2002,11 @@ export default function AdminHomepagePage() {
       return (
         <div className="space-y-4">
           {widgetLabelControl}
-          <button type="button" onClick={applyFeaturedInstructors} className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white">Apply selection</button>
+          <input value={selectedWidget.title} onChange={(event) => updateWidget(selectedWidget.id, { title: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Section title" />
+          <textarea value={selectedWidget.body ?? ""} onChange={(event) => updateWidget(selectedWidget.id, { body: event.target.value })} rows={3} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Optional intro text" />
+          <p className="rounded-2xl bg-teal-50 px-3 py-2 text-xs leading-5 text-teal-800">
+            Course selections update the widget immediately. No separate apply step is needed.
+          </p>
           {(catalogQuery.data ?? []).map((instructor) => (
             <div key={instructor.id} className="rounded-2xl border border-slate-200 p-3">
               <p className="font-semibold text-slate-900">{instructor.fullName}</p>
@@ -1171,18 +2018,51 @@ export default function AdminHomepagePage() {
                       <input
                         type="checkbox"
                         checked={checked}
-                        onChange={() => setFeaturedSelection((current) => {
-                          const selected = current[instructor.id] ?? [];
-                          return { ...current, [instructor.id]: checked ? selected.filter((id) => id !== course.id) : [...selected, course.id] };
-                        })}
+                        onChange={() => {
+                          const nextSelection = { ...featuredSelection };
+                          const selected = nextSelection[instructor.id] ?? [];
+                          nextSelection[instructor.id] = checked ? selected.filter((id) => id !== course.id) : [...selected, course.id];
+                          if (!nextSelection[instructor.id].length) delete nextSelection[instructor.id];
+                          updateFeaturedSelection(nextSelection);
+                        }}
                       />
-                      {course.title}
+                      <span>
+                        <span className="block font-medium text-slate-800">{course.title}</span>
+                        <span className="text-xs text-slate-500">{course.category ?? "Course"}</span>
+                      </span>
                     </label>
                   );
                 })}
+                {!instructor.instructorCourses.length ? <p className="text-sm text-slate-500">No published courses for this instructor.</p> : null}
               </div>
             </div>
           ))}
+          {!(catalogQuery.data ?? []).length ? <p className="rounded-2xl bg-amber-50 px-3 py-2 text-sm text-amber-800">No instructors are available yet.</p> : null}
+        </div>
+      );
+    }
+
+    if (contentSectionWidgetTypes.includes(selectedWidget.type)) {
+      const bullets = "bullets" in selectedWidget ? selectedWidget.bullets ?? [] : [];
+      return (
+        <div className="space-y-4">
+          {widgetLabelControl}
+          <input value={selectedWidget.title} onChange={(event) => updateWidget(selectedWidget.id, { title: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Title" />
+          <input value={selectedWidget.subtitle ?? ""} onChange={(event) => updateWidget(selectedWidget.id, { subtitle: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Subtitle" />
+          <textarea value={selectedWidget.body ?? ""} onChange={(event) => updateWidget(selectedWidget.id, { body: event.target.value })} rows={5} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Body" />
+          <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Bullet points</p>
+            {bullets.map((bullet, index) => (
+              <div key={`${selectedWidget.id}-bullet-${index}`} className="flex items-center gap-2">
+                <input value={bullet} onChange={(event) => updateWidget(selectedWidget.id, { bullets: bullets.map((item, itemIndex) => itemIndex === index ? event.target.value : item) })} className="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm" placeholder={`Bullet ${index + 1}`} />
+                <IconButton label="Remove bullet" tone="danger" onClick={() => updateWidget(selectedWidget.id, { bullets: bullets.filter((_, itemIndex) => itemIndex !== index) })}><TrashIcon /></IconButton>
+              </div>
+            ))}
+            <button type="button" onClick={() => updateWidget(selectedWidget.id, { bullets: [...bullets, "New bullet point"] })} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
+              <PlusIcon />
+              Add bullet
+            </button>
+          </div>
         </div>
       );
     }
@@ -1211,13 +2091,56 @@ export default function AdminHomepagePage() {
           </select>
         ) : null}
         <ColorControl label="Text color" value={selectedWidget.textColor ?? ""} allowTransparent={false} onChange={(color) => updateWidget(selectedWidget.id, { textColor: color })} />
+        {["ABOUT_US", "WHY_US", "ABOUT_SITE", "TEXT_MEDIA", "HEADING", "TEXT", "ICON", "LIST", "CARD", "COURSE_LIST", "INSTRUCTOR_LIST", "TESTIMONIAL", "STATS", "FAQ", "FEATURED_INSTRUCTORS"].includes(selectedWidget.type) ? (
+          <TypographyControl value={selectedWidget.typography} onChange={(typography) => updateWidget(selectedWidget.id, { typography })} />
+        ) : null}
         {selectedWidget.type === "BUTTON" || selectedWidget.type === "CARD" ? (
           <div className="space-y-3 rounded-2xl border border-slate-200 p-3">
             <ColorControl label="Button background" value={selectedWidget.buttonStyle?.backgroundColor ?? "#020617"} allowTransparent={false} onChange={(color) => updateWidget(selectedWidget.id, { buttonStyle: { ...(selectedWidget.buttonStyle ?? createButtonStyle()), backgroundColor: color } })} />
             <ColorControl label="Button text" value={selectedWidget.buttonStyle?.textColor ?? "#ffffff"} allowTransparent={false} onChange={(color) => updateWidget(selectedWidget.id, { buttonStyle: { ...(selectedWidget.buttonStyle ?? createButtonStyle()), textColor: color } })} />
             <ColorControl label="Hover background" value={selectedWidget.buttonStyle?.hoverBackgroundColor ?? "#0f172a"} allowTransparent={false} onChange={(color) => updateWidget(selectedWidget.id, { buttonStyle: { ...(selectedWidget.buttonStyle ?? createButtonStyle()), hoverBackgroundColor: color } })} />
             <ColorControl label="Hover text" value={selectedWidget.buttonStyle?.hoverTextColor ?? "#ffffff"} allowTransparent={false} onChange={(color) => updateWidget(selectedWidget.id, { buttonStyle: { ...(selectedWidget.buttonStyle ?? createButtonStyle()), hoverTextColor: color } })} />
+            <BoxSpacingControl
+              label="Button padding"
+              value={selectedWidget.buttonStyle?.padding}
+              onChange={(padding) => updateWidget(selectedWidget.id, { buttonStyle: { ...(selectedWidget.buttonStyle ?? createButtonStyle()), padding } })}
+            />
             <BorderControl value={selectedWidget.buttonStyle?.border} onChange={(border) => updateWidget(selectedWidget.id, { buttonStyle: { ...(selectedWidget.buttonStyle ?? createButtonStyle()), border } })} />
+          </div>
+        ) : null}
+        {selectedWidget.type === "ICON" ? (
+          <div className="space-y-3 rounded-2xl border border-slate-200 p-3">
+            <LengthControl label="Icon size" value={selectedWidget.iconSize} onChange={(iconSize) => updateWidget(selectedWidget.id, { iconSize })} />
+            <ColorControl label="Icon color" value={selectedWidget.iconColor ?? ""} allowTransparent={false} onChange={(iconColor) => updateWidget(selectedWidget.id, { iconColor })} />
+          </div>
+        ) : null}
+        {selectedWidget.type === "DIVIDER" ? (
+          <div className="space-y-3 rounded-2xl border border-slate-200 p-3">
+            <ColorControl label="Divider color" value={selectedWidget.dividerColor ?? "#cbd5e1"} allowTransparent={false} onChange={(dividerColor) => updateWidget(selectedWidget.id, { dividerColor })} />
+            <label>
+              <span className="mb-1 block text-xs text-slate-500">Divider width</span>
+              <input
+                type="number"
+                value={selectedWidget.dividerWidth ?? 1}
+                onChange={(event) => updateWidget(selectedWidget.id, { dividerWidth: Number(event.target.value) })}
+                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+              />
+            </label>
+            <select value={selectedWidget.dividerStyle ?? "solid"} onChange={(event) => updateWidget(selectedWidget.id, { dividerStyle: event.target.value as "solid" | "dashed" })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm">
+              <option value="solid">Solid</option>
+              <option value="dashed">Dashed</option>
+            </select>
+          </div>
+        ) : null}
+        {selectedWidget.type === "SPACER" ? (
+          <div className="space-y-3 rounded-2xl border border-slate-200 p-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Spacer height</p>
+            <select value={selectedWidget.heightPreset ?? "medium"} onChange={(event) => updateWidget(selectedWidget.id, { heightPreset: event.target.value as HomepageSizePreset })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm">
+              <option value="none">None</option>
+              <option value="small">Small</option>
+              <option value="medium">Medium</option>
+              <option value="large">Large</option>
+            </select>
           </div>
         ) : null}
         {selectedWidget.type === "IMAGE_BLOCK" ? (
@@ -1256,12 +2179,33 @@ export default function AdminHomepagePage() {
       if (isContainer(element)) updateContainer(element.id, patch as Partial<HomepageContainer>);
       else updateWidget(element.id, patch as Partial<HomepageCard>);
     };
+    const responsiveDevice = canvasViewport === "auto" ? "desktop" : canvasViewport;
+    const updateResponsiveContainer = (
+      container: HomepageContainer,
+      patch: NonNullable<HomepageContainer["responsive"]>["desktop"]
+    ) => {
+      updateContainer(container.id, {
+        responsive: {
+          ...(container.responsive ?? {}),
+          [responsiveDevice]: {
+            ...(container.responsive?.[responsiveDevice] ?? {}),
+            ...patch
+          }
+        }
+      });
+    };
     return (
       <div className="space-y-5">
         <div className="flex gap-2">
+          <IconButton label="Select parent" disabled={!selection} onClick={selectParentElement}><UpIcon /></IconButton>
+          <IconButton label="Copy" disabled={!selection} onClick={() => copySelected(selection)}><CopyIcon /></IconButton>
+          <IconButton label="Paste" disabled={!copiedElement} onClick={pasteCopiedElement}><ClipboardIcon /></IconButton>
           <IconButton label={element.hidden ? "Show" : "Hide"} tone={element.hidden ? "success" : "default"} onClick={() => updateCommon({ hidden: !element.hidden })}>{element.hidden ? <EyeIcon /> : <EyeOffIcon />}</IconButton>
           <IconButton label="Duplicate" onClick={() => duplicateSelected(selection)}><CopyIcon /></IconButton>
           <IconButton label="Delete" tone="danger" onClick={() => setDeleteTarget(selection)}><TrashIcon /></IconButton>
+        </div>
+        <div className="rounded-2xl bg-slate-50 p-3 text-xs leading-5 text-slate-500">
+          Shortcuts: Ctrl/Cmd+C copy, Ctrl/Cmd+V paste, Ctrl/Cmd+Z undo, Ctrl/Cmd+Y redo, Delete remove, Esc clear selection.
         </div>
         <VisibilityControls visibility={element.visibility} onChange={(visibility) => updateCommon({ visibility })} />
         {isContainer(element) ? (
@@ -1296,6 +2240,27 @@ export default function AdminHomepagePage() {
             <LengthControl label="Max width" value={element.maxWidth} onChange={(maxWidth) => updateContainer(element.id, { maxWidth })} />
             <LengthControl label="Min height" value={element.minHeight} onChange={(minHeight) => updateContainer(element.id, { minHeight })} />
             <LengthControl label="Height" value={element.height} onChange={(height) => updateContainer(element.id, { height })} />
+            <div className="space-y-3 rounded-2xl border border-sky-100 bg-sky-50/70 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-sky-700">Responsive overrides</p>
+                <span className="rounded-full bg-white px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-sky-800">
+                  {responsiveDevice}
+                </span>
+              </div>
+              <select
+                value={element.responsive?.[responsiveDevice]?.direction ?? ""}
+                onChange={(event) => updateResponsiveContainer(element, { direction: event.target.value ? event.target.value as HomepageContainerDirection : undefined })}
+                className="w-full rounded-2xl border border-sky-200 bg-white px-3 py-2 text-sm"
+              >
+                <option value="">Inherit direction</option>
+                <option value="column">Below each other</option>
+                <option value="row">Next to each other</option>
+              </select>
+              <LengthControl label="Device width" value={element.responsive?.[responsiveDevice]?.width} onChange={(width) => updateResponsiveContainer(element, { width })} />
+              <LengthControl label="Device max width" value={element.responsive?.[responsiveDevice]?.maxWidth} onChange={(maxWidth) => updateResponsiveContainer(element, { maxWidth })} />
+              <LengthControl label="Device min height" value={element.responsive?.[responsiveDevice]?.minHeight} onChange={(minHeight) => updateResponsiveContainer(element, { minHeight })} />
+              <LengthControl label="Device height" value={element.responsive?.[responsiveDevice]?.height} onChange={(height) => updateResponsiveContainer(element, { height })} />
+            </div>
           </>
         ) : selectedWidget?.type === "ICON" ? (
           <input value={selectedWidget.iconSymbol} onChange={(event) => updateWidget(selectedWidget.id, { iconSymbol: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Icon symbol" />
@@ -1311,6 +2276,10 @@ export default function AdminHomepagePage() {
     );
   };
 
+  const selectedLabel = selectedContainer?.builderLabel || selectedWidget?.builderLabel || selectedWidget?.title || (selectedContainer ? "Container" : "Elements");
+  const selectedKindLabel = selectedContainer ? "Container" : selectedWidget ? "Widget" : "Elements";
+  const selectedPanelTitle = sidebarTab === "CONTENT" ? "Content" : sidebarTab === "STYLE" ? "Style" : "Advanced";
+
   return (
     <main className="min-h-screen bg-slate-100">
       <div className="flex h-[4.75rem] items-center justify-between border-b border-slate-200 bg-white px-4 shadow-sm lg:px-6">
@@ -1319,11 +2288,16 @@ export default function AdminHomepagePage() {
           <div>
             <p className="text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-teal-700">Homepage</p>
             <h1 className="text-lg font-semibold text-slate-950">Builder</h1>
+            <p className="text-xs text-slate-500">
+              {hasPendingDraftChanges ? "Unsaved edits" : `Saved: ${draftSaveLabel}`} - {workingDraftSummary.containers} containers - {workingDraftSummary.widgets} widgets
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <IconButton label="Undo" disabled={!undoStack.length} onClick={undo}><UndoIcon /></IconButton>
           <IconButton label="Redo" disabled={!redoStack.length} onClick={redo}><RedoIcon /></IconButton>
+          <IconButton label="Copy selected" disabled={!selection} onClick={() => copySelected(selection)}><CopyIcon /></IconButton>
+          <IconButton label="Paste copied" disabled={!copiedElement} onClick={pasteCopiedElement}><ClipboardIcon /></IconButton>
           <div className="mx-2 flex rounded-full border border-slate-200 bg-slate-50 p-1">
             {(["desktop", "tablet", "mobile"] as const).map((viewport) => (
               <IconButton key={viewport} label={viewport} active={canvasViewport === viewport} onClick={() => setCanvasViewport(viewport)}>
@@ -1333,6 +2307,7 @@ export default function AdminHomepagePage() {
           </div>
           <IconButton label={showPreviewHeader ? "Hide header" : "Show header"} active={showPreviewHeader} onClick={() => setShowPreviewHeader((value) => !value)}><LayersIcon /></IconButton>
           <IconButton label={showPreviewFooter ? "Hide footer" : "Show footer"} active={showPreviewFooter} onClick={() => setShowPreviewFooter((value) => !value)}><BoxIcon /></IconButton>
+          <IconButton label={navigatorOpen ? "Hide navigator" : "Show navigator"} active={navigatorOpen} onClick={() => setNavigatorOpen((value) => !value)}><LayersIcon /></IconButton>
           {hasPendingDraftChanges ? (
             <button type="button" onClick={() => saveDraftMutation.mutate(workingDraft)} disabled={saveDraftMutation.isPending} className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 disabled:opacity-60">
               {saveDraftMutation.isPending ? "Saving..." : "Draft"}
@@ -1341,8 +2316,8 @@ export default function AdminHomepagePage() {
           <button type="button" onClick={() => setResetConfirmOpen(true)} disabled={!homepageQuery.data?.hasPublishedContent} className="rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700 disabled:opacity-50">
             Reset
           </button>
-          {!hasPendingDraftChanges && savedDraft ? (
-            <button type="button" onClick={() => setPublishConfirmOpen(true)} className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white">
+          {canOpenPublishReview ? (
+            <button type="button" onClick={openPublishReview} className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white">
               Publish
             </button>
           ) : null}
@@ -1353,9 +2328,9 @@ export default function AdminHomepagePage() {
         {sidebarOpen ? (
           <aside className="ui-scrollbar h-[calc(100vh-4.75rem)] overflow-y-auto border-r border-slate-200 bg-white p-4">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-teal-700">Editor</p>
-                <h2 className="text-xl font-semibold text-slate-950">{selection ? (selectedContainer ? "Container" : "Widget") : "Elements"}</h2>
+              <div className="min-w-0">
+                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-teal-700">{selectedKindLabel}</p>
+                <h2 className="truncate text-lg font-semibold text-slate-950">{selection ? selectedLabel : "Builder"}</h2>
               </div>
               <IconButton label="Close sidebar" onClick={() => setSidebarOpen(false)}><BackIcon /></IconButton>
             </div>
@@ -1365,58 +2340,76 @@ export default function AdminHomepagePage() {
 
             {!selection ? (
               <>
-                <div className="mt-4 grid grid-cols-2 gap-2 rounded-[20px] border border-slate-200 bg-slate-100 p-1">
-                  <button type="button" onClick={() => setSidebarMode("ELEMENTS")} className={`rounded-2xl px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] ${sidebarMode === "ELEMENTS" ? "bg-slate-950 text-white" : "bg-white text-slate-600"}`}>Elements</button>
-                  <button type="button" onClick={() => setSidebarMode("NAVIGATOR")} className={`rounded-2xl px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] ${sidebarMode === "NAVIGATOR" ? "bg-slate-950 text-white" : "bg-white text-slate-600"}`}>Navigator</button>
-                </div>
-                {sidebarMode === "ELEMENTS" ? (
-                  <div className="mt-4 space-y-4">
-                    {canInsertIntoTarget ? (
-                      <div className="rounded-2xl border border-teal-100 bg-teal-50 px-3 py-2 text-xs leading-5 text-teal-900">
-                        Adding inside: <span className="font-semibold">{targetContainerLabel}</span>
-                        <button type="button" onClick={() => setInsertionTargetContainerId(null)} className="ml-2 font-semibold text-teal-700 underline">
-                          clear
-                        </button>
-                      </div>
-                    ) : null}
-                    <button type="button" onClick={() => addElement(createContainer())} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white">
-                      <BoxIcon />
-                      {canInsertIntoTarget ? "Container inside target" : "Root container"}
-                    </button>
-                    <input value={widgetSearch} onChange={(event) => setWidgetSearch(event.target.value)} placeholder="Search widgets" className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm" />
-                    {!canInsertIntoTarget ? (
-                      <p className="rounded-2xl bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
-                        Select a container in the canvas or Navigator before adding widgets.
-                      </p>
-                    ) : null}
-                    <div className="grid grid-cols-2 gap-3">
-                      {filteredWidgets.map((item) => (
-                        <button key={item.type} type="button" disabled={!canInsertIntoTarget} onClick={() => addElement(createWidget(item.type))} className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white p-3 text-center text-xs font-semibold text-slate-800 hover:border-sky-300 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-45">
-                          {getWidgetIcon(item.type)}
-                          {item.title}
-                        </button>
-                      ))}
+                <div className="mt-4 space-y-4">
+                  <EditorSection title="Structure">
+                    <div className="space-y-3">
+                      {canvasInsertionPoint ? (
+                        <div className="rounded-2xl border border-sky-100 bg-sky-50 px-3 py-2 text-xs leading-5 text-sky-900">
+                          Inserting {canvasInsertionPoint.position} selected canvas item in: <span className="font-semibold">{targetContainerLabel}</span>
+                          <button type="button" onClick={() => setCanvasInsertionPoint(null)} className="ml-2 font-semibold text-sky-700 underline">
+                            clear
+                          </button>
+                        </div>
+                      ) : null}
+                      {canInsertIntoTarget ? (
+                        <div className="rounded-2xl border border-teal-100 bg-teal-50 px-3 py-2 text-xs leading-5 text-teal-900">
+                          Adding inside: <span className="font-semibold">{targetContainerLabel}</span>
+                          <button type="button" onClick={() => setInsertionTargetContainerId(null)} className="ml-2 font-semibold text-teal-700 underline">
+                            clear
+                          </button>
+                        </div>
+                      ) : null}
+                      <button type="button" onClick={() => addElement(createContainer())} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white">
+                        <ContainerIcon />
+                        {canvasInsertionPoint ? "Container at insertion point" : canInsertIntoTarget ? "Container inside target" : "Root container"}
+                      </button>
                     </div>
-                  </div>
-                ) : (
-                  <div className="mt-4">{renderNavigatorItems(workingDraft.containers ?? [])}</div>
-                )}
+                  </EditorSection>
+                  <EditorSection title="Widgets">
+                    <div className="space-y-3">
+                      <input value={widgetSearch} onChange={(event) => setWidgetSearch(event.target.value)} placeholder="Search widgets" className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm" />
+                      {!canInsertIntoTarget ? (
+                        <p className="rounded-2xl bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
+                          Select a container in the canvas or Navigator before adding widgets.
+                        </p>
+                      ) : null}
+                      <div className="grid grid-cols-2 gap-3">
+                        {filteredWidgets.map((item) => (
+                          <button key={item.type} type="button" disabled={!canInsertIntoTarget} onClick={() => addElement(createWidget(item.type))} className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white p-2 text-center text-xs font-semibold text-slate-800 shadow-sm hover:border-sky-300 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-45">
+                            {getWidgetIcon(item.type)}
+                            {item.title}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </EditorSection>
+                </div>
               </>
             ) : (
               <>
-                <div className="mt-4 flex gap-2 rounded-[20px] border border-slate-200 bg-slate-100 p-1">
+                <div className="mt-4 rounded-[20px] border border-slate-200 bg-slate-50 p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-slate-500">Editing</p>
+                      <p className="truncate text-sm font-semibold text-slate-950">{selectedLabel}</p>
+                    </div>
+                    <button type="button" onClick={() => { setSelection(null); setInsertionTargetContainerId(null); setCanvasInsertionPoint(null); }} className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">
+                      Back
+                    </button>
+                  </div>
+                </div>
+                <div className="mt-3 flex gap-2 rounded-[18px] border border-slate-200 bg-slate-100 p-1">
                   {(["CONTENT", "STYLE", "ADVANCED"] as const).map((tab) => (
                     <button key={tab} type="button" onClick={() => setSidebarTab(tab)} className={`flex-1 rounded-2xl px-2 py-2 text-[0.68rem] font-semibold uppercase tracking-[0.11em] ${sidebarTab === tab ? "bg-slate-950 text-white" : "bg-white text-slate-600"}`}>
                       {tab}
                     </button>
                   ))}
                 </div>
-                <div className="mt-4 rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
-                  {sidebarTab === "CONTENT" ? renderContentTab() : sidebarTab === "STYLE" ? renderStyleTab() : renderAdvancedTab()}
+                <div className="mt-4 space-y-3">
+                  <EditorSection title={selectedPanelTitle}>
+                    {sidebarTab === "CONTENT" ? renderContentTab() : sidebarTab === "STYLE" ? renderStyleTab() : renderAdvancedTab()}
+                  </EditorSection>
                 </div>
-                <button type="button" onClick={() => { setSelection(null); setInsertionTargetContainerId(null); setSidebarMode("ELEMENTS"); }} className="mt-4 w-full rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">
-                  Back to elements
-                </button>
               </>
             )}
           </aside>
@@ -1452,6 +2445,58 @@ export default function AdminHomepagePage() {
         </section>
       </div>
 
+      {navigatorOpen ? (
+        <div
+          className="fixed z-[120] flex min-h-[260px] min-w-[280px] resize overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-2xl"
+          style={{ left: navigatorPosition.x, top: navigatorPosition.y, width: navigatorSize.width, height: navigatorSize.height }}
+          onMouseUp={(event) => {
+            const rect = event.currentTarget.getBoundingClientRect();
+            setNavigatorSize({ width: Math.round(rect.width), height: Math.round(rect.height) });
+          }}
+        >
+          <div className="flex min-h-0 w-full flex-col">
+            <div
+              className="flex cursor-move items-center justify-between gap-3 border-b border-slate-100 bg-slate-950 px-4 py-3 text-white"
+              onMouseDown={(event) => {
+                setNavigatorDrag({
+                  startX: event.clientX,
+                  startY: event.clientY,
+                  originX: navigatorPosition.x,
+                  originY: navigatorPosition.y
+                });
+              }}
+            >
+              <div className="flex min-w-0 items-center gap-2">
+                <LayersIcon />
+                <div className="min-w-0">
+                  <p className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-teal-200">Navigator</p>
+                  <p className="truncate text-sm font-semibold">Page structure</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                aria-label="Close navigator"
+                title="Close navigator"
+                onClick={() => setNavigatorOpen(false)}
+                onMouseDown={(event) => event.stopPropagation()}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
+              >
+                <BackIcon />
+              </button>
+            </div>
+            <div className="ui-scrollbar min-h-0 flex-1 overflow-auto p-3">
+              {(workingDraft.containers ?? []).length ? (
+                renderNavigatorItems(workingDraft.containers ?? [])
+              ) : (
+                <div className="rounded-2xl border border-dashed border-slate-200 p-4 text-center text-sm text-slate-500">
+                  No containers yet.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {deleteTarget ? (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/50 px-4">
           <div className="w-full max-w-lg rounded-[30px] bg-white p-6 shadow-2xl">
@@ -1473,8 +2518,23 @@ export default function AdminHomepagePage() {
               <div>
                 <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-teal-700">Publish confirmation</p>
                 <h3 className="mt-2 text-2xl font-semibold text-slate-950">Review draft before going live</h3>
+                <p className="mt-2 text-sm text-slate-500">Only the saved draft is published. Unsaved canvas edits are blocked from publishing.</p>
               </div>
               <button type="button" onClick={() => setPublishConfirmOpen(false)} className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">Close</button>
+            </div>
+            <div className="mt-5 grid gap-3 md:grid-cols-3">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-slate-500">Saved draft</p>
+                <p className="mt-2 text-sm font-semibold text-slate-950">{draftSaveLabel}</p>
+              </div>
+              <div className="rounded-2xl border border-teal-100 bg-teal-50 p-4">
+                <p className="text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-teal-700">Draft content</p>
+                <p className="mt-2 text-sm font-semibold text-teal-950">{savedDraftSummary.containers} containers, {savedDraftSummary.widgets} widgets, {savedDraftSummary.hidden} hidden</p>
+              </div>
+              <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
+                <p className="text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-sky-700">Current live</p>
+                <p className="mt-2 text-sm font-semibold text-sky-950">{publishedSummary.containers} containers, {publishedSummary.widgets} widgets, {publishedSummary.hidden} hidden</p>
+              </div>
             </div>
             <div className="mt-6 grid gap-6 xl:grid-cols-2">
               <div>
@@ -1489,14 +2549,14 @@ export default function AdminHomepagePage() {
                 <h4 className="mb-3 text-lg font-semibold text-slate-950">Draft that will go live</h4>
                 <div className="rounded-[32px] border border-slate-200 bg-[var(--app-bg)] p-4">
                   {showPreviewHeader ? <PublicHomepageHeader previewViewport="desktop" interactive={false} /> : null}
-                  <div className="mt-6"><HomepageRenderer content={workingDraft} viewport="desktop" mode="builder" /></div>
+                  <div className="mt-6"><HomepageRenderer content={publishPreviewContent} viewport="desktop" mode="builder" /></div>
                   {showPreviewFooter ? <div className="mt-6"><SiteFooter interactive={false} previewViewport="desktop" /></div> : null}
                 </div>
               </div>
             </div>
             <div className="mt-6 flex justify-end gap-3">
               <button type="button" onClick={() => setPublishConfirmOpen(false)} className="rounded-full border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700">Cancel</button>
-              <button type="button" onClick={() => publishDraftMutation.mutate()} disabled={publishDraftMutation.isPending} className="rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60">
+              <button type="button" onClick={() => publishDraftMutation.mutate()} disabled={publishDraftMutation.isPending || hasPendingDraftChanges || !hasHomepageContent(publishPreviewContent)} className="rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60">
                 {publishDraftMutation.isPending ? "Publishing..." : "Confirm publish"}
               </button>
             </div>

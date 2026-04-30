@@ -32,6 +32,7 @@ import type {
   HomepageSizePreset,
   HomepageSpacingPreset,
   HomepageTextTag,
+  HomepageTypography,
   HomepageVideoAspectRatio,
   HomepageWidthPreset
 } from "../../lib/homepage/types";
@@ -264,10 +265,21 @@ function lengthToCss(length: HomepageLengthValue | undefined) {
   return `${length.value}${length.unit ?? "px"}`;
 }
 
+function typographyToStyle(typography: HomepageTypography | undefined, textColor?: string): CSSProperties {
+  return {
+    color: colorValue(textColor),
+    fontSize: lengthToCss(typography?.fontSize),
+    lineHeight: typeof typography?.lineHeight === "number" ? typography.lineHeight : undefined,
+    fontWeight: typography?.fontWeight,
+    letterSpacing: typeof typography?.letterSpacing === "number" ? `${typography.letterSpacing}px` : undefined,
+    textTransform: typography?.textTransform && typography.textTransform !== "none" ? typography.textTransform : undefined
+  };
+}
+
 function getResponsiveContainerValue<T>(
   container: HomepageContainer,
   viewport: HomepageRendererViewport,
-  field: "direction" | "width" | "maxWidth" | "minHeight",
+  field: "direction" | "width" | "maxWidth" | "minHeight" | "height",
   fallback: T | undefined
 ) {
   if (viewport === "desktop" || viewport === "tablet" || viewport === "mobile") {
@@ -282,6 +294,7 @@ export function getContainerStyle(container: HomepageContainer, viewport: Homepa
   const width = getResponsiveContainerValue<HomepageLengthValue>(container, viewport, "width", container.width);
   const maxWidth = getResponsiveContainerValue<HomepageLengthValue>(container, viewport, "maxWidth", container.maxWidth);
   const minHeight = getResponsiveContainerValue<HomepageLengthValue>(container, viewport, "minHeight", container.minHeight);
+  const height = getResponsiveContainerValue<HomepageLengthValue>(container, viewport, "height", container.height);
   const justifyMap: Record<HomepageContainerJustify, CSSProperties["justifyContent"]> = {
     start: "flex-start",
     center: "center",
@@ -305,7 +318,7 @@ export function getContainerStyle(container: HomepageContainer, viewport: Homepa
     width: lengthToCss(width),
     maxWidth: lengthToCss(maxWidth),
     minHeight: lengthToCss(minHeight),
-    height: lengthToCss(container.height),
+    height: lengthToCss(height),
     backgroundColor: transparentValue(container.background?.color),
     backgroundImage: container.backgroundImage ? `url(${container.backgroundImage})` : undefined,
     backgroundSize: container.backgroundImage ? "cover" : undefined,
@@ -379,6 +392,20 @@ function getVideoRatioClass(aspectRatio: HomepageVideoAspectRatio | undefined) {
   return "aspect-video";
 }
 
+function getVideoEmbedUrl(videoUrl: string) {
+  if (videoUrl.includes("youtube.com/watch?v=")) {
+    return `https://www.youtube.com/embed/${videoUrl.split("v=")[1]?.split("&")[0] ?? ""}`;
+  }
+  if (videoUrl.includes("youtu.be/")) {
+    return `https://www.youtube.com/embed/${videoUrl.split("youtu.be/")[1]?.split("?")[0] ?? ""}`;
+  }
+  if (videoUrl.includes("vimeo.com/")) {
+    const id = videoUrl.split("vimeo.com/")[1]?.split("?")[0]?.split("/").filter(Boolean).at(-1);
+    return id ? `https://player.vimeo.com/video/${id}` : videoUrl;
+  }
+  return videoUrl;
+}
+
 function getButtonClasses(variant: HomepageButtonVariant | undefined) {
   if (variant === "secondary") return "border border-slate-300 bg-white text-slate-900 hover:bg-slate-50";
   if (variant === "ghost") return "border border-transparent bg-slate-100 text-slate-800 hover:bg-slate-200";
@@ -391,6 +418,7 @@ function getButtonStyle(card: HomepageCard): CSSProperties {
     color: colorValue(card.buttonStyle?.textColor),
     "--homepage-button-hover-bg": colorValue(card.buttonStyle?.hoverBackgroundColor) ?? colorValue(card.buttonStyle?.backgroundColor),
     "--homepage-button-hover-text": colorValue(card.buttonStyle?.hoverTextColor) ?? colorValue(card.buttonStyle?.textColor),
+    ...boxSpacingToStyle(card.buttonStyle?.padding, "padding"),
     ...borderToStyle(card.buttonStyle?.border)
   } as CSSProperties;
 }
@@ -449,22 +477,22 @@ function getOrderedColumns(row: HomepageRow, viewport: HomepageRendererViewport)
   return columns;
 }
 
-function TextTagView({ tag, className, children }: { tag: HomepageTextTag; className: string; children: string }) {
+function TextTagView({ tag, className, style, children }: { tag: HomepageTextTag; className: string; style?: CSSProperties; children: string }) {
   switch (tag) {
     case "H1":
-      return <h1 className={className}>{children}</h1>;
+      return <h1 className={className} style={style}>{children}</h1>;
     case "H2":
-      return <h2 className={className}>{children}</h2>;
+      return <h2 className={className} style={style}>{children}</h2>;
     case "H3":
-      return <h3 className={className}>{children}</h3>;
+      return <h3 className={className} style={style}>{children}</h3>;
     case "H4":
-      return <h4 className={className}>{children}</h4>;
+      return <h4 className={className} style={style}>{children}</h4>;
     case "H5":
-      return <h5 className={className}>{children}</h5>;
+      return <h5 className={className} style={style}>{children}</h5>;
     case "H6":
-      return <h6 className={className}>{children}</h6>;
+      return <h6 className={className} style={style}>{children}</h6>;
     case "P":
-      return <p className={className}>{children}</p>;
+      return <p className={className} style={style}>{children}</p>;
   }
 }
 
@@ -490,6 +518,7 @@ export function HomepageCardView({ card, viewport, mode }: { card: HomepageCard;
   const textTagClasses = getTextTagClasses(viewport);
   const cardClasses = getCardClasses(card);
   const cardStyle = getCardStyle(card);
+  const textStyle = typographyToStyle(card.typography, card.textColor);
 
   if (card.type === "SPACER") {
     return <div className={getSizeHeight(card.heightPreset)} style={cardStyle} />;
@@ -498,7 +527,13 @@ export function HomepageCardView({ card, viewport, mode }: { card: HomepageCard;
   if (card.type === "DIVIDER") {
     return (
       <div className={`${getMarginClasses(card.marginPreset)} px-2`} style={cardStyle}>
-        <div className={`border-t ${card.dividerStyle === "dashed" ? "border-dashed" : "border-solid"} border-slate-300`} />
+        <div
+          className={`border-t ${card.dividerStyle === "dashed" ? "border-dashed" : "border-solid"}`}
+          style={{
+            borderColor: colorValue(card.dividerColor) ?? "#cbd5e1",
+            borderTopWidth: `${card.dividerWidth ?? 1}px`
+          }}
+        />
       </div>
     );
   }
@@ -506,7 +541,7 @@ export function HomepageCardView({ card, viewport, mode }: { card: HomepageCard;
   if (card.type === "HEADING") {
     return (
       <article className={cardClasses} style={cardStyle}>
-        <TextTagView tag={card.textTag} className={`${textTagClasses[card.textTag]} ${card.textAlign === "center" ? "text-center" : "text-left"}`}>
+        <TextTagView tag={card.textTag} className={`${textTagClasses[card.textTag]} ${card.textAlign === "center" ? "text-center" : "text-left"}`} style={textStyle}>
           {card.content}
         </TextTagView>
       </article>
@@ -517,7 +552,7 @@ export function HomepageCardView({ card, viewport, mode }: { card: HomepageCard;
     return (
       <article className={cardClasses} style={cardStyle}>
         <AlignWrap align={card.textAlign}>
-          <p className="text-base leading-8">{card.content}</p>
+          <p className="text-base leading-8" style={textStyle}>{card.content}</p>
         </AlignWrap>
       </article>
     );
@@ -551,16 +586,12 @@ export function HomepageCardView({ card, viewport, mode }: { card: HomepageCard;
   }
 
   if (card.type === "VIDEO") {
-    const embedUrl = card.videoUrl.includes("youtube.com/watch?v=")
-      ? `https://www.youtube.com/embed/${card.videoUrl.split("v=")[1]?.split("&")[0] ?? ""}`
-      : card.videoUrl.includes("youtu.be/")
-        ? `https://www.youtube.com/embed/${card.videoUrl.split("youtu.be/")[1]?.split("?")[0] ?? ""}`
-        : card.videoUrl;
+    const embedUrl = getVideoEmbedUrl(card.videoUrl);
 
     return (
       <article className={cardClasses} style={cardStyle}>
         <div className={`overflow-hidden rounded-[16px] bg-slate-950 ${getVideoRatioClass(card.aspectRatio)}`}>
-          <iframe src={embedUrl} title={card.title || "Homepage video"} className="h-full w-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+          <iframe src={embedUrl} title={card.title || "Homepage video"} className={`h-full w-full ${mode === "builder" ? "pointer-events-none" : ""}`} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
         </div>
         {card.caption ? <p className="mt-4 text-sm leading-6 text-slate-600">{card.caption}</p> : null}
       </article>
@@ -572,8 +603,13 @@ export function HomepageCardView({ card, viewport, mode }: { card: HomepageCard;
       <article className={cardClasses} style={cardStyle}>
         <AlignWrap align={card.textAlign}>
           <div className={card.textAlign === "center" ? "flex flex-col items-center" : "flex flex-col items-start"}>
-            <span className="text-4xl leading-none">{card.iconSymbol}</span>
-            <p className="mt-4 text-base leading-7">{card.content}</p>
+            <span
+              className="leading-none"
+              style={{ fontSize: lengthToCss(card.iconSize) ?? "2.25rem", color: colorValue(card.iconColor) ?? colorValue(card.textColor) }}
+            >
+              {card.iconSymbol}
+            </span>
+            <p className="mt-4 text-base leading-7" style={textStyle}>{card.content}</p>
           </div>
         </AlignWrap>
       </article>
@@ -583,8 +619,8 @@ export function HomepageCardView({ card, viewport, mode }: { card: HomepageCard;
   if (card.type === "LIST") {
     return (
       <article className={cardClasses} style={cardStyle}>
-        {card.title ? <h3 className="text-xl font-semibold text-slate-950">{card.title}</h3> : null}
-        <ul className="mt-4 space-y-2 text-sm leading-6 text-slate-600">
+        {card.title ? <h3 className="text-xl font-semibold text-slate-950" style={textStyle}>{card.title}</h3> : null}
+        <ul className="mt-4 space-y-2 text-sm leading-6 text-slate-600" style={textStyle}>
           {card.items.map((item, index) => (
             <li key={`${card.id}-list-${index}`} className="flex gap-3">
               <span className="mt-2 h-2 w-2 rounded-full bg-sky-500" />
@@ -600,8 +636,8 @@ export function HomepageCardView({ card, viewport, mode }: { card: HomepageCard;
     return (
       <article className={cardClasses} style={cardStyle}>
         {card.subtitle ? <p className="section-kicker">{card.subtitle}</p> : null}
-        {card.title ? <h3 className="mt-3 text-2xl font-semibold text-slate-950">{card.title}</h3> : null}
-        {card.body ? <p className="mt-4 text-base leading-8 text-slate-600">{card.body}</p> : null}
+        {card.title ? <h3 className="mt-3 text-2xl font-semibold text-slate-950" style={textStyle}>{card.title}</h3> : null}
+        {card.body ? <p className="mt-4 text-base leading-8 text-slate-600" style={textStyle}>{card.body}</p> : null}
         {card.buttonLabel ? (
           <ButtonLikeLink href={card.buttonHref || "#"} mode={mode} style={getButtonStyle(card)} className="mt-5 inline-flex rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white hover:bg-[var(--homepage-button-hover-bg)] hover:text-[var(--homepage-button-hover-text)]">
             {card.buttonLabel}
@@ -611,16 +647,82 @@ export function HomepageCardView({ card, viewport, mode }: { card: HomepageCard;
     );
   }
 
+  if (card.type === "TESTIMONIAL") {
+    return (
+      <article className={cardClasses} style={cardStyle}>
+        <div className="text-5xl leading-none text-sky-500">&ldquo;</div>
+        <blockquote className="mt-2 text-xl font-semibold leading-9 text-slate-950" style={textStyle}>
+          {card.quote}
+        </blockquote>
+        <div className="mt-6 flex items-center gap-4">
+          <div className="h-12 w-12 overflow-hidden rounded-full bg-slate-100">
+            {card.avatarUrl ? <img src={card.avatarUrl} alt={card.authorName} className="h-full w-full object-cover" /> : null}
+          </div>
+          <div>
+            <p className="font-semibold text-slate-950">{card.authorName}</p>
+            {card.authorRole ? <p className="text-sm text-slate-500">{card.authorRole}</p> : null}
+          </div>
+        </div>
+      </article>
+    );
+  }
+
+  if (card.type === "STATS") {
+    return (
+      <article className={cardClasses} style={cardStyle}>
+        {card.title ? <h3 className="text-2xl font-semibold text-slate-950" style={textStyle}>{card.title}</h3> : null}
+        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          {card.stats.map((item) => (
+            <div key={item.id} className="rounded-[18px] border border-slate-200 bg-white/80 p-4">
+              <p className="text-3xl font-semibold text-sky-600">{item.value}</p>
+              <p className="mt-2 font-semibold text-slate-950">{item.label}</p>
+              {item.description ? <p className="mt-1 text-sm leading-6 text-slate-600">{item.description}</p> : null}
+            </div>
+          ))}
+        </div>
+      </article>
+    );
+  }
+
+  if (card.type === "FAQ") {
+    return (
+      <article className={cardClasses} style={cardStyle}>
+        {card.title ? <h3 className="text-2xl font-semibold text-slate-950" style={textStyle}>{card.title}</h3> : null}
+        <div className="mt-5 space-y-3">
+          {card.faqs.map((item) => (
+            <details key={item.id} className="group rounded-[18px] border border-slate-200 bg-white/80 p-4">
+              <summary className="cursor-pointer list-none font-semibold text-slate-950">
+                <span>{item.question}</span>
+              </summary>
+              <p className="mt-3 text-sm leading-6 text-slate-600">{item.answer}</p>
+            </details>
+          ))}
+        </div>
+      </article>
+    );
+  }
+
   if (card.type === "COURSE_LIST") {
     return (
       <article className={cardClasses} style={cardStyle}>
-        {card.title ? <h3 className="text-2xl font-semibold text-slate-950">{card.title}</h3> : null}
+        {card.title ? <h3 className="text-2xl font-semibold text-slate-950" style={textStyle}>{card.title}</h3> : null}
+        {card.body ? <p className="mt-3 text-base leading-8 text-slate-600" style={textStyle}>{card.body}</p> : null}
         <div className="mt-5 grid gap-3">
           {card.items.map((course) => (
-            <div key={course.id} className="rounded-[14px] border border-slate-200 bg-white p-4">
-              <p className="font-semibold text-slate-950">{course.title}</p>
-              {course.description ? <p className="mt-2 text-sm leading-6 text-slate-600">{course.description}</p> : null}
-            </div>
+            <ButtonLikeLink key={course.id} href={`/courses/${course.id}`} mode={mode} className="block rounded-[14px] border border-slate-200 bg-white p-4 transition hover:border-sky-200 hover:shadow-sm">
+              <div className="flex gap-4">
+                {course.thumbnailImage ? <img src={course.thumbnailImage} alt={course.title} className="h-16 w-20 shrink-0 rounded-xl object-cover" /> : null}
+                <div className="min-w-0">
+                  <p className="font-semibold text-slate-950">{course.title}</p>
+                  {course.description ? <p className="mt-2 text-sm leading-6 text-slate-600">{course.description}</p> : null}
+                  <div className="mt-3 flex flex-wrap gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.1em] text-slate-500">
+                    {course.category ? <span>{course.category}</span> : null}
+                    {course.level ? <span>{course.level}</span> : null}
+                    <span>{course.isPaid ? "Paid" : "Free"}</span>
+                  </div>
+                </div>
+              </div>
+            </ButtonLikeLink>
           ))}
         </div>
       </article>
@@ -632,12 +734,12 @@ export function HomepageCardView({ card, viewport, mode }: { card: HomepageCard;
     return (
       <article className={cardClasses} style={cardStyle}>
         {card.subtitle ? <p className="section-kicker">{card.subtitle}</p> : null}
-        {card.title ? <h2 className="mt-3 text-2xl font-semibold text-slate-950">{card.title}</h2> : null}
-        {card.body ? <p className="mt-4 text-base leading-8 text-slate-600">{card.body}</p> : null}
+        {card.title ? <h2 className="mt-3 text-2xl font-semibold text-slate-950" style={textStyle}>{card.title}</h2> : null}
+        {card.body ? <p className="mt-4 text-base leading-8 text-slate-600" style={textStyle}>{card.body}</p> : null}
         {instructors.length ? (
           <div className="mt-6 grid gap-4 md:grid-cols-2">
             {instructors.map((instructor) => (
-              <article key={instructor.id} className="rounded-[18px] border border-slate-200 bg-white p-5 shadow-sm">
+              <ButtonLikeLink key={instructor.id} href={`/instructors/${instructor.id}`} mode={mode} className="block rounded-[18px] border border-slate-200 bg-white p-5 shadow-sm transition hover:border-sky-200 hover:shadow-md">
                 <div className="flex items-center gap-4">
                   <div className="h-14 w-14 overflow-hidden rounded-full bg-slate-100">
                     {instructor.profileImage ? <img src={instructor.profileImage} alt={instructor.fullName} className="h-full w-full object-cover" /> : null}
@@ -647,7 +749,14 @@ export function HomepageCardView({ card, viewport, mode }: { card: HomepageCard;
                     {instructor.bio ? <p className="mt-1 text-sm leading-6 text-slate-600">{instructor.bio}</p> : null}
                   </div>
                 </div>
-              </article>
+                {instructor.courses.length ? (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {instructor.courses.slice(0, 4).map((course) => (
+                      <span key={course.id} className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{course.title}</span>
+                    ))}
+                  </div>
+                ) : null}
+              </ButtonLikeLink>
             ))}
           </div>
         ) : (
@@ -660,8 +769,8 @@ export function HomepageCardView({ card, viewport, mode }: { card: HomepageCard;
   return (
     <article className={cardClasses} style={cardStyle}>
       {card.subtitle ? <p className="section-kicker">{card.subtitle}</p> : null}
-      {card.title ? <h2 className="mt-3 text-2xl font-semibold text-slate-950">{card.title}</h2> : null}
-      {card.body ? <p className="mt-4 text-base leading-8 text-slate-600">{card.body}</p> : null}
+      {card.title ? <h2 className="mt-3 text-2xl font-semibold text-slate-950" style={textStyle}>{card.title}</h2> : null}
+      {card.body ? <p className="mt-4 text-base leading-8 text-slate-600" style={textStyle}>{card.body}</p> : null}
       {renderBulletLines(card)}
     </article>
   );
@@ -689,7 +798,7 @@ function HomepageElementView({
 
   if (!shouldDisplayOnViewport(element.hidden, element.visibility, viewport)) return null;
   return (
-    <div className={getResponsiveVisibilityClass(element.visibility, viewport)}>
+    <div className={`${getResponsiveVisibilityClass(element.visibility, viewport)} ${mode === "builder" ? "pointer-events-none select-none" : ""}`}>
       <HomepageCardView card={element} viewport={viewport} mode={mode} />
     </div>
   );
@@ -739,7 +848,7 @@ export function HomepageRenderer({
                       {column.widgets
                         .filter((widget) => shouldDisplayOnViewport(widget.hidden, widget.visibility, viewport))
                         .map((widget) => (
-                          <div key={widget.id} className={getResponsiveVisibilityClass(widget.visibility, viewport)}>
+                          <div key={widget.id} className={`${getResponsiveVisibilityClass(widget.visibility, viewport)} ${mode === "builder" ? "pointer-events-none select-none" : ""}`}>
                             <HomepageCardView card={widget} viewport={viewport} mode={mode} />
                           </div>
                         ))}

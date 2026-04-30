@@ -15,7 +15,10 @@ export type HomepageCardType =
   | "LIST"
   | "CARD"
   | "COURSE_LIST"
-  | "INSTRUCTOR_LIST";
+  | "INSTRUCTOR_LIST"
+  | "TESTIMONIAL"
+  | "STATS"
+  | "FAQ";
 
 export type HomepageTextTag = "H1" | "H2" | "H3" | "H4" | "H5" | "H6" | "P";
 export type HomepageResponsiveVisibility = {
@@ -81,6 +84,15 @@ export type HomepageButtonStyle = {
   hoverBackgroundColor?: string;
   hoverTextColor?: string;
   border?: HomepageBorder;
+  padding?: HomepageBoxSpacing;
+};
+
+export type HomepageTypography = {
+  fontSize?: HomepageLengthValue;
+  lineHeight?: number;
+  fontWeight?: "300" | "400" | "500" | "600" | "700" | "800";
+  letterSpacing?: number;
+  textTransform?: "none" | "uppercase" | "lowercase" | "capitalize";
 };
 
 export type HomepageLengthValue = {
@@ -93,6 +105,7 @@ export type HomepageContainerResponsive = {
   width?: HomepageLengthValue;
   maxWidth?: HomepageLengthValue;
   minHeight?: HomepageLengthValue;
+  height?: HomepageLengthValue;
 };
 
 export type HomepageInstructorCourse = {
@@ -112,6 +125,19 @@ export type HomepageInstructorEntry = {
   bio?: string | null;
   profileImage?: string | null;
   courses: HomepageInstructorCourse[];
+};
+
+export type HomepageStatItem = {
+  id: string;
+  value: string;
+  label: string;
+  description?: string;
+};
+
+export type HomepageFaqItem = {
+  id: string;
+  question: string;
+  answer: string;
 };
 
 export type HomepageCardBase = {
@@ -135,6 +161,11 @@ export type HomepageCardBase = {
   background?: HomepageBackground;
   border?: HomepageBorder;
   buttonStyle?: HomepageButtonStyle;
+  typography?: HomepageTypography;
+  iconSize?: HomepageLengthValue;
+  iconColor?: string;
+  dividerColor?: string;
+  dividerWidth?: number;
 };
 
 export type HomepageCard =
@@ -206,6 +237,21 @@ export type HomepageCard =
   | (HomepageCardBase & {
       type: "INSTRUCTOR_LIST";
       instructors: HomepageInstructorEntry[];
+    })
+  | (HomepageCardBase & {
+      type: "TESTIMONIAL";
+      quote: string;
+      authorName: string;
+      authorRole?: string;
+      avatarUrl?: string;
+    })
+  | (HomepageCardBase & {
+      type: "STATS";
+      stats: HomepageStatItem[];
+    })
+  | (HomepageCardBase & {
+      type: "FAQ";
+      faqs: HomepageFaqItem[];
     })
   | (HomepageCardBase & {
       type: "FEATURED_INSTRUCTORS";
