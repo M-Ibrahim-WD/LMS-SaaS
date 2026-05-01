@@ -23,6 +23,7 @@ import type {
   HomepageButtonVariant,
   HomepageButtonStyle,
   HomepageCard,
+  HomepageCardPartStyles,
   HomepageCardType,
   HomepageCatalogInstructor,
   HomepageColumn,
@@ -39,6 +40,7 @@ import type {
   HomepageInstructorEntry,
   HomepageLengthUnit,
   HomepageLengthValue,
+  HomepagePartStyle,
   HomepageResponsiveVisibility,
   HomepageRow,
   HomepageSizePreset,
@@ -220,6 +222,42 @@ function DownIcon() {
   return <SvgIcon><path strokeLinecap="round" strokeLinejoin="round" d="m7 10 5 5 5-5" /></SvgIcon>;
 }
 
+function RowDirectionIcon() {
+  return <SvgIcon><rect x="4" y="7" width="7" height="10" rx="1.5" /><rect x="13" y="7" width="7" height="10" rx="1.5" /></SvgIcon>;
+}
+
+function ColumnDirectionIcon() {
+  return <SvgIcon><rect x="6" y="4" width="12" height="6" rx="1.5" /><rect x="6" y="14" width="12" height="6" rx="1.5" /></SvgIcon>;
+}
+
+function WrapIcon() {
+  return <SvgIcon><path strokeLinecap="round" d="M4 7h10a4 4 0 0 1 0 8H8" /><path strokeLinecap="round" strokeLinejoin="round" d="m10 12-4 3 4 3" /></SvgIcon>;
+}
+
+function NoWrapIcon() {
+  return <SvgIcon><path strokeLinecap="round" d="M4 12h16" /><path strokeLinecap="round" strokeLinejoin="round" d="m16 8 4 4-4 4" /></SvgIcon>;
+}
+
+function AlignStartIcon() {
+  return <SvgIcon><path strokeLinecap="round" d="M5 5v14M9 8h10M9 16h6" /></SvgIcon>;
+}
+
+function AlignCenterIcon() {
+  return <SvgIcon><path strokeLinecap="round" d="M12 5v14M7 8h10M9 16h6" /></SvgIcon>;
+}
+
+function AlignEndIcon() {
+  return <SvgIcon><path strokeLinecap="round" d="M19 5v14M5 8h10M9 16h6" /></SvgIcon>;
+}
+
+function AlignBetweenIcon() {
+  return <SvgIcon><path strokeLinecap="round" d="M5 5v14M19 5v14M8 9h8M8 15h8" /></SvgIcon>;
+}
+
+function StretchIcon() {
+  return <SvgIcon><path strokeLinecap="round" d="M5 6v12M19 6v12M8 8h8M8 16h8" /><path strokeLinecap="round" strokeLinejoin="round" d="m8 12 2-2M8 12l2 2M16 12l-2-2M16 12l-2 2" /></SvgIcon>;
+}
+
 function isContainer(element: HomepageElement): element is HomepageContainer {
   return element.type === "CONTAINER";
 }
@@ -307,6 +345,8 @@ function createContainer(
     justify: overrides.justify ?? "start",
     align: overrides.align ?? "stretch",
     gap: overrides.gap ?? 10,
+    rowGap: overrides.rowGap,
+    columnGap: overrides.columnGap,
     visibility: overrides.visibility ?? createVisibility(),
     spacing: overrides.spacing ?? { padding: createBox(10), margin: createBox(10) },
     background: overrides.background ?? { color: "transparent" },
@@ -805,6 +845,82 @@ function TypographyControl({
   );
 }
 
+function NumberControl({
+  label,
+  value,
+  onChange,
+  placeholder = "Auto",
+  min
+}: {
+  label: string;
+  value?: number;
+  onChange: (value: number | undefined) => void;
+  placeholder?: string;
+  min?: number;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">{label}</span>
+      <input
+        type="number"
+        min={min}
+        value={typeof value === "number" ? value : ""}
+        onChange={(event) => onChange(event.target.value === "" ? undefined : Number(event.target.value))}
+        className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+        placeholder={placeholder}
+      />
+    </label>
+  );
+}
+
+function AlignmentControl({ value, onChange }: { value?: HomepageAlign; onChange: (value: HomepageAlign | undefined) => void }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Alignment</span>
+      <select value={value ?? ""} onChange={(event) => onChange(event.target.value ? event.target.value as HomepageAlign : undefined)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+        <option value="">Default</option>
+        <option value="left">Left</option>
+        <option value="center">Center</option>
+      </select>
+    </label>
+  );
+}
+
+function IconSegmentedControl<T extends string>({
+  label,
+  value,
+  options,
+  onChange
+}: {
+  label: string;
+  value: T;
+  options: Array<{ value: T; label: string; icon: React.ReactNode }>;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <div>
+      <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">{label}</span>
+      <div className="grid grid-cols-4 gap-2">
+        {options.map((option) => {
+          const active = option.value === value;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              aria-label={option.label}
+              title={option.label}
+              onClick={() => onChange(option.value)}
+              className={`inline-flex h-11 items-center justify-center rounded-2xl border transition ${active ? "border-teal-500 bg-teal-50 text-teal-700 ring-2 ring-teal-100" : "border-slate-200 bg-white text-slate-600 hover:border-sky-200 hover:bg-sky-50"}`}
+            >
+              {option.icon}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function IconButton({
   label,
   children,
@@ -873,6 +989,28 @@ function EditorSection({
         <span className="text-slate-400 transition group-open:rotate-180">⌄</span>
       </summary>
       <div className="border-t border-slate-100 p-3">
+        {children}
+      </div>
+    </details>
+  );
+}
+
+function ControlGroup({
+  title,
+  children,
+  defaultOpen = false
+}: {
+  title: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
+  return (
+    <details name="homepage-builder-control-group" open={defaultOpen} className="rounded-[18px] border border-slate-200 bg-white shadow-sm">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 text-[0.68rem] font-semibold uppercase tracking-[0.13em] text-slate-600">
+        {title}
+        <span className="text-slate-400">⌄</span>
+      </summary>
+      <div className="space-y-3 border-t border-slate-100 p-3">
         {children}
       </div>
     </details>
@@ -1134,6 +1272,16 @@ export default function AdminHomepagePage() {
 
   function updateWidget(id: string, patch: Partial<HomepageCard>) {
     updateElement(id, (element) => (!isContainer(element) ? ({ ...element, ...patch } as HomepageCard) : element));
+  }
+
+  function selectElement(nextSelection: Exclude<Selection, null>, nextTab?: SidebarTab) {
+    if (selection?.kind === nextSelection.kind && selection.id === nextSelection.id) {
+      setSidebarOpen(true);
+      return;
+    }
+    setSelection(nextSelection);
+    setSidebarOpen(true);
+    if (nextTab) setSidebarTab(nextTab);
   }
 
   function addElement(element: HomepageElement) {
@@ -1577,13 +1725,12 @@ export default function AdminHomepagePage() {
           onPointerLeave={() => setHoveredCanvasElementId((current) => current === element.id ? null : current)}
           onClick={(event) => {
             event.stopPropagation();
-            setSelection({ kind: "container", id: element.id });
-            setSidebarTab("ADVANCED");
+            selectElement({ kind: "container", id: element.id }, "ADVANCED");
           }}
           onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === " ") {
               event.preventDefault();
-              setSelection({ kind: "container", id: element.id });
+              selectElement({ kind: "container", id: element.id }, "ADVANCED");
             }
           }}
           className={`relative min-h-[44px] outline-offset-2 transition ${deviceHiddenClass} ${active ? "outline outline-2 outline-teal-500" : chromeVisible ? "outline outline-1 outline-teal-300" : ""}`}
@@ -1634,13 +1781,12 @@ export default function AdminHomepagePage() {
         onPointerLeave={() => setHoveredCanvasElementId((current) => current === element.id ? null : current)}
         onClick={(event) => {
           event.stopPropagation();
-          setSelection({ kind: "widget", id: element.id });
-          setSidebarTab("CONTENT");
+          selectElement({ kind: "widget", id: element.id }, "CONTENT");
         }}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
-            setSelection({ kind: "widget", id: element.id });
+            selectElement({ kind: "widget", id: element.id }, "CONTENT");
           }
         }}
         className={`relative outline-offset-2 transition ${deviceHiddenClass} ${active ? "outline outline-2 outline-sky-500" : chromeVisible ? "outline outline-1 outline-sky-300" : ""}`}
@@ -2079,23 +2225,89 @@ export default function AdminHomepagePage() {
 
   const renderStyleTab = () => {
     if (selectedContainer) {
-      return <p className="rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">Container layout, background, border, padding, margin, and size live in Advanced.</p>;
+      return (
+        <div className="space-y-3">
+          <ControlGroup title="Background" defaultOpen>
+            <ColorControl label="Background color" value={selectedContainer.background?.color ?? "transparent"} onChange={(color) => updateContainer(selectedContainer.id, { background: { ...(selectedContainer.background ?? {}), color } })} />
+            <input value={selectedContainer.backgroundImage ?? ""} onChange={(event) => updateContainer(selectedContainer.id, { backgroundImage: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Background image URL" />
+          </ControlGroup>
+          <ControlGroup title="Border">
+            <BorderControl value={selectedContainer.border} onChange={(border) => updateContainer(selectedContainer.id, { border })} />
+          </ControlGroup>
+        </div>
+      );
     }
     if (!selectedWidget) return null;
+
+    type PartKey = keyof HomepageCardPartStyles;
+    const updatePart = (key: PartKey, patch: Partial<HomepagePartStyle>) => {
+      updateWidget(selectedWidget.id, {
+        partStyles: {
+          ...(selectedWidget.partStyles ?? {}),
+          [key]: {
+            ...(selectedWidget.partStyles?.[key] ?? {}),
+            ...patch
+          }
+        }
+      });
+    };
+    const part = (key: PartKey) => selectedWidget.partStyles?.[key] ?? {};
+    const typographyGroup = (key: PartKey, title: string, options: { color?: boolean; align?: boolean; spacing?: boolean; first?: boolean } = {}) => (
+      <ControlGroup title={title} defaultOpen={options.first ?? (title === "Title" || title === "Text")}>
+        {options.color !== false ? <ColorControl label="Color" value={part(key).color ?? ""} allowTransparent={false} onChange={(color) => updatePart(key, { color })} /> : null}
+        <TypographyControl value={part(key).typography} onChange={(typography) => updatePart(key, { typography })} />
+        {options.align ? <AlignmentControl value={part(key).align} onChange={(align) => updatePart(key, { align })} /> : null}
+        {options.spacing ? <BoxSpacingControl label="Spacing around this part" value={part(key).spacing?.margin} onChange={(margin) => updatePart(key, { spacing: { ...(part(key).spacing ?? {}), margin } })} /> : null}
+      </ControlGroup>
+    );
+    const gapGroup = (key: PartKey, title: string, label = "Gap") => (
+      <ControlGroup title={title} defaultOpen={false}>
+        <NumberControl label={label} value={part(key).gap} min={0} onChange={(gap) => updatePart(key, { gap })} />
+      </ControlGroup>
+    );
+    const cardVisualGroup = (key: PartKey, title: string) => (
+      <ControlGroup title={title} defaultOpen={false}>
+        <ColorControl label="Background" value={part(key).backgroundColor ?? ""} onChange={(backgroundColor) => updatePart(key, { backgroundColor })} />
+        <BoxSpacingControl label="Padding" value={part(key).spacing?.padding} onChange={(padding) => updatePart(key, { spacing: { ...(part(key).spacing ?? {}), padding } })} />
+        <BorderControl value={part(key).border} onChange={(border) => updatePart(key, { border })} />
+      </ControlGroup>
+    );
+    const imageVisualGroup = (key: PartKey, title: string) => (
+      <ControlGroup title={title} defaultOpen={false}>
+        <LengthControl label="Width" value={part(key).width} onChange={(width) => updatePart(key, { width })} />
+        <LengthControl label="Height" value={part(key).height} onChange={(height) => updatePart(key, { height })} />
+        <NumberControl label="Radius" value={part(key).radius} min={0} onChange={(radius) => updatePart(key, { radius })} />
+        <select value={part(key).objectFit ?? ""} onChange={(event) => updatePart(key, { objectFit: event.target.value ? event.target.value as HomepageImageFit : undefined })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm">
+          <option value="">Default fit</option>
+          <option value="cover">Cover</option>
+          <option value="contain">Contain</option>
+        </select>
+        <select value={part(key).objectPosition ?? ""} onChange={(event) => updatePart(key, { objectPosition: event.target.value ? event.target.value as HomepageImagePosition : undefined })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm">
+          <option value="">Default position</option>
+          <option value="center">Center</option>
+          <option value="top">Top</option>
+          <option value="bottom">Bottom</option>
+        </select>
+      </ControlGroup>
+    );
+
     return (
-      <div className="space-y-4">
+      <div className="space-y-3">
         {"textAlign" in selectedWidget ? (
-          <select value={selectedWidget.textAlign ?? "left"} onChange={(event) => updateWidget(selectedWidget.id, { textAlign: event.target.value as HomepageAlign })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm">
-            <option value="left">Left</option>
-            <option value="center">Center</option>
-          </select>
+          <ControlGroup title="Alignment" defaultOpen>
+            <select value={selectedWidget.textAlign ?? "left"} onChange={(event) => updateWidget(selectedWidget.id, { textAlign: event.target.value as HomepageAlign })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm">
+              <option value="left">Left</option>
+              <option value="center">Center</option>
+            </select>
+          </ControlGroup>
         ) : null}
-        <ColorControl label="Text color" value={selectedWidget.textColor ?? ""} allowTransparent={false} onChange={(color) => updateWidget(selectedWidget.id, { textColor: color })} />
-        {["ABOUT_US", "WHY_US", "ABOUT_SITE", "TEXT_MEDIA", "HEADING", "TEXT", "ICON", "LIST", "CARD", "COURSE_LIST", "INSTRUCTOR_LIST", "TESTIMONIAL", "STATS", "FAQ", "FEATURED_INSTRUCTORS"].includes(selectedWidget.type) ? (
-          <TypographyControl value={selectedWidget.typography} onChange={(typography) => updateWidget(selectedWidget.id, { typography })} />
-        ) : null}
+        {["HEADING"].includes(selectedWidget.type) ? typographyGroup("title", "Heading", { align: true, spacing: true, first: true }) : null}
+        {["TEXT"].includes(selectedWidget.type) ? typographyGroup("body", "Text", { align: true, spacing: true }) : null}
+        {["ABOUT_US", "WHY_US", "ABOUT_SITE", "TEXT_MEDIA", "CARD", "COURSE_LIST", "INSTRUCTOR_LIST", "FEATURED_INSTRUCTORS", "LIST", "STATS", "FAQ"].includes(selectedWidget.type) ? typographyGroup("title", "Title", { align: true, spacing: true }) : null}
+        {["ABOUT_US", "WHY_US", "ABOUT_SITE", "TEXT_MEDIA", "CARD", "INSTRUCTOR_LIST", "FEATURED_INSTRUCTORS"].includes(selectedWidget.type) ? typographyGroup("subtitle", "Subtitle / accent", { align: true, spacing: true }) : null}
+        {["ABOUT_US", "WHY_US", "ABOUT_SITE", "TEXT_MEDIA", "CARD", "COURSE_LIST", "INSTRUCTOR_LIST", "FEATURED_INSTRUCTORS"].includes(selectedWidget.type) ? typographyGroup("body", "Body", { align: true, spacing: true }) : null}
         {selectedWidget.type === "BUTTON" || selectedWidget.type === "CARD" ? (
-          <div className="space-y-3 rounded-2xl border border-slate-200 p-3">
+          <ControlGroup title="Button">
             <ColorControl label="Button background" value={selectedWidget.buttonStyle?.backgroundColor ?? "#020617"} allowTransparent={false} onChange={(color) => updateWidget(selectedWidget.id, { buttonStyle: { ...(selectedWidget.buttonStyle ?? createButtonStyle()), backgroundColor: color } })} />
             <ColorControl label="Button text" value={selectedWidget.buttonStyle?.textColor ?? "#ffffff"} allowTransparent={false} onChange={(color) => updateWidget(selectedWidget.id, { buttonStyle: { ...(selectedWidget.buttonStyle ?? createButtonStyle()), textColor: color } })} />
             <ColorControl label="Hover background" value={selectedWidget.buttonStyle?.hoverBackgroundColor ?? "#0f172a"} allowTransparent={false} onChange={(color) => updateWidget(selectedWidget.id, { buttonStyle: { ...(selectedWidget.buttonStyle ?? createButtonStyle()), hoverBackgroundColor: color } })} />
@@ -2106,16 +2318,18 @@ export default function AdminHomepagePage() {
               onChange={(padding) => updateWidget(selectedWidget.id, { buttonStyle: { ...(selectedWidget.buttonStyle ?? createButtonStyle()), padding } })}
             />
             <BorderControl value={selectedWidget.buttonStyle?.border} onChange={(border) => updateWidget(selectedWidget.id, { buttonStyle: { ...(selectedWidget.buttonStyle ?? createButtonStyle()), border } })} />
-          </div>
+          </ControlGroup>
         ) : null}
         {selectedWidget.type === "ICON" ? (
-          <div className="space-y-3 rounded-2xl border border-slate-200 p-3">
-            <LengthControl label="Icon size" value={selectedWidget.iconSize} onChange={(iconSize) => updateWidget(selectedWidget.id, { iconSize })} />
-            <ColorControl label="Icon color" value={selectedWidget.iconColor ?? ""} allowTransparent={false} onChange={(iconColor) => updateWidget(selectedWidget.id, { iconColor })} />
-          </div>
+          <ControlGroup title="Icon symbol" defaultOpen>
+            <input value={part("icon").iconSymbol ?? selectedWidget.iconSymbol} onChange={(event) => updatePart("icon", { iconSymbol: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Icon symbol" />
+            <LengthControl label="Icon size" value={part("icon").size ?? selectedWidget.iconSize} onChange={(size) => updatePart("icon", { size })} />
+            <ColorControl label="Icon color" value={part("icon").color ?? selectedWidget.iconColor ?? ""} allowTransparent={false} onChange={(color) => updatePart("icon", { color })} />
+          </ControlGroup>
         ) : null}
+        {selectedWidget.type === "ICON" ? typographyGroup("body", "Icon text", { align: true, spacing: true }) : null}
         {selectedWidget.type === "DIVIDER" ? (
-          <div className="space-y-3 rounded-2xl border border-slate-200 p-3">
+          <ControlGroup title="Divider" defaultOpen>
             <ColorControl label="Divider color" value={selectedWidget.dividerColor ?? "#cbd5e1"} allowTransparent={false} onChange={(dividerColor) => updateWidget(selectedWidget.id, { dividerColor })} />
             <label>
               <span className="mb-1 block text-xs text-slate-500">Divider width</span>
@@ -2130,10 +2344,18 @@ export default function AdminHomepagePage() {
               <option value="solid">Solid</option>
               <option value="dashed">Dashed</option>
             </select>
-          </div>
+          </ControlGroup>
+        ) : null}
+        {selectedWidget.type === "TESTIMONIAL" ? (
+          <>
+            {typographyGroup("quote", "Quote", { align: true, spacing: true })}
+            {typographyGroup("authorName", "Author name", { spacing: true })}
+            {typographyGroup("authorRole", "Author role", { spacing: true })}
+            {imageVisualGroup("image", "Avatar")}
+          </>
         ) : null}
         {selectedWidget.type === "SPACER" ? (
-          <div className="space-y-3 rounded-2xl border border-slate-200 p-3">
+          <ControlGroup title="Spacer" defaultOpen>
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Spacer height</p>
             <select value={selectedWidget.heightPreset ?? "medium"} onChange={(event) => updateWidget(selectedWidget.id, { heightPreset: event.target.value as HomepageSizePreset })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm">
               <option value="none">None</option>
@@ -2141,10 +2363,11 @@ export default function AdminHomepagePage() {
               <option value="medium">Medium</option>
               <option value="large">Large</option>
             </select>
-          </div>
+          </ControlGroup>
         ) : null}
         {selectedWidget.type === "IMAGE_BLOCK" ? (
           <>
+          <ControlGroup title="Image" defaultOpen>
             <select value={selectedWidget.imageHeightPreset ?? "medium"} onChange={(event) => updateWidget(selectedWidget.id, { imageHeightPreset: event.target.value as HomepageImageHeightPreset })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm">
               <option value="compact">Compact</option>
               <option value="medium">Medium</option>
@@ -2159,14 +2382,84 @@ export default function AdminHomepagePage() {
               <option value="top">Top</option>
               <option value="bottom">Bottom</option>
             </select>
+          </ControlGroup>
+          {imageVisualGroup("image", "Image frame")}
+          {typographyGroup("caption", "Caption", { align: true, spacing: true })}
           </>
         ) : null}
         {selectedWidget.type === "VIDEO" ? (
-          <select value={selectedWidget.aspectRatio ?? "16:9"} onChange={(event) => updateWidget(selectedWidget.id, { aspectRatio: event.target.value as HomepageVideoAspectRatio })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm">
-            <option value="16:9">16:9</option>
-            <option value="4:3">4:3</option>
-            <option value="1:1">1:1</option>
-          </select>
+          <>
+          <ControlGroup title="Video" defaultOpen>
+            <select value={selectedWidget.aspectRatio ?? "16:9"} onChange={(event) => updateWidget(selectedWidget.id, { aspectRatio: event.target.value as HomepageVideoAspectRatio })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm">
+              <option value="16:9">16:9</option>
+              <option value="4:3">4:3</option>
+              <option value="1:1">1:1</option>
+            </select>
+          </ControlGroup>
+          {imageVisualGroup("image", "Video frame")}
+          {typographyGroup("caption", "Caption", { align: true, spacing: true })}
+          </>
+        ) : null}
+        {["ABOUT_US", "WHY_US", "ABOUT_SITE", "TEXT_MEDIA"].includes(selectedWidget.type) ? (
+          <>
+            {gapGroup("list", "Bullet list", "Gap between bullets")}
+            {gapGroup("listItem", "Bullet row", "Icon/text gap")}
+            <ControlGroup title="Bullet icon" defaultOpen={false}>
+              <LengthControl label="Icon size" value={part("listIcon").size} onChange={(size) => updatePart("listIcon", { size })} />
+              <ColorControl label="Icon color" value={part("listIcon").color ?? "#0ea5e9"} allowTransparent={false} onChange={(color) => updatePart("listIcon", { color })} />
+              <NumberControl label="Icon radius" value={part("listIcon").radius} min={0} onChange={(radius) => updatePart("listIcon", { radius })} />
+            </ControlGroup>
+            {typographyGroup("listText", "Bullet text", { spacing: true })}
+          </>
+        ) : null}
+        {selectedWidget.type === "LIST" ? (
+          <>
+            {gapGroup("list", "List spacing", "Gap between list items")}
+            {gapGroup("listItem", "Item layout", "Icon/text gap")}
+            <ControlGroup title="List icon">
+              <LengthControl label="Icon size" value={part("listIcon").size} onChange={(size) => updatePart("listIcon", { size })} />
+              <ColorControl label="Icon color" value={part("listIcon").color ?? "#0ea5e9"} allowTransparent={false} onChange={(color) => updatePart("listIcon", { color })} />
+              <NumberControl label="Icon radius" value={part("listIcon").radius} min={0} onChange={(radius) => updatePart("listIcon", { radius })} />
+            </ControlGroup>
+            {typographyGroup("listText", "List text", { spacing: true })}
+          </>
+        ) : null}
+        {selectedWidget.type === "STATS" ? (
+          <>
+            {gapGroup("list", "Stats grid", "Gap between stats")}
+            {cardVisualGroup("card", "Stat card")}
+            {typographyGroup("statValue", "Stat value", { align: true, spacing: true })}
+            {typographyGroup("statLabel", "Stat label", { align: true, spacing: true })}
+            {typographyGroup("statDescription", "Stat description", { align: true, spacing: true })}
+          </>
+        ) : null}
+        {selectedWidget.type === "FAQ" ? (
+          <>
+            {gapGroup("list", "FAQ list", "Gap between questions")}
+            {cardVisualGroup("card", "FAQ card")}
+            {typographyGroup("faqQuestion", "Question", { spacing: true })}
+            {typographyGroup("faqAnswer", "Answer", { spacing: true })}
+          </>
+        ) : null}
+        {selectedWidget.type === "COURSE_LIST" ? (
+          <>
+            {gapGroup("list", "Course list", "Gap between courses")}
+            {cardVisualGroup("card", "Course card")}
+            {imageVisualGroup("image", "Course thumbnail")}
+            {typographyGroup("courseTitle", "Course title", { spacing: true })}
+            {typographyGroup("courseDescription", "Course description", { spacing: true })}
+            {typographyGroup("courseMeta", "Course metadata", { spacing: true })}
+          </>
+        ) : null}
+        {selectedWidget.type === "INSTRUCTOR_LIST" || selectedWidget.type === "FEATURED_INSTRUCTORS" ? (
+          <>
+            {gapGroup("list", "Instructor grid", "Gap between cards")}
+            {cardVisualGroup("card", "Instructor card")}
+            {imageVisualGroup("image", "Instructor avatar")}
+            {typographyGroup("instructorName", "Instructor name", { spacing: true })}
+            {typographyGroup("instructorBio", "Instructor bio", { spacing: true })}
+            {typographyGroup("courseMeta", "Course tags", { spacing: true })}
+          </>
         ) : null}
       </div>
     );
@@ -2195,58 +2488,66 @@ export default function AdminHomepagePage() {
       });
     };
     return (
-      <div className="space-y-5">
-        <div className="flex gap-2">
-          <IconButton label="Select parent" disabled={!selection} onClick={selectParentElement}><UpIcon /></IconButton>
-          <IconButton label="Copy" disabled={!selection} onClick={() => copySelected(selection)}><CopyIcon /></IconButton>
-          <IconButton label="Paste" disabled={!copiedElement} onClick={pasteCopiedElement}><ClipboardIcon /></IconButton>
-          <IconButton label={element.hidden ? "Show" : "Hide"} tone={element.hidden ? "success" : "default"} onClick={() => updateCommon({ hidden: !element.hidden })}>{element.hidden ? <EyeIcon /> : <EyeOffIcon />}</IconButton>
-          <IconButton label="Duplicate" onClick={() => duplicateSelected(selection)}><CopyIcon /></IconButton>
-          <IconButton label="Delete" tone="danger" onClick={() => setDeleteTarget(selection)}><TrashIcon /></IconButton>
-        </div>
-        <div className="rounded-2xl bg-slate-50 p-3 text-xs leading-5 text-slate-500">
-          Shortcuts: Ctrl/Cmd+C copy, Ctrl/Cmd+V paste, Ctrl/Cmd+Z undo, Ctrl/Cmd+Y redo, Delete remove, Esc clear selection.
-        </div>
-        <VisibilityControls visibility={element.visibility} onChange={(visibility) => updateCommon({ visibility })} />
+      <div className="space-y-3">
         {isContainer(element) ? (
           <>
-            <div className="grid grid-cols-2 gap-2">
-              <select value={element.direction ?? "column"} onChange={(event) => updateContainer(element.id, { direction: event.target.value as HomepageContainerDirection })} className="rounded-2xl border border-slate-300 px-3 py-2 text-sm">
-                <option value="column">Below each other</option>
-                <option value="row">Next to each other</option>
-              </select>
-              <select value={element.wrap ?? "wrap"} onChange={(event) => updateContainer(element.id, { wrap: event.target.value as HomepageContainerWrap })} className="rounded-2xl border border-slate-300 px-3 py-2 text-sm">
-                <option value="wrap">Wrap</option>
-                <option value="nowrap">No wrap</option>
-              </select>
-              <select value={element.justify ?? "start"} onChange={(event) => updateContainer(element.id, { justify: event.target.value as HomepageContainerJustify })} className="rounded-2xl border border-slate-300 px-3 py-2 text-sm">
-                <option value="start">Start</option>
-                <option value="center">Center</option>
-                <option value="end">End</option>
-                <option value="between">Space between</option>
-              </select>
-              <select value={element.align ?? "stretch"} onChange={(event) => updateContainer(element.id, { align: event.target.value as HomepageContainerAlign })} className="rounded-2xl border border-slate-300 px-3 py-2 text-sm">
-                <option value="stretch">Stretch</option>
-                <option value="start">Start</option>
-                <option value="center">Center</option>
-                <option value="end">End</option>
-              </select>
-            </div>
-            <label>
-              <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Gap</span>
-              <input type="number" value={element.gap ?? 10} onChange={(event) => updateContainer(element.id, { gap: Number(event.target.value) })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" />
-            </label>
-            <LengthControl label="Width" value={element.width} onChange={(width) => updateContainer(element.id, { width })} />
-            <LengthControl label="Max width" value={element.maxWidth} onChange={(maxWidth) => updateContainer(element.id, { maxWidth })} />
-            <LengthControl label="Min height" value={element.minHeight} onChange={(minHeight) => updateContainer(element.id, { minHeight })} />
-            <LengthControl label="Height" value={element.height} onChange={(height) => updateContainer(element.id, { height })} />
-            <div className="space-y-3 rounded-2xl border border-sky-100 bg-sky-50/70 p-3">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-sky-700">Responsive overrides</p>
-                <span className="rounded-full bg-white px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-sky-800">
-                  {responsiveDevice}
-                </span>
+            <ControlGroup title="Spacing" defaultOpen>
+              <BoxSpacingControl label="Padding" value={element.spacing?.padding} onChange={(padding) => updateCommon({ spacing: { ...(element.spacing ?? {}), padding } })} />
+              <BoxSpacingControl label="Margin" value={element.spacing?.margin} onChange={(margin) => updateCommon({ spacing: { ...(element.spacing ?? {}), margin } })} />
+              <div className="grid grid-cols-2 gap-2">
+                <NumberControl label="Vertical gap" value={element.rowGap ?? element.gap ?? 10} min={0} onChange={(rowGap) => updateContainer(element.id, { rowGap })} />
+                <NumberControl label="Horizontal gap" value={element.columnGap ?? element.gap ?? 10} min={0} onChange={(columnGap) => updateContainer(element.id, { columnGap })} />
               </div>
+            </ControlGroup>
+            <ControlGroup title="Layout">
+              <IconSegmentedControl<HomepageContainerDirection>
+                label="Direction"
+                value={element.direction ?? "column"}
+                onChange={(direction) => updateContainer(element.id, { direction })}
+                options={[
+                  { value: "column", label: "Vertical", icon: <ColumnDirectionIcon /> },
+                  { value: "row", label: "Horizontal", icon: <RowDirectionIcon /> }
+                ]}
+              />
+              <IconSegmentedControl<HomepageContainerWrap>
+                label="Wrap"
+                value={element.wrap ?? "wrap"}
+                onChange={(wrap) => updateContainer(element.id, { wrap })}
+                options={[
+                  { value: "wrap", label: "Wrap", icon: <WrapIcon /> },
+                  { value: "nowrap", label: "No wrap", icon: <NoWrapIcon /> }
+                ]}
+              />
+              <IconSegmentedControl<HomepageContainerJustify>
+                label="Justify"
+                value={element.justify ?? "start"}
+                onChange={(justify) => updateContainer(element.id, { justify })}
+                options={[
+                  { value: "start", label: "Start", icon: <AlignStartIcon /> },
+                  { value: "center", label: "Center", icon: <AlignCenterIcon /> },
+                  { value: "end", label: "End", icon: <AlignEndIcon /> },
+                  { value: "between", label: "Space between", icon: <AlignBetweenIcon /> }
+                ]}
+              />
+              <IconSegmentedControl<HomepageContainerAlign>
+                label="Align"
+                value={element.align ?? "stretch"}
+                onChange={(align) => updateContainer(element.id, { align })}
+                options={[
+                  { value: "stretch", label: "Stretch", icon: <StretchIcon /> },
+                  { value: "start", label: "Start", icon: <AlignStartIcon /> },
+                  { value: "center", label: "Center", icon: <AlignCenterIcon /> },
+                  { value: "end", label: "End", icon: <AlignEndIcon /> }
+                ]}
+              />
+            </ControlGroup>
+            <ControlGroup title="Size">
+              <LengthControl label="Width" value={element.width} onChange={(width) => updateContainer(element.id, { width })} />
+              <LengthControl label="Max width" value={element.maxWidth} onChange={(maxWidth) => updateContainer(element.id, { maxWidth })} />
+              <LengthControl label="Min height" value={element.minHeight} onChange={(minHeight) => updateContainer(element.id, { minHeight })} />
+              <LengthControl label="Height" value={element.height} onChange={(height) => updateContainer(element.id, { height })} />
+            </ControlGroup>
+            <ControlGroup title={`Responsive overrides: ${responsiveDevice}`}>
               <select
                 value={element.responsive?.[responsiveDevice]?.direction ?? ""}
                 onChange={(event) => updateResponsiveContainer(element, { direction: event.target.value ? event.target.value as HomepageContainerDirection : undefined })}
@@ -2260,18 +2561,78 @@ export default function AdminHomepagePage() {
               <LengthControl label="Device max width" value={element.responsive?.[responsiveDevice]?.maxWidth} onChange={(maxWidth) => updateResponsiveContainer(element, { maxWidth })} />
               <LengthControl label="Device min height" value={element.responsive?.[responsiveDevice]?.minHeight} onChange={(minHeight) => updateResponsiveContainer(element, { minHeight })} />
               <LengthControl label="Device height" value={element.responsive?.[responsiveDevice]?.height} onChange={(height) => updateResponsiveContainer(element, { height })} />
-            </div>
+            </ControlGroup>
+            <ControlGroup title="Responsive">
+              <VisibilityControls visibility={element.visibility} onChange={(visibility) => updateCommon({ visibility })} />
+            </ControlGroup>
+            <ControlGroup title="Actions">
+              <div className="flex gap-2">
+                <IconButton label="Select parent" disabled={!selection} onClick={selectParentElement}><UpIcon /></IconButton>
+                <IconButton label="Copy" disabled={!selection} onClick={() => copySelected(selection)}><CopyIcon /></IconButton>
+                <IconButton label="Paste" disabled={!copiedElement} onClick={pasteCopiedElement}><ClipboardIcon /></IconButton>
+                <IconButton label={element.hidden ? "Show" : "Hide"} tone={element.hidden ? "success" : "default"} onClick={() => updateCommon({ hidden: !element.hidden })}>{element.hidden ? <EyeIcon /> : <EyeOffIcon />}</IconButton>
+                <IconButton label="Duplicate" onClick={() => duplicateSelected(selection)}><CopyIcon /></IconButton>
+                <IconButton label="Delete" tone="danger" onClick={() => setDeleteTarget(selection)}><TrashIcon /></IconButton>
+              </div>
+            </ControlGroup>
           </>
         ) : selectedWidget?.type === "ICON" ? (
-          <input value={selectedWidget.iconSymbol} onChange={(event) => updateWidget(selectedWidget.id, { iconSymbol: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Icon symbol" />
+          <>
+          <ControlGroup title="Spacing" defaultOpen>
+            <BoxSpacingControl label="Wrapper padding" value={element.spacing?.padding} onChange={(padding) => updateCommon({ spacing: { ...(element.spacing ?? {}), padding } })} />
+            <BoxSpacingControl label="Wrapper margin" value={element.spacing?.margin} onChange={(margin) => updateCommon({ spacing: { ...(element.spacing ?? {}), margin } })} />
+          </ControlGroup>
+          <ControlGroup title="Responsive">
+            <VisibilityControls visibility={element.visibility} onChange={(visibility) => updateCommon({ visibility })} />
+          </ControlGroup>
+          <ControlGroup title="Actions">
+            <div className="flex gap-2">
+              <IconButton label="Select parent" disabled={!selection} onClick={selectParentElement}><UpIcon /></IconButton>
+              <IconButton label="Copy" disabled={!selection} onClick={() => copySelected(selection)}><CopyIcon /></IconButton>
+              <IconButton label="Paste" disabled={!copiedElement} onClick={pasteCopiedElement}><ClipboardIcon /></IconButton>
+              <IconButton label={element.hidden ? "Show" : "Hide"} tone={element.hidden ? "success" : "default"} onClick={() => updateCommon({ hidden: !element.hidden })}>{element.hidden ? <EyeIcon /> : <EyeOffIcon />}</IconButton>
+              <IconButton label="Duplicate" onClick={() => duplicateSelected(selection)}><CopyIcon /></IconButton>
+              <IconButton label="Delete" tone="danger" onClick={() => setDeleteTarget(selection)}><TrashIcon /></IconButton>
+            </div>
+          </ControlGroup>
+          <ControlGroup title="Legacy icon field">
+            <input value={selectedWidget.iconSymbol} onChange={(event) => updateWidget(selectedWidget.id, { iconSymbol: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Icon symbol" />
+          </ControlGroup>
+          <ControlGroup title="Background">
+            <ColorControl label="Wrapper background color" value={element.background?.color ?? "transparent"} onChange={(color) => updateCommon({ background: { ...(element.background ?? {}), color } })} />
+          </ControlGroup>
+          <ControlGroup title="Border">
+            <BorderControl value={element.border} onChange={(border) => updateCommon({ border })} />
+          </ControlGroup>
+          </>
         ) : null}
-        <BoxSpacingControl label="Padding" value={element.spacing?.padding} onChange={(padding) => updateCommon({ spacing: { ...(element.spacing ?? {}), padding } })} />
-        <BoxSpacingControl label="Margin" value={element.spacing?.margin} onChange={(margin) => updateCommon({ spacing: { ...(element.spacing ?? {}), margin } })} />
-        <ColorControl label="Background color" value={element.background?.color ?? "transparent"} onChange={(color) => updateCommon({ background: { ...(element.background ?? {}), color } })} />
-        {isContainer(element) ? (
-          <input value={element.backgroundImage ?? ""} onChange={(event) => updateContainer(element.id, { backgroundImage: event.target.value })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm" placeholder="Background image URL" />
+        {!isContainer(element) && selectedWidget?.type !== "ICON" ? (
+          <>
+            <ControlGroup title="Spacing" defaultOpen>
+              <BoxSpacingControl label="Wrapper padding" value={element.spacing?.padding} onChange={(padding) => updateCommon({ spacing: { ...(element.spacing ?? {}), padding } })} />
+              <BoxSpacingControl label="Wrapper margin" value={element.spacing?.margin} onChange={(margin) => updateCommon({ spacing: { ...(element.spacing ?? {}), margin } })} />
+            </ControlGroup>
+            <ControlGroup title="Responsive">
+              <VisibilityControls visibility={element.visibility} onChange={(visibility) => updateCommon({ visibility })} />
+            </ControlGroup>
+            <ControlGroup title="Actions">
+              <div className="flex gap-2">
+                <IconButton label="Select parent" disabled={!selection} onClick={selectParentElement}><UpIcon /></IconButton>
+                <IconButton label="Copy" disabled={!selection} onClick={() => copySelected(selection)}><CopyIcon /></IconButton>
+                <IconButton label="Paste" disabled={!copiedElement} onClick={pasteCopiedElement}><ClipboardIcon /></IconButton>
+                <IconButton label={element.hidden ? "Show" : "Hide"} tone={element.hidden ? "success" : "default"} onClick={() => updateCommon({ hidden: !element.hidden })}>{element.hidden ? <EyeIcon /> : <EyeOffIcon />}</IconButton>
+                <IconButton label="Duplicate" onClick={() => duplicateSelected(selection)}><CopyIcon /></IconButton>
+                <IconButton label="Delete" tone="danger" onClick={() => setDeleteTarget(selection)}><TrashIcon /></IconButton>
+              </div>
+            </ControlGroup>
+            <ControlGroup title="Background">
+              <ColorControl label="Wrapper background color" value={element.background?.color ?? "transparent"} onChange={(color) => updateCommon({ background: { ...(element.background ?? {}), color } })} />
+            </ControlGroup>
+            <ControlGroup title="Border">
+              <BorderControl value={element.border} onChange={(border) => updateCommon({ border })} />
+            </ControlGroup>
+          </>
         ) : null}
-        <BorderControl value={element.border} onChange={(border) => updateCommon({ border })} />
       </div>
     );
   };
@@ -2368,11 +2729,6 @@ export default function AdminHomepagePage() {
                   <EditorSection title="Widgets">
                     <div className="space-y-3">
                       <input value={widgetSearch} onChange={(event) => setWidgetSearch(event.target.value)} placeholder="Search widgets" className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm" />
-                      {!canInsertIntoTarget ? (
-                        <p className="rounded-2xl bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
-                          Select a container in the canvas or Navigator before adding widgets.
-                        </p>
-                      ) : null}
                       <div className="grid grid-cols-2 gap-3">
                         {filteredWidgets.map((item) => (
                           <button key={item.type} type="button" disabled={!canInsertIntoTarget} onClick={() => addElement(createWidget(item.type))} className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white p-2 text-center text-xs font-semibold text-slate-800 shadow-sm hover:border-sky-300 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-45">
@@ -2406,7 +2762,7 @@ export default function AdminHomepagePage() {
                   ))}
                 </div>
                 <div className="mt-4 space-y-3">
-                  <EditorSection title={selectedPanelTitle}>
+                  <EditorSection key={`${selection?.kind ?? "none"}-${selection?.id ?? "none"}-${sidebarTab}`} title={selectedPanelTitle}>
                     {sidebarTab === "CONTENT" ? renderContentTab() : sidebarTab === "STYLE" ? renderStyleTab() : renderAdvancedTab()}
                   </EditorSection>
                 </div>

@@ -23,6 +23,7 @@ import type {
   HomepageImageFit,
   HomepageImageHeightPreset,
   HomepageImagePosition,
+  HomepagePartStyle,
   HomepagePaddingPreset,
   HomepageRadiusPreset,
   HomepageResponsiveVisibility,
@@ -276,6 +277,30 @@ function typographyToStyle(typography: HomepageTypography | undefined, textColor
   };
 }
 
+function partToStyle(part: HomepagePartStyle | undefined, fallbackColor?: string): CSSProperties {
+  if (!part) return {};
+  return {
+    ...typographyToStyle(part.typography, part.color ?? fallbackColor),
+    backgroundColor: transparentValue(part.backgroundColor),
+    width: lengthToCss(part.width),
+    height: lengthToCss(part.height),
+    fontSize: lengthToCss(part.size) ?? typographyToStyle(part.typography, part.color ?? fallbackColor).fontSize,
+    textAlign: part.align,
+    borderRadius: typeof part.radius === "number" ? `${part.radius}px` : undefined,
+    ...boxSpacingToStyle(part.spacing?.padding, "padding"),
+    ...boxSpacingToStyle(part.spacing?.margin, "margin"),
+    ...borderToStyle(part.border)
+  };
+}
+
+function getPart(card: HomepageCard, key: keyof NonNullable<HomepageCard["partStyles"]>) {
+  return card.partStyles?.[key];
+}
+
+function gapStyle(part: HomepagePartStyle | undefined, fallback: number): CSSProperties {
+  return { gap: `${part?.gap ?? fallback}px` };
+}
+
 function getResponsiveContainerValue<T>(
   container: HomepageContainer,
   viewport: HomepageRendererViewport,
@@ -315,6 +340,8 @@ export function getContainerStyle(container: HomepageContainer, viewport: Homepa
     justifyContent: justifyMap[container.justify ?? "start"],
     alignItems: alignMap[container.align ?? "stretch"],
     gap: `${container.gap ?? 10}px`,
+    rowGap: `${container.rowGap ?? container.gap ?? 10}px`,
+    columnGap: `${container.columnGap ?? container.gap ?? 10}px`,
     width: lengthToCss(width),
     maxWidth: lengthToCss(maxWidth),
     minHeight: lengthToCss(minHeight),
@@ -502,12 +529,25 @@ function AlignWrap({ align, children }: { align?: HomepageAlign; children: React
 
 function renderBulletLines(card: HomepageCard) {
   if (!("bullets" in card) || !card.bullets?.length) return null;
+  const listPart = getPart(card, "list");
+  const itemPart = getPart(card, "listItem");
+  const iconPart = getPart(card, "listIcon");
+  const textPart = getPart(card, "listText");
   return (
-    <ul className="mt-4 space-y-2 text-sm leading-6 text-slate-600">
+    <ul className="mt-4 flex flex-col text-sm leading-6 text-slate-600" style={{ ...partToStyle(listPart), ...gapStyle(listPart, 8) }}>
       {card.bullets.map((bullet, index) => (
-        <li key={`${card.id}-bullet-${index}`} className="flex gap-3">
-          <span className="mt-2 h-2 w-2 rounded-full bg-sky-500" />
-          <span>{bullet}</span>
+        <li key={`${card.id}-bullet-${index}`} className="flex" style={{ ...partToStyle(itemPart), ...gapStyle(itemPart, 12) }}>
+          <span
+            className="mt-2 shrink-0 rounded-full bg-sky-500"
+            style={{
+              width: lengthToCss(iconPart?.size) ?? "0.5rem",
+              height: lengthToCss(iconPart?.size) ?? "0.5rem",
+              backgroundColor: colorValue(iconPart?.color) ?? "#0ea5e9",
+              borderRadius: typeof iconPart?.radius === "number" ? `${iconPart.radius}px` : "999px",
+              ...boxSpacingToStyle(iconPart?.spacing?.margin, "margin")
+            }}
+          />
+          <span style={partToStyle(textPart, card.textColor)}>{bullet}</span>
         </li>
       ))}
     </ul>
@@ -519,6 +559,10 @@ export function HomepageCardView({ card, viewport, mode }: { card: HomepageCard;
   const cardClasses = getCardClasses(card);
   const cardStyle = getCardStyle(card);
   const textStyle = typographyToStyle(card.typography, card.textColor);
+  const titleStyle = { ...textStyle, ...partToStyle(getPart(card, "title"), card.textColor) };
+  const subtitleStyle = partToStyle(getPart(card, "subtitle"), card.textColor);
+  const bodyStyle = { ...textStyle, ...partToStyle(getPart(card, "body"), card.textColor) };
+  const captionStyle = partToStyle(getPart(card, "caption"), card.textColor);
 
   if (card.type === "SPACER") {
     return <div className={getSizeHeight(card.heightPreset)} style={cardStyle} />;
@@ -541,7 +585,7 @@ export function HomepageCardView({ card, viewport, mode }: { card: HomepageCard;
   if (card.type === "HEADING") {
     return (
       <article className={cardClasses} style={cardStyle}>
-        <TextTagView tag={card.textTag} className={`${textTagClasses[card.textTag]} ${card.textAlign === "center" ? "text-center" : "text-left"}`} style={textStyle}>
+        <TextTagView tag={card.textTag} className={`${textTagClasses[card.textTag]} ${card.textAlign === "center" ? "text-center" : "text-left"}`} style={{ ...textStyle, ...partToStyle(getPart(card, "title"), card.textColor) }}>
           {card.content}
         </TextTagView>
       </article>
@@ -552,7 +596,7 @@ export function HomepageCardView({ card, viewport, mode }: { card: HomepageCard;
     return (
       <article className={cardClasses} style={cardStyle}>
         <AlignWrap align={card.textAlign}>
-          <p className="text-base leading-8" style={textStyle}>{card.content}</p>
+          <p className="text-base leading-8" style={bodyStyle}>{card.content}</p>
         </AlignWrap>
       </article>
     );
@@ -562,7 +606,7 @@ export function HomepageCardView({ card, viewport, mode }: { card: HomepageCard;
     return (
       <article className={cardClasses} style={cardStyle}>
         <AlignWrap align={card.textAlign}>
-          <ButtonLikeLink href={card.href || "#"} mode={mode} style={getButtonStyle(card)} className={`inline-flex min-h-[3rem] items-center justify-center rounded-full px-6 py-3 text-sm font-semibold transition hover:bg-[var(--homepage-button-hover-bg)] hover:text-[var(--homepage-button-hover-text)] ${getButtonClasses(card.variant)}`}>
+          <ButtonLikeLink href={card.href || "#"} mode={mode} style={{ ...getButtonStyle(card), ...partToStyle(getPart(card, "button")) }} className={`inline-flex min-h-[3rem] items-center justify-center rounded-full px-6 py-3 text-sm font-semibold transition hover:bg-[var(--homepage-button-hover-bg)] hover:text-[var(--homepage-button-hover-text)] ${getButtonClasses(card.variant)}`}>
             {card.label}
           </ButtonLikeLink>
         </AlignWrap>
@@ -577,10 +621,10 @@ export function HomepageCardView({ card, viewport, mode }: { card: HomepageCard;
     const positionClass = position === "top" ? "object-top" : position === "bottom" ? "object-bottom" : "object-center";
     return (
       <article className={cardClasses} style={cardStyle}>
-        <div className={`overflow-hidden rounded-[16px] bg-slate-100 ${getImageHeightClasses(card.imageHeightPreset, viewport)}`}>
-          <img src={card.imageUrl} alt={card.altText || "Homepage image"} className={`h-full w-full ${fitClass} ${positionClass}`} />
+        <div className={`overflow-hidden rounded-[16px] bg-slate-100 ${getImageHeightClasses(card.imageHeightPreset, viewport)}`} style={partToStyle(getPart(card, "image"))}>
+          <img src={card.imageUrl} alt={card.altText || "Homepage image"} className={`h-full w-full ${fitClass} ${positionClass}`} style={{ objectFit: getPart(card, "image")?.objectFit, objectPosition: getPart(card, "image")?.objectPosition }} />
         </div>
-        {card.caption ? <p className="mt-4 text-sm leading-6 text-slate-600">{card.caption}</p> : null}
+        {card.caption ? <p className="mt-4 text-sm leading-6 text-slate-600" style={captionStyle}>{card.caption}</p> : null}
       </article>
     );
   }
@@ -590,10 +634,10 @@ export function HomepageCardView({ card, viewport, mode }: { card: HomepageCard;
 
     return (
       <article className={cardClasses} style={cardStyle}>
-        <div className={`overflow-hidden rounded-[16px] bg-slate-950 ${getVideoRatioClass(card.aspectRatio)}`}>
+        <div className={`overflow-hidden rounded-[16px] bg-slate-950 ${getVideoRatioClass(card.aspectRatio)}`} style={partToStyle(getPart(card, "image"))}>
           <iframe src={embedUrl} title={card.title || "Homepage video"} className={`h-full w-full ${mode === "builder" ? "pointer-events-none" : ""}`} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
         </div>
-        {card.caption ? <p className="mt-4 text-sm leading-6 text-slate-600">{card.caption}</p> : null}
+        {card.caption ? <p className="mt-4 text-sm leading-6 text-slate-600" style={captionStyle}>{card.caption}</p> : null}
       </article>
     );
   }
@@ -605,11 +649,11 @@ export function HomepageCardView({ card, viewport, mode }: { card: HomepageCard;
           <div className={card.textAlign === "center" ? "flex flex-col items-center" : "flex flex-col items-start"}>
             <span
               className="leading-none"
-              style={{ fontSize: lengthToCss(card.iconSize) ?? "2.25rem", color: colorValue(card.iconColor) ?? colorValue(card.textColor) }}
+              style={{ fontSize: lengthToCss(getPart(card, "icon")?.size ?? card.iconSize) ?? "2.25rem", color: colorValue(getPart(card, "icon")?.color ?? card.iconColor) ?? colorValue(card.textColor), ...boxSpacingToStyle(getPart(card, "icon")?.spacing?.margin, "margin") }}
             >
-              {card.iconSymbol}
+              {getPart(card, "icon")?.iconSymbol ?? card.iconSymbol}
             </span>
-            <p className="mt-4 text-base leading-7" style={textStyle}>{card.content}</p>
+            <p className="mt-4 text-base leading-7" style={bodyStyle}>{card.content}</p>
           </div>
         </AlignWrap>
       </article>
@@ -617,14 +661,27 @@ export function HomepageCardView({ card, viewport, mode }: { card: HomepageCard;
   }
 
   if (card.type === "LIST") {
+    const listPart = getPart(card, "list");
+    const itemPart = getPart(card, "listItem");
+    const iconPart = getPart(card, "listIcon");
+    const textPart = getPart(card, "listText");
     return (
       <article className={cardClasses} style={cardStyle}>
-        {card.title ? <h3 className="text-xl font-semibold text-slate-950" style={textStyle}>{card.title}</h3> : null}
-        <ul className="mt-4 space-y-2 text-sm leading-6 text-slate-600" style={textStyle}>
+        {card.title ? <h3 className="text-xl font-semibold text-slate-950" style={titleStyle}>{card.title}</h3> : null}
+        <ul className="mt-4 flex flex-col text-sm leading-6 text-slate-600" style={{ ...partToStyle(listPart, card.textColor), ...gapStyle(listPart, 8) }}>
           {card.items.map((item, index) => (
-            <li key={`${card.id}-list-${index}`} className="flex gap-3">
-              <span className="mt-2 h-2 w-2 rounded-full bg-sky-500" />
-              <span>{item}</span>
+            <li key={`${card.id}-list-${index}`} className="flex" style={{ ...partToStyle(itemPart), ...gapStyle(itemPart, 12) }}>
+              <span
+                className="mt-2 shrink-0 rounded-full bg-sky-500"
+                style={{
+                  width: lengthToCss(iconPart?.size) ?? "0.5rem",
+                  height: lengthToCss(iconPart?.size) ?? "0.5rem",
+                  backgroundColor: colorValue(iconPart?.color) ?? "#0ea5e9",
+                  borderRadius: typeof iconPart?.radius === "number" ? `${iconPart.radius}px` : "999px",
+                  ...boxSpacingToStyle(iconPart?.spacing?.margin, "margin")
+                }}
+              />
+              <span style={partToStyle(textPart, card.textColor)}>{item}</span>
             </li>
           ))}
         </ul>
@@ -635,11 +692,11 @@ export function HomepageCardView({ card, viewport, mode }: { card: HomepageCard;
   if (card.type === "CARD") {
     return (
       <article className={cardClasses} style={cardStyle}>
-        {card.subtitle ? <p className="section-kicker">{card.subtitle}</p> : null}
-        {card.title ? <h3 className="mt-3 text-2xl font-semibold text-slate-950" style={textStyle}>{card.title}</h3> : null}
-        {card.body ? <p className="mt-4 text-base leading-8 text-slate-600" style={textStyle}>{card.body}</p> : null}
+        {card.subtitle ? <p className="section-kicker" style={subtitleStyle}>{card.subtitle}</p> : null}
+        {card.title ? <h3 className="mt-3 text-2xl font-semibold text-slate-950" style={titleStyle}>{card.title}</h3> : null}
+        {card.body ? <p className="mt-4 text-base leading-8 text-slate-600" style={bodyStyle}>{card.body}</p> : null}
         {card.buttonLabel ? (
-          <ButtonLikeLink href={card.buttonHref || "#"} mode={mode} style={getButtonStyle(card)} className="mt-5 inline-flex rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white hover:bg-[var(--homepage-button-hover-bg)] hover:text-[var(--homepage-button-hover-text)]">
+          <ButtonLikeLink href={card.buttonHref || "#"} mode={mode} style={{ ...getButtonStyle(card), ...partToStyle(getPart(card, "button")) }} className="mt-5 inline-flex rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white hover:bg-[var(--homepage-button-hover-bg)] hover:text-[var(--homepage-button-hover-text)]">
             {card.buttonLabel}
           </ButtonLikeLink>
         ) : null}
@@ -650,17 +707,17 @@ export function HomepageCardView({ card, viewport, mode }: { card: HomepageCard;
   if (card.type === "TESTIMONIAL") {
     return (
       <article className={cardClasses} style={cardStyle}>
-        <div className="text-5xl leading-none text-sky-500">&ldquo;</div>
-        <blockquote className="mt-2 text-xl font-semibold leading-9 text-slate-950" style={textStyle}>
+        <div className="text-5xl leading-none text-sky-500" style={partToStyle(getPart(card, "icon"))}>&ldquo;</div>
+        <blockquote className="mt-2 text-xl font-semibold leading-9 text-slate-950" style={{ ...textStyle, ...partToStyle(getPart(card, "quote"), card.textColor) }}>
           {card.quote}
         </blockquote>
         <div className="mt-6 flex items-center gap-4">
-          <div className="h-12 w-12 overflow-hidden rounded-full bg-slate-100">
+          <div className="h-12 w-12 overflow-hidden rounded-full bg-slate-100" style={partToStyle(getPart(card, "image"))}>
             {card.avatarUrl ? <img src={card.avatarUrl} alt={card.authorName} className="h-full w-full object-cover" /> : null}
           </div>
           <div>
-            <p className="font-semibold text-slate-950">{card.authorName}</p>
-            {card.authorRole ? <p className="text-sm text-slate-500">{card.authorRole}</p> : null}
+            <p className="font-semibold text-slate-950" style={partToStyle(getPart(card, "authorName"), card.textColor)}>{card.authorName}</p>
+            {card.authorRole ? <p className="text-sm text-slate-500" style={partToStyle(getPart(card, "authorRole"), card.textColor)}>{card.authorRole}</p> : null}
           </div>
         </div>
       </article>
@@ -670,13 +727,13 @@ export function HomepageCardView({ card, viewport, mode }: { card: HomepageCard;
   if (card.type === "STATS") {
     return (
       <article className={cardClasses} style={cardStyle}>
-        {card.title ? <h3 className="text-2xl font-semibold text-slate-950" style={textStyle}>{card.title}</h3> : null}
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        {card.title ? <h3 className="text-2xl font-semibold text-slate-950" style={titleStyle}>{card.title}</h3> : null}
+        <div className="mt-5 grid sm:grid-cols-3" style={gapStyle(getPart(card, "list"), 12)}>
           {card.stats.map((item) => (
-            <div key={item.id} className="rounded-[18px] border border-slate-200 bg-white/80 p-4">
-              <p className="text-3xl font-semibold text-sky-600">{item.value}</p>
-              <p className="mt-2 font-semibold text-slate-950">{item.label}</p>
-              {item.description ? <p className="mt-1 text-sm leading-6 text-slate-600">{item.description}</p> : null}
+            <div key={item.id} className="rounded-[18px] border border-slate-200 bg-white/80 p-4" style={partToStyle(getPart(card, "card"))}>
+              <p className="text-3xl font-semibold text-sky-600" style={partToStyle(getPart(card, "statValue"), card.textColor)}>{item.value}</p>
+              <p className="mt-2 font-semibold text-slate-950" style={partToStyle(getPart(card, "statLabel"), card.textColor)}>{item.label}</p>
+              {item.description ? <p className="mt-1 text-sm leading-6 text-slate-600" style={partToStyle(getPart(card, "statDescription"), card.textColor)}>{item.description}</p> : null}
             </div>
           ))}
         </div>
@@ -687,14 +744,14 @@ export function HomepageCardView({ card, viewport, mode }: { card: HomepageCard;
   if (card.type === "FAQ") {
     return (
       <article className={cardClasses} style={cardStyle}>
-        {card.title ? <h3 className="text-2xl font-semibold text-slate-950" style={textStyle}>{card.title}</h3> : null}
-        <div className="mt-5 space-y-3">
+        {card.title ? <h3 className="text-2xl font-semibold text-slate-950" style={titleStyle}>{card.title}</h3> : null}
+        <div className="mt-5 flex flex-col" style={gapStyle(getPart(card, "list"), 12)}>
           {card.faqs.map((item) => (
-            <details key={item.id} className="group rounded-[18px] border border-slate-200 bg-white/80 p-4">
-              <summary className="cursor-pointer list-none font-semibold text-slate-950">
+            <details key={item.id} className="group rounded-[18px] border border-slate-200 bg-white/80 p-4" style={partToStyle(getPart(card, "card"))}>
+              <summary className="cursor-pointer list-none font-semibold text-slate-950" style={partToStyle(getPart(card, "faqQuestion"), card.textColor)}>
                 <span>{item.question}</span>
               </summary>
-              <p className="mt-3 text-sm leading-6 text-slate-600">{item.answer}</p>
+              <p className="mt-3 text-sm leading-6 text-slate-600" style={partToStyle(getPart(card, "faqAnswer"), card.textColor)}>{item.answer}</p>
             </details>
           ))}
         </div>
@@ -705,17 +762,17 @@ export function HomepageCardView({ card, viewport, mode }: { card: HomepageCard;
   if (card.type === "COURSE_LIST") {
     return (
       <article className={cardClasses} style={cardStyle}>
-        {card.title ? <h3 className="text-2xl font-semibold text-slate-950" style={textStyle}>{card.title}</h3> : null}
-        {card.body ? <p className="mt-3 text-base leading-8 text-slate-600" style={textStyle}>{card.body}</p> : null}
-        <div className="mt-5 grid gap-3">
+        {card.title ? <h3 className="text-2xl font-semibold text-slate-950" style={titleStyle}>{card.title}</h3> : null}
+        {card.body ? <p className="mt-3 text-base leading-8 text-slate-600" style={bodyStyle}>{card.body}</p> : null}
+        <div className="mt-5 grid" style={gapStyle(getPart(card, "list"), 12)}>
           {card.items.map((course) => (
-            <ButtonLikeLink key={course.id} href={`/courses/${course.id}`} mode={mode} className="block rounded-[14px] border border-slate-200 bg-white p-4 transition hover:border-sky-200 hover:shadow-sm">
+            <ButtonLikeLink key={course.id} href={`/courses/${course.id}`} mode={mode} style={partToStyle(getPart(card, "card"))} className="block rounded-[14px] border border-slate-200 bg-white p-4 transition hover:border-sky-200 hover:shadow-sm">
               <div className="flex gap-4">
-                {course.thumbnailImage ? <img src={course.thumbnailImage} alt={course.title} className="h-16 w-20 shrink-0 rounded-xl object-cover" /> : null}
+                {course.thumbnailImage ? <img src={course.thumbnailImage} alt={course.title} className="h-16 w-20 shrink-0 rounded-xl object-cover" style={partToStyle(getPart(card, "image"))} /> : null}
                 <div className="min-w-0">
-                  <p className="font-semibold text-slate-950">{course.title}</p>
-                  {course.description ? <p className="mt-2 text-sm leading-6 text-slate-600">{course.description}</p> : null}
-                  <div className="mt-3 flex flex-wrap gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.1em] text-slate-500">
+                  <p className="font-semibold text-slate-950" style={partToStyle(getPart(card, "courseTitle"), card.textColor)}>{course.title}</p>
+                  {course.description ? <p className="mt-2 text-sm leading-6 text-slate-600" style={partToStyle(getPart(card, "courseDescription"), card.textColor)}>{course.description}</p> : null}
+                  <div className="mt-3 flex flex-wrap gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.1em] text-slate-500" style={partToStyle(getPart(card, "courseMeta"), card.textColor)}>
                     {course.category ? <span>{course.category}</span> : null}
                     {course.level ? <span>{course.level}</span> : null}
                     <span>{course.isPaid ? "Paid" : "Free"}</span>
@@ -733,26 +790,26 @@ export function HomepageCardView({ card, viewport, mode }: { card: HomepageCard;
     const instructors = card.instructors;
     return (
       <article className={cardClasses} style={cardStyle}>
-        {card.subtitle ? <p className="section-kicker">{card.subtitle}</p> : null}
-        {card.title ? <h2 className="mt-3 text-2xl font-semibold text-slate-950" style={textStyle}>{card.title}</h2> : null}
-        {card.body ? <p className="mt-4 text-base leading-8 text-slate-600" style={textStyle}>{card.body}</p> : null}
+        {card.subtitle ? <p className="section-kicker" style={subtitleStyle}>{card.subtitle}</p> : null}
+        {card.title ? <h2 className="mt-3 text-2xl font-semibold text-slate-950" style={titleStyle}>{card.title}</h2> : null}
+        {card.body ? <p className="mt-4 text-base leading-8 text-slate-600" style={bodyStyle}>{card.body}</p> : null}
         {instructors.length ? (
-          <div className="mt-6 grid gap-4 md:grid-cols-2">
+          <div className="mt-6 grid md:grid-cols-2" style={gapStyle(getPart(card, "list"), 16)}>
             {instructors.map((instructor) => (
-              <ButtonLikeLink key={instructor.id} href={`/instructors/${instructor.id}`} mode={mode} className="block rounded-[18px] border border-slate-200 bg-white p-5 shadow-sm transition hover:border-sky-200 hover:shadow-md">
+              <ButtonLikeLink key={instructor.id} href={`/instructors/${instructor.id}`} mode={mode} style={partToStyle(getPart(card, "card"))} className="block rounded-[18px] border border-slate-200 bg-white p-5 shadow-sm transition hover:border-sky-200 hover:shadow-md">
                 <div className="flex items-center gap-4">
-                  <div className="h-14 w-14 overflow-hidden rounded-full bg-slate-100">
+                  <div className="h-14 w-14 overflow-hidden rounded-full bg-slate-100" style={partToStyle(getPart(card, "image"))}>
                     {instructor.profileImage ? <img src={instructor.profileImage} alt={instructor.fullName} className="h-full w-full object-cover" /> : null}
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-slate-950">{instructor.fullName}</h3>
-                    {instructor.bio ? <p className="mt-1 text-sm leading-6 text-slate-600">{instructor.bio}</p> : null}
+                    <h3 className="text-lg font-semibold text-slate-950" style={partToStyle(getPart(card, "instructorName"), card.textColor)}>{instructor.fullName}</h3>
+                    {instructor.bio ? <p className="mt-1 text-sm leading-6 text-slate-600" style={partToStyle(getPart(card, "instructorBio"), card.textColor)}>{instructor.bio}</p> : null}
                   </div>
                 </div>
                 {instructor.courses.length ? (
                   <div className="mt-4 flex flex-wrap gap-2">
                     {instructor.courses.slice(0, 4).map((course) => (
-                      <span key={course.id} className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{course.title}</span>
+                      <span key={course.id} className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600" style={partToStyle(getPart(card, "courseMeta"), card.textColor)}>{course.title}</span>
                     ))}
                   </div>
                 ) : null}
@@ -768,9 +825,9 @@ export function HomepageCardView({ card, viewport, mode }: { card: HomepageCard;
 
   return (
     <article className={cardClasses} style={cardStyle}>
-      {card.subtitle ? <p className="section-kicker">{card.subtitle}</p> : null}
-      {card.title ? <h2 className="mt-3 text-2xl font-semibold text-slate-950" style={textStyle}>{card.title}</h2> : null}
-      {card.body ? <p className="mt-4 text-base leading-8 text-slate-600" style={textStyle}>{card.body}</p> : null}
+      {card.subtitle ? <p className="section-kicker" style={subtitleStyle}>{card.subtitle}</p> : null}
+      {card.title ? <h2 className="mt-3 text-2xl font-semibold text-slate-950" style={titleStyle}>{card.title}</h2> : null}
+      {card.body ? <p className="mt-4 text-base leading-8 text-slate-600" style={bodyStyle}>{card.body}</p> : null}
       {renderBulletLines(card)}
     </article>
   );

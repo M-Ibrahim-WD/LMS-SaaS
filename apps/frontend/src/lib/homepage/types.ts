@@ -100,6 +100,58 @@ export type HomepageLengthValue = {
   unit?: HomepageLengthUnit;
 };
 
+export type HomepagePartStyle = {
+  color?: string;
+  backgroundColor?: string;
+  typography?: HomepageTypography;
+  spacing?: HomepageElementSpacing;
+  gap?: number;
+  size?: HomepageLengthValue;
+  width?: HomepageLengthValue;
+  height?: HomepageLengthValue;
+  border?: HomepageBorder;
+  radius?: number;
+  align?: HomepageAlign;
+  objectFit?: HomepageImageFit;
+  objectPosition?: HomepageImagePosition;
+  iconSymbol?: string;
+};
+
+export type HomepageCardPartStyles = Partial<Record<
+  | "title"
+  | "subtitle"
+  | "body"
+  | "accent"
+  | "caption"
+  | "icon"
+  | "image"
+  | "button"
+  | "divider"
+  | "list"
+  | "listItem"
+  | "listIcon"
+  | "listText"
+  | "card"
+  | "cardTitle"
+  | "cardBody"
+  | "cardMeta"
+  | "statValue"
+  | "statLabel"
+  | "statDescription"
+  | "faqQuestion"
+  | "faqAnswer"
+  | "courseTitle"
+  | "courseDescription"
+  | "courseMeta"
+  | "instructorName"
+  | "instructorBio"
+  | "instructorMeta"
+  | "quote"
+  | "authorName"
+  | "authorRole",
+  HomepagePartStyle
+>>;
+
 export type HomepageContainerResponsive = {
   direction?: HomepageContainerDirection;
   width?: HomepageLengthValue;
@@ -162,6 +214,7 @@ export type HomepageCardBase = {
   border?: HomepageBorder;
   buttonStyle?: HomepageButtonStyle;
   typography?: HomepageTypography;
+  partStyles?: HomepageCardPartStyles;
   iconSize?: HomepageLengthValue;
   iconColor?: string;
   dividerColor?: string;
@@ -309,6 +362,8 @@ export type HomepageContainer = {
   justify?: HomepageContainerJustify;
   align?: HomepageContainerAlign;
   gap?: number;
+  rowGap?: number;
+  columnGap?: number;
   spacing?: HomepageElementSpacing;
   background?: HomepageBackground;
   backgroundImage?: string;
