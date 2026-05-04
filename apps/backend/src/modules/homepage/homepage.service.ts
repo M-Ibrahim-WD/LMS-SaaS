@@ -3,6 +3,7 @@ import { AdminPermission, Prisma, UserRole } from "@prisma/client";
 import { PrismaService } from "../../shared/prisma/prisma.service";
 import type { JwtPayload } from "../../shared/types/auth.types";
 import { AdminAccessService } from "../admin/services/admin-access.service";
+import { validateHomepageContent } from "./homepage-content.validator";
 
 const HOMEPAGE_KEY = "global-public-homepage";
 
@@ -81,6 +82,7 @@ export class HomepageService {
 
   async saveDraftHomepage(currentUser: JwtPayload, content: HomepageContentPayload) {
     await this.assertHomepageAccess(currentUser);
+    validateHomepageContent(content);
 
     const record = await this.ensureHomepageRecord();
 
@@ -100,6 +102,7 @@ export class HomepageService {
     await this.assertHomepageAccess(currentUser);
 
     const record = await this.ensureHomepageRecord();
+    validateHomepageContent(record.draftContent ?? EMPTY_HOMEPAGE_CONTENT);
 
     return this.prisma.homepageContent.update({
       where: { id: record.id },

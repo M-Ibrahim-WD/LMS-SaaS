@@ -3,6 +3,7 @@ import type { Response } from "express";
 import { CurrentUser } from "../../../shared/decorators/current-user.decorator";
 import type { JwtPayload } from "../../../shared/types/auth.types";
 import { JwtAuthGuard } from "../guards/jwt-auth.guard";
+import { RateLimitGuard } from "../../../shared/guards/rate-limit.guard";
 import { LoginDto } from "../dto/login.dto";
 import { RegisterDto } from "../dto/register.dto";
 import { ChangePasswordDto } from "../dto/change-password.dto";
@@ -16,36 +17,43 @@ import { AuthService } from "../services/auth.service";
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @UseGuards(RateLimitGuard)
   @Post("register")
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }
 
+  @UseGuards(RateLimitGuard)
   @Post("login")
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
   }
 
+  @UseGuards(RateLimitGuard)
   @Post("verify-email")
   verifyEmail(@Body() dto: VerifyEmailDto) {
     return this.authService.verifyEmail(dto.token);
   }
 
+  @UseGuards(RateLimitGuard)
   @Post("forgot-password")
   requestPasswordReset(@Body() dto: RequestPasswordResetDto) {
     return this.authService.requestPasswordReset(dto.email);
   }
 
+  @UseGuards(RateLimitGuard)
   @Post("reset-password")
   resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto.token, dto.password);
   }
 
+  @UseGuards(RateLimitGuard)
   @Post("google/complete-registration")
   completeGoogleRegistration(@Body() dto: CompleteGoogleRegistrationDto) {
     return this.authService.completeGoogleRegistration(dto);
   }
 
+  @UseGuards(RateLimitGuard)
   @Get("google/start")
   async startGoogleAuth(
     @Query("intent") intent: "login" | "register" | undefined,
@@ -64,6 +72,7 @@ export class AuthController {
     response.redirect(redirectUrl);
   }
 
+  @UseGuards(RateLimitGuard)
   @Get("google/callback")
   async handleGoogleCallback(
     @Query("code") code: string | undefined,

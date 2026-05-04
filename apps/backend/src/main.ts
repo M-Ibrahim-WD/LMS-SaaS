@@ -6,9 +6,29 @@ import { AppModule } from "./app.module";
 import { GlobalExceptionFilter } from "./shared/filters/global-exception.filter";
 import { LoggingInterceptor } from "./shared/interceptors/logging.interceptor";
 
+function getAllowedCorsOrigins(config: ConfigService) {
+  const nodeEnv = config.get<string>("app.nodeEnv") ?? "development";
+  const publicWebUrl = config.get<string>("app.publicWebUrl") ?? "";
+  const configuredOrigins = (process.env.CORS_ORIGINS ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  const developmentOrigins =
+    nodeEnv === "production"
+      ? []
+      : ["http://localhost:3000", "http://127.0.0.1:3000"];
+
+  return Array.from(new Set([publicWebUrl, ...configuredOrigins, ...developmentOrigins].filter(Boolean)));
+}
+
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { cors: true });
+  const app = await NestFactory.create(AppModule);
   const config = app.get(ConfigService);
+
+  app.enableCors({
+    origin: getAllowedCorsOrigins(config),
+    credentials: true
+  });
 
   app.use(
     helmet({

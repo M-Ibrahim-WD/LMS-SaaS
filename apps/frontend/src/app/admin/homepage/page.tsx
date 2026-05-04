@@ -21,12 +21,10 @@ import type {
   HomepageBorderStyle,
   HomepageBoxSpacing,
   HomepageButtonVariant,
-  HomepageButtonStyle,
   HomepageCard,
   HomepageCardPartStyles,
   HomepageCardType,
   HomepageCatalogInstructor,
-  HomepageColumn,
   HomepageContainer,
   HomepageContainerAlign,
   HomepageContainerDirection,
@@ -42,13 +40,95 @@ import type {
   HomepageLengthValue,
   HomepagePartStyle,
   HomepageResponsiveVisibility,
-  HomepageRow,
   HomepageSizePreset,
   HomepageStyleUnit,
   HomepageTextTag,
   HomepageTypography,
   HomepageVideoAspectRatio
 } from "../../../lib/homepage/types";
+import {
+  AlignmentControl,
+  BorderControl,
+  BoxSpacingControl,
+  ColorControl,
+  IconButton,
+  IconSegmentedControl,
+  LengthControl,
+  NumberControl,
+  TypographyControl,
+} from "./homepage-builder-controls";
+import {
+  addElementToContainer,
+  addElementsToContainer,
+  cloneContent,
+  cloneElement,
+  createBox,
+  createButtonStyle,
+  createContainer,
+  createId,
+  createNoBorder,
+  createVisibility,
+  createWidget,
+  findElement,
+  formatBuilderTimestamp,
+  getEvenContainerWidth,
+  getParentContainerId,
+  hasHomepageContent,
+  insertElementNearSibling,
+  isContainer,
+  moveElementList,
+  normalizeContent,
+  removeElementList,
+  summarizeContent,
+  updateElementList
+} from "./homepage-builder-utils";
+import {
+  AlignBetweenIcon,
+  AlignCenterIcon,
+  AlignEndIcon,
+  AlignStartIcon,
+  BackIcon,
+  BookIcon,
+  BoxIcon,
+  ButtonIcon,
+  CardIcon,
+  ChartIcon,
+  CheckIcon,
+  ChevronIcon,
+  ClipboardIcon,
+  ColumnDirectionIcon,
+  ContainerIcon,
+  CopyIcon,
+  DividerIcon,
+  DownIcon,
+  EyeIcon,
+  EyeOffIcon,
+  HeadingIcon,
+  ImageIcon,
+  InfoIcon,
+  LayersIcon,
+  ListIcon,
+  MonitorIcon,
+  NoWrapIcon,
+  PhoneIcon,
+  PlayIcon,
+  PlusIcon,
+  QuestionIcon,
+  QuoteIcon,
+  RedoIcon,
+  RowDirectionIcon,
+  SpacerIcon,
+  SparkIcon,
+  StarIcon,
+  StretchIcon,
+  TabletIcon,
+  TextIcon,
+  TrashIcon,
+  UndoIcon,
+  UpIcon,
+  UsersIcon,
+  WrapIcon
+} from "./homepage-builder-icons";
 
 type DraftResponse = {
   draftContent: HomepageContent;
@@ -61,7 +141,6 @@ type SidebarTab = "CONTENT" | "STYLE" | "ADVANCED";
 type Selection = { kind: "container"; id: string } | { kind: "widget"; id: string } | null;
 type DeleteTarget = Selection;
 type CanvasInsertionPoint = { siblingId: string; position: "before" | "after"; parentContainerId: string | null } | null;
-type HomepageContentSummary = { containers: number; widgets: number; hidden: number };
 type NavigatorDragState = { startX: number; startY: number; originX: number; originY: number } | null;
 
 type WidgetCatalogItem = {
@@ -69,536 +148,6 @@ type WidgetCatalogItem = {
   title: string;
   description: string;
 };
-
-function SvgIcon({ children }: { children: React.ReactNode }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
-      {children}
-    </svg>
-  );
-}
-
-function BackIcon() {
-  return <SvgIcon><path strokeLinecap="round" strokeLinejoin="round" d="m15 18-6-6 6-6" /></SvgIcon>;
-}
-
-function PlusIcon() {
-  return <SvgIcon><path strokeLinecap="round" d="M12 5v14M5 12h14" /></SvgIcon>;
-}
-
-function MonitorIcon() {
-  return <SvgIcon><rect x="3" y="4" width="18" height="12" rx="2" /><path strokeLinecap="round" d="M8 20h8M12 16v4" /></SvgIcon>;
-}
-
-function TabletIcon() {
-  return <SvgIcon><rect x="5" y="3" width="14" height="18" rx="2.5" /><path strokeLinecap="round" d="M11 18h2" /></SvgIcon>;
-}
-
-function PhoneIcon() {
-  return <SvgIcon><rect x="7" y="2.5" width="10" height="19" rx="2.5" /><path strokeLinecap="round" d="M11 18.5h2" /></SvgIcon>;
-}
-
-function LayersIcon() {
-  return <SvgIcon><path strokeLinecap="round" strokeLinejoin="round" d="m12 3 9 4.5L12 12 3 7.5 12 3Z" /><path strokeLinecap="round" strokeLinejoin="round" d="m3 12 9 4.5 9-4.5M3 16.5 12 21l9-4.5" /></SvgIcon>;
-}
-
-function BoxIcon() {
-  return <SvgIcon><rect x="4" y="5" width="16" height="14" rx="2" /><path strokeLinecap="round" d="M8 9h8M8 13h8" /></SvgIcon>;
-}
-
-function ContainerIcon() {
-  return <SvgIcon><rect x="3.5" y="5" width="17" height="14" rx="2.5" /><path strokeLinecap="round" d="M8 5v14M16 5v14" /></SvgIcon>;
-}
-
-function TextIcon() {
-  return <SvgIcon><path strokeLinecap="round" d="M5 7h14M5 12h14M5 17h10" /></SvgIcon>;
-}
-
-function HeadingIcon() {
-  return <SvgIcon><path strokeLinecap="round" d="M5 6v12M19 6v12M5 12h14" /><path strokeLinecap="round" d="M12 18h6" /></SvgIcon>;
-}
-
-function ButtonIcon() {
-  return <SvgIcon><rect x="4" y="7" width="16" height="10" rx="5" /></SvgIcon>;
-}
-
-function ImageIcon() {
-  return <SvgIcon><rect x="4" y="5" width="16" height="14" rx="2" /><circle cx="9" cy="10" r="1.5" /><path strokeLinecap="round" strokeLinejoin="round" d="m20 15-4.5-4.5L8 18" /></SvgIcon>;
-}
-
-function StarIcon() {
-  return <SvgIcon><path strokeLinecap="round" strokeLinejoin="round" d="m12 3 2.8 5.67 6.26.91-4.53 4.42 1.07 6.25L12 17.27l-5.6 2.95 1.07-6.25L2.94 9.58l6.26-.91L12 3Z" /></SvgIcon>;
-}
-
-function PlayIcon() {
-  return <SvgIcon><rect x="4" y="5" width="16" height="14" rx="2" /><path fill="currentColor" stroke="none" d="m10 9 5 3-5 3V9Z" /></SvgIcon>;
-}
-
-function SparkIcon() {
-  return <SvgIcon><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v4M12 17v4M4.2 4.2 7 7M17 17l2.8 2.8M3 12h4M17 12h4M4.2 19.8 7 17M17 7l2.8-2.8" /></SvgIcon>;
-}
-
-function SpacerIcon() {
-  return <SvgIcon><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16M8 8l4-4 4 4M8 16l4 4 4-4" /></SvgIcon>;
-}
-
-function DividerIcon() {
-  return <SvgIcon><path strokeLinecap="round" d="M4 12h16" /><path strokeLinecap="round" d="M7 8h10M7 16h10" opacity=".55" /></SvgIcon>;
-}
-
-function ListIcon() {
-  return <SvgIcon><path strokeLinecap="round" d="M9 7h11M9 12h11M9 17h11" /><circle cx="5" cy="7" r="1" fill="currentColor" stroke="none" /><circle cx="5" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="5" cy="17" r="1" fill="currentColor" stroke="none" /></SvgIcon>;
-}
-
-function CardIcon() {
-  return <SvgIcon><rect x="4" y="5" width="16" height="14" rx="2" /><path strokeLinecap="round" d="M7 9h10M7 13h6" /></SvgIcon>;
-}
-
-function BookIcon() {
-  return <SvgIcon><path strokeLinecap="round" strokeLinejoin="round" d="M5 5.5A2.5 2.5 0 0 1 7.5 3H20v16H7.5A2.5 2.5 0 0 0 5 21V5.5Z" /><path strokeLinecap="round" d="M9 7h7M9 11h6" /></SvgIcon>;
-}
-
-function UsersIcon() {
-  return <SvgIcon><circle cx="9" cy="8" r="3" /><path strokeLinecap="round" strokeLinejoin="round" d="M3.5 19a5.5 5.5 0 0 1 11 0" /><path strokeLinecap="round" d="M16 11a2.5 2.5 0 0 0 0-5M18 18a4 4 0 0 0-3-3.8" /></SvgIcon>;
-}
-
-function InfoIcon() {
-  return <SvgIcon><circle cx="12" cy="12" r="9" /><path strokeLinecap="round" d="M12 11v5M12 8h.01" /></SvgIcon>;
-}
-
-function CheckIcon() {
-  return <SvgIcon><path strokeLinecap="round" strokeLinejoin="round" d="m5 13 4 4L19 7" /><circle cx="12" cy="12" r="9" opacity=".35" /></SvgIcon>;
-}
-
-function QuestionIcon() {
-  return <SvgIcon><circle cx="12" cy="12" r="9" /><path strokeLinecap="round" strokeLinejoin="round" d="M9.5 9a2.7 2.7 0 1 1 4.1 2.3c-.9.6-1.6 1.1-1.6 2.2" /><path strokeLinecap="round" d="M12 17h.01" /></SvgIcon>;
-}
-
-function QuoteIcon() {
-  return <SvgIcon><path strokeLinecap="round" strokeLinejoin="round" d="M8 8H5v5h3v3c0 1.7-1 3-3 3M19 8h-3v5h3v3c0 1.7-1 3-3 3" /></SvgIcon>;
-}
-
-function ChartIcon() {
-  return <SvgIcon><path strokeLinecap="round" d="M5 19V9M12 19V5M19 19v-7" /><path strokeLinecap="round" d="M3 19h18" /></SvgIcon>;
-}
-
-function EyeIcon() {
-  return <SvgIcon><path strokeLinecap="round" strokeLinejoin="round" d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" /><circle cx="12" cy="12" r="2.5" /></SvgIcon>;
-}
-
-function EyeOffIcon() {
-  return <SvgIcon><path strokeLinecap="round" strokeLinejoin="round" d="M3 3 21 21" /><path strokeLinecap="round" strokeLinejoin="round" d="M6.7 6.7C4.3 8.2 3 10.5 3 12c0 0 3.5 6 10 6 1.8 0 3.4-.5 4.8-1.2M9.9 5.1A11.5 11.5 0 0 1 12 5c6.5 0 10 6 10 6-.4.8-1.1 1.8-1.9 2.7" /></SvgIcon>;
-}
-
-function CopyIcon() {
-  return <SvgIcon><rect x="8" y="8" width="10" height="10" rx="2" /><path strokeLinecap="round" strokeLinejoin="round" d="M6 14H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v1" /></SvgIcon>;
-}
-
-function ClipboardIcon() {
-  return <SvgIcon><path strokeLinecap="round" strokeLinejoin="round" d="M9 4h6l1 2h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2l1-2Z" /><path strokeLinecap="round" d="M9 10h6M9 14h6" /></SvgIcon>;
-}
-
-function TrashIcon() {
-  return <SvgIcon><path strokeLinecap="round" d="M4 7h16M10 11v6M14 11v6" /><path strokeLinecap="round" strokeLinejoin="round" d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" /></SvgIcon>;
-}
-
-function UndoIcon() {
-  return <SvgIcon><path strokeLinecap="round" strokeLinejoin="round" d="M9 14 4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3" /></SvgIcon>;
-}
-
-function RedoIcon() {
-  return <SvgIcon><path strokeLinecap="round" strokeLinejoin="round" d="m15 14 5-5-5-5M20 9H10a6 6 0 0 0 0 12h3" /></SvgIcon>;
-}
-
-function ChevronIcon() {
-  return <SvgIcon><path strokeLinecap="round" strokeLinejoin="round" d="m8 10 4 4 4-4" /></SvgIcon>;
-}
-
-function UpIcon() {
-  return <SvgIcon><path strokeLinecap="round" strokeLinejoin="round" d="m7 14 5-5 5 5" /></SvgIcon>;
-}
-
-function DownIcon() {
-  return <SvgIcon><path strokeLinecap="round" strokeLinejoin="round" d="m7 10 5 5 5-5" /></SvgIcon>;
-}
-
-function RowDirectionIcon() {
-  return <SvgIcon><rect x="4" y="7" width="7" height="10" rx="1.5" /><rect x="13" y="7" width="7" height="10" rx="1.5" /></SvgIcon>;
-}
-
-function ColumnDirectionIcon() {
-  return <SvgIcon><rect x="6" y="4" width="12" height="6" rx="1.5" /><rect x="6" y="14" width="12" height="6" rx="1.5" /></SvgIcon>;
-}
-
-function WrapIcon() {
-  return <SvgIcon><path strokeLinecap="round" d="M4 7h10a4 4 0 0 1 0 8H8" /><path strokeLinecap="round" strokeLinejoin="round" d="m10 12-4 3 4 3" /></SvgIcon>;
-}
-
-function NoWrapIcon() {
-  return <SvgIcon><path strokeLinecap="round" d="M4 12h16" /><path strokeLinecap="round" strokeLinejoin="round" d="m16 8 4 4-4 4" /></SvgIcon>;
-}
-
-function AlignStartIcon() {
-  return <SvgIcon><path strokeLinecap="round" d="M5 5v14M9 8h10M9 16h6" /></SvgIcon>;
-}
-
-function AlignCenterIcon() {
-  return <SvgIcon><path strokeLinecap="round" d="M12 5v14M7 8h10M9 16h6" /></SvgIcon>;
-}
-
-function AlignEndIcon() {
-  return <SvgIcon><path strokeLinecap="round" d="M19 5v14M5 8h10M9 16h6" /></SvgIcon>;
-}
-
-function AlignBetweenIcon() {
-  return <SvgIcon><path strokeLinecap="round" d="M5 5v14M19 5v14M8 9h8M8 15h8" /></SvgIcon>;
-}
-
-function StretchIcon() {
-  return <SvgIcon><path strokeLinecap="round" d="M5 6v12M19 6v12M8 8h8M8 16h8" /><path strokeLinecap="round" strokeLinejoin="round" d="m8 12 2-2M8 12l2 2M16 12l-2-2M16 12l-2 2" /></SvgIcon>;
-}
-
-function isContainer(element: HomepageElement): element is HomepageContainer {
-  return element.type === "CONTAINER";
-}
-
-function createId(prefix: string) {
-  return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-function createBox(value: number): HomepageBoxSpacing {
-  return { top: value, right: value, bottom: value, left: value, unit: "px", linked: true };
-}
-
-function createNoBorder(): HomepageBorder {
-  return { enabled: false, width: 0, color: "#0f172a", style: "solid", radius: 0, unit: "px" };
-}
-
-function createVisibility(): HomepageResponsiveVisibility {
-  return { desktop: true, tablet: true, mobile: true };
-}
-
-function summarizeElements(elements: HomepageElement[]): HomepageContentSummary {
-  return elements.reduce(
-    (summary: HomepageContentSummary, element): HomepageContentSummary => {
-      const hidden = element.hidden ? 1 : 0;
-      if (isContainer(element)) {
-        const childSummary = summarizeElements(element.children);
-        return {
-          containers: summary.containers + 1 + childSummary.containers,
-          widgets: summary.widgets + childSummary.widgets,
-          hidden: summary.hidden + hidden + childSummary.hidden
-        };
-      }
-      return {
-        containers: summary.containers,
-        widgets: summary.widgets + 1,
-        hidden: summary.hidden + hidden
-      };
-    },
-    { containers: 0, widgets: 0, hidden: 0 }
-  );
-}
-
-function summarizeContent(content: HomepageContent) {
-  const containerSummary = summarizeElements(content.containers ?? []);
-  const legacyWidgetCount = content.rows.reduce((count, row) => count + (row.columnsData?.reduce((columnCount, column) => columnCount + column.widgets.length, 0) ?? row.slots?.filter(Boolean).length ?? 0), 0);
-  return {
-    containers: containerSummary.containers || content.rows.length,
-    widgets: containerSummary.widgets || legacyWidgetCount,
-    hidden: containerSummary.hidden
-  };
-}
-
-function hasHomepageContent(content: HomepageContent) {
-  const summary = summarizeContent(content);
-  return summary.containers > 0 || summary.widgets > 0;
-}
-
-function formatBuilderTimestamp(value?: string | null) {
-  if (!value) return "Not saved yet";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Saved draft";
-  return date.toLocaleString();
-}
-
-function createButtonStyle(): HomepageButtonStyle {
-  return {
-    backgroundColor: "#020617",
-    textColor: "#ffffff",
-    hoverBackgroundColor: "#0f172a",
-    hoverTextColor: "#ffffff",
-    border: createNoBorder()
-  };
-}
-
-function createContainer(
-  children: HomepageElement[] = [],
-  overrides: Partial<Omit<HomepageContainer, "id" | "type" | "children">> = {}
-): HomepageContainer {
-  return {
-    id: createId("container"),
-    type: "CONTAINER",
-    builderLabel: "Container",
-    direction: overrides.direction ?? "column",
-    wrap: overrides.wrap ?? "wrap",
-    justify: overrides.justify ?? "start",
-    align: overrides.align ?? "stretch",
-    gap: overrides.gap ?? 10,
-    rowGap: overrides.rowGap,
-    columnGap: overrides.columnGap,
-    visibility: overrides.visibility ?? createVisibility(),
-    spacing: overrides.spacing ?? { padding: createBox(10), margin: createBox(10) },
-    background: overrides.background ?? { color: "transparent" },
-    backgroundImage: overrides.backgroundImage,
-    border: overrides.border ?? createNoBorder(),
-    width: overrides.width ?? { value: 100, unit: "%" },
-    maxWidth: overrides.maxWidth,
-    minHeight: overrides.minHeight,
-    height: overrides.height,
-    responsive: overrides.responsive,
-    hidden: overrides.hidden,
-    children
-  };
-}
-
-function getEvenContainerWidth(count: number): HomepageLengthValue {
-  return { value: Math.round((100 / count) * 100) / 100, unit: "%" };
-}
-
-function createWidget(type: HomepageCardType): HomepageCard {
-  const base = {
-    id: createId("widget"),
-    type,
-    title: type.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase()),
-    visibility: createVisibility(),
-    spacing: { padding: createBox(0), margin: createBox(0) },
-    background: { color: "transparent" },
-    border: createNoBorder(),
-    buttonStyle: createButtonStyle()
-  };
-
-  if (type === "HEADING") return { ...base, type, title: "Heading", textTag: "H2", content: "New heading", textAlign: "left" };
-  if (type === "TEXT") return { ...base, type, title: "Text", content: "Write your text here.", textAlign: "left" };
-  if (type === "BUTTON") return { ...base, type, title: "Button", label: "Click here", href: "/courses", variant: "primary", textAlign: "left" };
-  if (type === "IMAGE_BLOCK") {
-    return {
-      ...base,
-      type,
-      title: "Image",
-      imageUrl: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1600&q=80",
-      altText: "Homepage image",
-      caption: "",
-      imageHeightPreset: "medium",
-      imageFit: "cover",
-      imagePosition: "center"
-    };
-  }
-  if (type === "VIDEO") return { ...base, type, title: "Video", videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", caption: "", aspectRatio: "16:9" };
-  if (type === "ICON") return { ...base, type, title: "Icon", iconSymbol: "*", content: "Icon text", textAlign: "center" };
-  if (type === "SPACER") return { ...base, type, title: "Spacer", heightPreset: "medium" };
-  if (type === "DIVIDER") return { ...base, type, title: "Divider", dividerStyle: "solid" };
-  if (type === "LIST") return { ...base, type, title: "List", items: ["First item", "Second item"] };
-  if (type === "CARD") return { ...base, type, title: "Card", subtitle: "Subtitle", body: "Card content.", buttonLabel: "", buttonHref: "" };
-  if (type === "COURSE_LIST") return { ...base, type, title: "Course List", items: [] };
-  if (type === "INSTRUCTOR_LIST") return { ...base, type, title: "Instructor List", instructors: [] };
-  if (type === "TESTIMONIAL") {
-    return {
-      ...base,
-      type,
-      title: "Testimonial",
-      quote: "This learning experience made everything clearer and easier to follow.",
-      authorName: "Student name",
-      authorRole: "Course student",
-      avatarUrl: ""
-    };
-  }
-  if (type === "STATS") {
-    return {
-      ...base,
-      type,
-      title: "Stats",
-      stats: [
-        { id: createId("stat"), value: "120+", label: "Students", description: "Active learners" },
-        { id: createId("stat"), value: "24", label: "Courses", description: "Published programs" },
-        { id: createId("stat"), value: "98%", label: "Satisfaction", description: "Positive feedback" }
-      ]
-    };
-  }
-  if (type === "FAQ") {
-    return {
-      ...base,
-      type,
-      title: "FAQ",
-      faqs: [
-        { id: createId("faq"), question: "How do I start?", answer: "Create an account, choose a course, and begin learning at your own pace." },
-        { id: createId("faq"), question: "Can instructors publish courses?", answer: "Yes. Instructors can build and manage their own courses from the platform." }
-      ]
-    };
-  }
-  if (type === "FEATURED_INSTRUCTORS") return { ...base, type, title: "Featured Instructors", instructors: [] };
-  return {
-    ...base,
-    type,
-    title: type === "ABOUT_US" ? "About Us" : type === "WHY_US" ? "Why Us" : type === "ABOUT_SITE" ? "About This Site" : "Custom Section",
-    subtitle: "Who we are",
-    body: "Use this block to describe your platform.",
-    bullets: ["Clear learning paths", "Modern course experience", "Built for education"]
-  };
-}
-
-function normalizeRowColumns(row: HomepageRow): HomepageColumn[] {
-  if (row.columnsData?.length) return row.columnsData.map((column) => ({ ...column, widgets: column.widgets ?? [] }));
-  const slots = row.slots ?? Array.from({ length: row.columns }, () => null);
-  return Array.from({ length: row.columns }, (_, index) => ({
-    id: `${row.id}-column-${index + 1}`,
-    widgets: slots[index] ? [slots[index] as HomepageCard] : []
-  }));
-}
-
-function rowsToContainers(rows: HomepageRow[]): HomepageContainer[] {
-  return rows.map((row) => {
-    const columns = normalizeRowColumns(row);
-    return {
-      ...createContainer(
-        columns.map((column) => ({
-          ...createContainer(column.widgets),
-          id: column.id,
-          builderLabel: column.builderLabel || "Container",
-          hidden: column.hidden,
-          visibility: column.visibility ?? createVisibility(),
-          direction: "column",
-          gap: column.gapPreset === "tight" ? 12 : column.gapPreset === "loose" ? 28 : 20,
-          spacing: column.spacing ?? { padding: createBox(10), margin: createBox(10) },
-          background: column.background ?? { color: column.backgroundColor ?? "transparent" },
-          border: column.border ?? createNoBorder(),
-          width: row.columns === 2 ? { value: 50, unit: "%" } : { value: 100, unit: "%" }
-        }))
-      ),
-      id: row.id,
-      builderLabel: row.builderLabel || "Container",
-      hidden: row.hidden,
-      visibility: row.visibility ?? createVisibility(),
-      direction: row.columns === 2 ? "row" : "column",
-      gap: row.gapPreset === "tight" ? 12 : row.gapPreset === "loose" ? 28 : 20,
-      background: row.background ?? { color: row.backgroundColor ?? "transparent" },
-      backgroundImage: row.backgroundImage,
-      border: row.border ?? createNoBorder(),
-      spacing: row.spacing ?? { padding: createBox(10), margin: createBox(10) }
-    };
-  });
-}
-
-function normalizeContent(content: HomepageContent): HomepageContent {
-  const containers = content.containers?.length ? content.containers : rowsToContainers(content.rows ?? []);
-  return { ...content, rows: content.rows ?? [], containers };
-}
-
-function cloneContent(content: HomepageContent): HomepageContent {
-  return normalizeContent(JSON.parse(JSON.stringify(content)) as HomepageContent);
-}
-
-function cloneElement<T extends HomepageElement>(element: T): T {
-  const cloned = JSON.parse(JSON.stringify(element)) as T;
-  const replaceIds = (entry: HomepageElement): HomepageElement => {
-    if (isContainer(entry)) {
-      return { ...entry, id: createId("container"), children: entry.children.map(replaceIds) };
-    }
-    return { ...entry, id: createId("widget") };
-  };
-  return replaceIds(cloned) as T;
-}
-
-function updateElementList(elements: HomepageElement[], id: string, updater: (element: HomepageElement) => HomepageElement): HomepageElement[] {
-  return elements.map((element) => {
-    if (element.id === id) return updater(element);
-    if (isContainer(element)) return { ...element, children: updateElementList(element.children, id, updater) };
-    return element;
-  });
-}
-
-function removeElementList(elements: HomepageElement[], id: string): HomepageElement[] {
-  return elements
-    .filter((element) => element.id !== id)
-    .map((element) => (isContainer(element) ? { ...element, children: removeElementList(element.children, id) } : element));
-}
-
-function addElementToContainer(elements: HomepageElement[], containerId: string | null, child: HomepageElement): HomepageElement[] {
-  if (!containerId) return [...elements, child];
-  return elements.map((element) => {
-    if (isContainer(element) && element.id === containerId) return { ...element, children: [...element.children, child] };
-    if (isContainer(element)) return { ...element, children: addElementToContainer(element.children, containerId, child) };
-    return element;
-  });
-}
-
-function addElementsToContainer(elements: HomepageElement[], containerId: string, children: HomepageElement[]): HomepageElement[] {
-  return elements.map((element) => {
-    if (isContainer(element) && element.id === containerId) return { ...element, children: [...element.children, ...children] };
-    if (isContainer(element)) return { ...element, children: addElementsToContainer(element.children, containerId, children) };
-    return element;
-  });
-}
-
-function insertElementNearSibling(
-  elements: HomepageElement[],
-  siblingId: string,
-  position: "before" | "after",
-  child: HomepageElement
-): HomepageElement[] {
-  const index = elements.findIndex((element) => element.id === siblingId);
-  if (index >= 0) {
-    const next = [...elements];
-    next.splice(position === "before" ? index : index + 1, 0, child);
-    return next;
-  }
-
-  return elements.map((element) => (
-    isContainer(element)
-      ? { ...element, children: insertElementNearSibling(element.children, siblingId, position, child) }
-      : element
-  ));
-}
-
-function moveElementList(elements: HomepageElement[], id: string, direction: -1 | 1): HomepageElement[] {
-  const index = elements.findIndex((element) => element.id === id);
-  if (index >= 0) {
-    const targetIndex = index + direction;
-    if (targetIndex < 0 || targetIndex >= elements.length) return elements;
-    const next = [...elements];
-    [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
-    return next;
-  }
-
-  return elements.map((element) => (
-    isContainer(element)
-      ? { ...element, children: moveElementList(element.children, id, direction) }
-      : element
-  ));
-}
-
-function findElement(elements: HomepageElement[], id: string | undefined): HomepageElement | null {
-  if (!id) return null;
-  for (const element of elements) {
-    if (element.id === id) return element;
-    if (isContainer(element)) {
-      const found = findElement(element.children, id);
-      if (found) return found;
-    }
-  }
-  return null;
-}
-
-function getParentContainerId(elements: HomepageElement[], id: string): string | null {
-  for (const element of elements) {
-    if (isContainer(element)) {
-      if (element.children.some((child) => child.id === id)) return element.id;
-      const found = getParentContainerId(element.children, id);
-      if (found) return found;
-    }
-  }
-  return null;
-}
 
 function getWidgetIcon(type: HomepageCardType) {
   const icons: Record<HomepageCardType, React.ReactNode> = {
@@ -628,321 +177,6 @@ function getWidgetIcon(type: HomepageCardType) {
 
 function formatLabel(value: string) {
   return value.toLowerCase().replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
-function LengthControl({
-  label,
-  value,
-  onChange
-}: {
-  label: string;
-  value?: HomepageLengthValue;
-  onChange: (value: HomepageLengthValue | undefined) => void;
-}) {
-  const length = value ?? {};
-  return (
-    <div>
-      <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">{label}</span>
-      <div className="flex gap-2">
-        <input
-          type="number"
-          value={length.value ?? ""}
-          onChange={(event) => onChange(event.target.value === "" ? undefined : { ...length, value: Number(event.target.value), unit: length.unit ?? "%" })}
-          className="min-w-0 flex-1 rounded-2xl border border-slate-300 px-3 py-2 text-sm"
-          placeholder="Auto"
-        />
-        <select
-          value={length.unit ?? "%"}
-          onChange={(event) => onChange({ ...length, value: length.value ?? 100, unit: event.target.value as HomepageLengthUnit })}
-          className="rounded-2xl border border-slate-300 px-3 py-2 text-sm"
-        >
-          <option value="%">%</option>
-          <option value="px">px</option>
-        </select>
-      </div>
-    </div>
-  );
-}
-
-function ColorControl({
-  label,
-  value,
-  onChange,
-  allowTransparent = true
-}: {
-  label: string;
-  value?: string;
-  onChange: (value: string) => void;
-  allowTransparent?: boolean;
-}) {
-  const normalized = value && value !== "transparent" ? value : "#ffffff";
-  return (
-    <label className="block">
-      <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">{label}</span>
-      <div className="flex items-center gap-2">
-        <input
-          type="color"
-          value={/^#[0-9a-fA-F]{6}$/.test(normalized) ? normalized : "#ffffff"}
-          onChange={(event) => onChange(event.target.value)}
-          className="h-10 w-11 rounded-xl border border-slate-300 bg-white p-1"
-        />
-        <input
-          value={value ?? ""}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={allowTransparent ? "transparent or #000000" : "#000000"}
-          className="min-w-0 flex-1 rounded-2xl border border-slate-300 px-3 py-2 text-sm"
-        />
-        {allowTransparent ? (
-          <button type="button" onClick={() => onChange("transparent")} className="rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700">
-            Clear
-          </button>
-        ) : null}
-      </div>
-    </label>
-  );
-}
-
-function BoxSpacingControl({
-  label,
-  value,
-  onChange
-}: {
-  label: string;
-  value?: HomepageBoxSpacing;
-  onChange: (value: HomepageBoxSpacing) => void;
-}) {
-  const box = value ?? createBox(10);
-  const updateSide = (side: "top" | "right" | "bottom" | "left", nextValue: number) => {
-    if (box.linked) onChange({ ...box, top: nextValue, right: nextValue, bottom: nextValue, left: nextValue });
-    else onChange({ ...box, [side]: nextValue });
-  };
-
-  return (
-    <div>
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <span className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">{label}</span>
-        <div className="flex gap-2">
-          <select value={box.unit} onChange={(event) => onChange({ ...box, unit: event.target.value as HomepageStyleUnit })} className="rounded-full border border-slate-300 bg-white px-2 py-1 text-xs">
-            <option value="px">px</option>
-            <option value="%">%</option>
-          </select>
-          <button type="button" onClick={() => onChange({ ...box, linked: !box.linked })} className={`rounded-full px-2 py-1 text-xs font-semibold ${box.linked ? "bg-slate-950 text-white" : "border border-slate-300 bg-white text-slate-700"}`}>
-            {box.linked ? "Linked" : "Free"}
-          </button>
-        </div>
-      </div>
-      <div className="grid grid-cols-4 gap-2">
-        {(["top", "right", "bottom", "left"] as const).map((side) => (
-          <label key={side}>
-            <span className="mb-1 block text-center text-[0.62rem] uppercase tracking-[0.12em] text-slate-500">{side}</span>
-            <input type="number" value={box[side]} onChange={(event) => updateSide(side, Number(event.target.value))} className="w-full rounded-xl border border-slate-300 px-2 py-2 text-center text-sm" />
-          </label>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function BorderControl({ value, onChange }: { value?: HomepageBorder; onChange: (value: HomepageBorder) => void }) {
-  const border = value ?? createNoBorder();
-  return (
-    <div className="space-y-3">
-      <label className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
-        Border
-        <input type="checkbox" checked={border.enabled ?? false} onChange={(event) => onChange({ ...border, enabled: event.target.checked, width: event.target.checked ? border.width || 1 : 0 })} />
-      </label>
-      <div className="grid grid-cols-2 gap-2">
-        <label>
-          <span className="mb-1 block text-xs text-slate-500">Width</span>
-          <input type="number" value={border.width ?? 0} onChange={(event) => onChange({ ...border, width: Number(event.target.value) })} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-        </label>
-        <label>
-          <span className="mb-1 block text-xs text-slate-500">Radius</span>
-          <input type="number" value={border.radius ?? 0} onChange={(event) => onChange({ ...border, radius: Number(event.target.value) })} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-        </label>
-      </div>
-      <ColorControl label="Border color" value={border.color ?? "#000000"} allowTransparent={false} onChange={(color) => onChange({ ...border, color })} />
-      <select value={border.style ?? "solid"} onChange={(event) => onChange({ ...border, style: event.target.value as HomepageBorderStyle })} className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm">
-        <option value="solid">Solid</option>
-        <option value="dashed">Dashed</option>
-        <option value="dotted">Dotted</option>
-      </select>
-    </div>
-  );
-}
-
-function TypographyControl({
-  value,
-  onChange
-}: {
-  value?: HomepageTypography;
-  onChange: (value: HomepageTypography) => void;
-}) {
-  const typography = value ?? {};
-  return (
-    <div className="space-y-3 rounded-2xl border border-slate-200 p-3">
-      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Typography</p>
-      <LengthControl
-        label="Font size"
-        value={typography.fontSize}
-        onChange={(fontSize) => onChange({ ...typography, fontSize })}
-      />
-      <div className="grid grid-cols-2 gap-2">
-        <label>
-          <span className="mb-1 block text-xs text-slate-500">Weight</span>
-          <select
-            value={typography.fontWeight ?? "600"}
-            onChange={(event) => onChange({ ...typography, fontWeight: event.target.value as HomepageTypography["fontWeight"] })}
-            className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
-          >
-            <option value="300">Light</option>
-            <option value="400">Regular</option>
-            <option value="500">Medium</option>
-            <option value="600">Semi bold</option>
-            <option value="700">Bold</option>
-            <option value="800">Extra bold</option>
-          </select>
-        </label>
-        <label>
-          <span className="mb-1 block text-xs text-slate-500">Transform</span>
-          <select
-            value={typography.textTransform ?? "none"}
-            onChange={(event) => onChange({ ...typography, textTransform: event.target.value as HomepageTypography["textTransform"] })}
-            className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
-          >
-            <option value="none">None</option>
-            <option value="uppercase">Uppercase</option>
-            <option value="lowercase">Lowercase</option>
-            <option value="capitalize">Capitalize</option>
-          </select>
-        </label>
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <label>
-          <span className="mb-1 block text-xs text-slate-500">Line height</span>
-          <input
-            type="number"
-            step="0.1"
-            value={typography.lineHeight ?? ""}
-            onChange={(event) => onChange({ ...typography, lineHeight: event.target.value === "" ? undefined : Number(event.target.value) })}
-            className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
-            placeholder="Auto"
-          />
-        </label>
-        <label>
-          <span className="mb-1 block text-xs text-slate-500">Letter spacing</span>
-          <input
-            type="number"
-            step="0.1"
-            value={typography.letterSpacing ?? ""}
-            onChange={(event) => onChange({ ...typography, letterSpacing: event.target.value === "" ? undefined : Number(event.target.value) })}
-            className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
-            placeholder="0"
-          />
-        </label>
-      </div>
-    </div>
-  );
-}
-
-function NumberControl({
-  label,
-  value,
-  onChange,
-  placeholder = "Auto",
-  min
-}: {
-  label: string;
-  value?: number;
-  onChange: (value: number | undefined) => void;
-  placeholder?: string;
-  min?: number;
-}) {
-  return (
-    <label className="block">
-      <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">{label}</span>
-      <input
-        type="number"
-        min={min}
-        value={typeof value === "number" ? value : ""}
-        onChange={(event) => onChange(event.target.value === "" ? undefined : Number(event.target.value))}
-        className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
-        placeholder={placeholder}
-      />
-    </label>
-  );
-}
-
-function AlignmentControl({ value, onChange }: { value?: HomepageAlign; onChange: (value: HomepageAlign | undefined) => void }) {
-  return (
-    <label className="block">
-      <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Alignment</span>
-      <select value={value ?? ""} onChange={(event) => onChange(event.target.value ? event.target.value as HomepageAlign : undefined)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
-        <option value="">Default</option>
-        <option value="left">Left</option>
-        <option value="center">Center</option>
-      </select>
-    </label>
-  );
-}
-
-function IconSegmentedControl<T extends string>({
-  label,
-  value,
-  options,
-  onChange
-}: {
-  label: string;
-  value: T;
-  options: Array<{ value: T; label: string; icon: React.ReactNode }>;
-  onChange: (value: T) => void;
-}) {
-  return (
-    <div>
-      <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">{label}</span>
-      <div className="grid grid-cols-4 gap-2">
-        {options.map((option) => {
-          const active = option.value === value;
-          return (
-            <button
-              key={option.value}
-              type="button"
-              aria-label={option.label}
-              title={option.label}
-              onClick={() => onChange(option.value)}
-              className={`inline-flex h-11 items-center justify-center rounded-2xl border transition ${active ? "border-teal-500 bg-teal-50 text-teal-700 ring-2 ring-teal-100" : "border-slate-200 bg-white text-slate-600 hover:border-sky-200 hover:bg-sky-50"}`}
-            >
-              {option.icon}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function IconButton({
-  label,
-  children,
-  onClick,
-  active,
-  tone = "default",
-  disabled
-}: {
-  label: string;
-  children: React.ReactNode;
-  onClick: () => void;
-  active?: boolean;
-  tone?: "default" | "danger" | "success";
-  disabled?: boolean;
-}) {
-  const toneClass = tone === "danger" ? "border-rose-100 bg-white text-rose-600 hover:bg-rose-50" : tone === "success" ? "border-emerald-100 bg-white text-emerald-700 hover:bg-emerald-50" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-100";
-  const activeClass = "border-teal-500 bg-teal-600 text-white shadow-sm ring-2 ring-teal-100 hover:bg-teal-700";
-  return (
-    <button type="button" aria-label={label} title={label} disabled={disabled} onClick={onClick} className={`inline-flex h-9 w-9 items-center justify-center rounded-full border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 disabled:opacity-40 ${active ? activeClass : toneClass}`}>
-      {children}
-    </button>
-  );
 }
 
 function DeviceVisibilityButton({

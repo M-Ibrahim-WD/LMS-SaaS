@@ -125,6 +125,22 @@ type ManagedAdmin = {
 
 type AuditCategory = "ALL" | "ADMINS" | "PLANS" | "TENANTS" | "USERS";
 
+type PlatformMethodType =
+  | "INSTAPAY"
+  | "VODAFONE_CASH"
+  | "ORANGE_CASH"
+  | "ETISALAT_CASH"
+  | "WE_CASH"
+  | "FAWRY"
+  | "BANK"
+  | "CUSTOM"
+  | "STRIPE"
+  | "PAYPAL"
+  | "PAYMOB"
+  | "PAYTABS"
+  | "PAYONEER"
+  | "OTHER";
+
 type AuditLog = {
   id: string;
   action: string;
@@ -722,6 +738,36 @@ export function AdminControlCenter({ section }: AdminControlCenterProps) {
     enabled: Boolean(hasHydrated && accessToken)
   });
 
+  const subscriptionPaymentsQuery = useQuery({
+    queryKey: ["admin", "subscription-payments"],
+    queryFn: () =>
+      apiFetch<
+        Array<{
+          id: string;
+            status: "PENDING" | "PROCESSING" | "APPROVED" | "REJECTED" | "PAID" | "FAILED";
+          provider: "MANUAL" | "STRIPE" | "PAYPAL" | "PAYMOB" | "PAYTABS" | "OTHER";
+          amount: number;
+          billingPeriod: "MONTHLY" | "YEARLY";
+          proof?: string | null;
+          createdAt: string;
+          tenant: { id: string; name: string };
+            user: { id: string; fullName: string; email: string };
+            plan: { id: string; name: string; code: string };
+            platformPaymentMethod?: {
+              id: string;
+              type: PlatformMethodType;
+              category: "MANUAL" | "ONLINE";
+              label: string;
+              details: string;
+              isActive: boolean;
+              isConfigured: boolean;
+              isSelectable: boolean;
+            } | null;
+          }>
+        >("/subscription/payment-requests", { token: accessToken ?? undefined }),
+    enabled: Boolean(hasHydrated && accessToken && hasAdminPermission("REVIEW_PAYMENTS"))
+  });
+
   const activityQuery = useQuery({
     queryKey: ["admin", "activity"],
     queryFn: () => apiFetch<{ recentUsers: Array<{ id: string; fullName: string; role: string }>; recentCourses: Array<{ id: string; title: string; status: string }>; recentPayments: Array<{ id: string; user: { fullName: string }; course: { title: string } }>; recentNotifications: Array<{ id: string; title: string }> }>("/admin/activity", { token: accessToken ?? undefined }),
@@ -883,6 +929,36 @@ export function AdminControlCenter({ section }: AdminControlCenterProps) {
       await refresh();
     },
     onError: (error) => setMessage(error instanceof Error ? error.message : "Failed to update tenant subscription.")
+  });
+
+  const approveSubscriptionPaymentMutation = useMutation({
+    mutationFn: (id: string) =>
+      apiFetch(`/subscription/payment-requests/${id}/approve`, {
+        method: "PATCH",
+        token: accessToken ?? undefined,
+        body: JSON.stringify({})
+      }),
+    onSuccess: async () => {
+      setMessage("Subscription payment approved and plan activated.");
+      await refresh();
+      await queryClient.invalidateQueries({ queryKey: ["admin", "subscription-payments"] });
+    },
+    onError: (error) => setMessage(error instanceof Error ? error.message : "Failed to approve subscription payment.")
+  });
+
+  const rejectSubscriptionPaymentMutation = useMutation({
+    mutationFn: (id: string) =>
+      apiFetch(`/subscription/payment-requests/${id}/reject`, {
+        method: "PATCH",
+        token: accessToken ?? undefined,
+        body: JSON.stringify({})
+      }),
+    onSuccess: async () => {
+      setMessage("Subscription payment rejected.");
+      await refresh();
+      await queryClient.invalidateQueries({ queryKey: ["admin", "subscription-payments"] });
+    },
+    onError: (error) => setMessage(error instanceof Error ? error.message : "Failed to reject subscription payment.")
   });
 
   const createPlanMutation = useMutation({
@@ -1256,7 +1332,18 @@ export function AdminControlCenter({ section }: AdminControlCenterProps) {
       ) : null}
 
       {hasAdminPermission("REVIEW_PAYMENTS") && section === "payments" ? (
-        <AdminPaymentsSection payments={paymentsQuery.data} isLoading={paymentsQuery.isLoading} />
+        <AdminPaymentsSection
+          accessToken={accessToken ?? ""}
+          payments={paymentsQuery.data}
+          isLoading={paymentsQuery.isLoading}
+          subscriptionPayments={subscriptionPaymentsQuery.data}
+          subscriptionPaymentsLoading={subscriptionPaymentsQuery.isLoading}
+          onApproveSubscriptionPayment={(id) => approveSubscriptionPaymentMutation.mutate(id)}
+          onRejectSubscriptionPayment={(id) => rejectSubscriptionPaymentMutation.mutate(id)}
+          subscriptionPaymentActionPending={
+            approveSubscriptionPaymentMutation.isPending || rejectSubscriptionPaymentMutation.isPending
+          }
+        />
       ) : null}
     </AdminShell>
   );

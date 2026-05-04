@@ -4,4 +4,8 @@ export class CreateMediaSessionDto {
   @IsOptional()
   @IsString()
   deviceLabel?: string;
+
+  @IsOptional()
+  @IsString()
+  token?: string;
 }

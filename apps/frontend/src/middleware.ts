@@ -18,7 +18,9 @@ export function middleware(request: NextRequest) {
     pathname.startsWith("/instructor") ||
     pathname.startsWith("/courses") ||
     pathname.startsWith("/my-courses") ||
-    pathname.startsWith("/certificates");
+    pathname.startsWith("/certificates") ||
+    pathname.startsWith("/messages") ||
+    pathname.startsWith("/support");
   const payload = decodeAuthToken(token);
 
   if (process.env.NODE_ENV !== "production") {
@@ -61,6 +63,19 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
+  if (pathname.startsWith("/messages") && payload.role !== "STUDENT" && payload.role !== "INSTRUCTOR") {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
+  if (
+    pathname.startsWith("/support") &&
+    payload.role === "ADMIN" &&
+    !payload.isSuperAdmin &&
+    !payload.adminPermissions?.includes("HANDLE_SUPPORT")
+  ) {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
   if (
     (pathname.startsWith("/my-courses") ||
       pathname.startsWith("/join-tenant") ||
@@ -84,6 +99,8 @@ export const config = {
     "/courses/:path*",
     "/my-courses/:path*",
     "/certificates/:path*",
+    "/messages/:path*",
+    "/support/:path*",
     "/login",
     "/register"
   ]

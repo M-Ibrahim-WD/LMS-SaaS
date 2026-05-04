@@ -1,13 +1,12 @@
-import { createHash, randomUUID } from "crypto";
+import { createHash, createHmac, randomUUID, timingSafeEqual } from "crypto";
 import {
   ForbiddenException,
   Injectable,
   NotFoundException
 } from "@nestjs/common";
-import { NotificationType, Prisma, ProtectedContentEventType, UserRole } from "@prisma/client";
+import { Prisma, ProtectedContentEventType, UserRole } from "@prisma/client";
 import { PrismaService } from "../../../shared/prisma/prisma.service";
 import type { JwtPayload } from "../../../shared/types/auth.types";
-import { NotificationsService } from "../../notifications/services/notifications.service";
 import { SubscriptionsService } from "../../subscriptions/services/subscriptions.service";
 import { CreateLessonDto } from "../dto/create-lesson.dto";
 import { CreateMediaSessionDto } from "../dto/create-media-session.dto";
@@ -18,6 +17,26 @@ import {
   LessonMediaStorageService,
   type UploadedLessonMediaFile
 } from "./lesson-media-storage.service";
+import { PdfPageRendererService } from "./pdf-page-renderer.service";
+
+type MediaRequestContext = {
+  headers?: {
+    "user-agent"?: string | string[];
+    "accept-language"?: string | string[];
+    "sec-fetch-dest"?: string | string[];
+    "sec-fetch-mode"?: string | string[];
+    referer?: string | string[];
+    referrer?: string | string[];
+  };
+};
+
+type SignedMediaTokenPayload = {
+  jti: string;
+  userId: string;
+  lessonId: string;
+  fingerprint: string;
+  issuedAt: number;
+};
 
 @Injectable()
 export class LessonsService {
@@ -25,10 +44,10 @@ export class LessonsService {
     private readonly prisma: PrismaService,
     private readonly subscriptionsService: SubscriptionsService,
     private readonly lessonMediaStorageService: LessonMediaStorageService,
-    private readonly notificationsService: NotificationsService
+    private readonly pdfPageRendererService: PdfPageRendererService
   ) {}
 
-  private readonly mediaSessionLifetimeMs = 12 * 60 * 60 * 1000;
+  private readonly mediaSessionLifetimeMs = 30 * 60 * 1000;
   private readonly suspiciousSessionWindowMs = 10 * 60 * 1000;
   private readonly suspiciousSessionThreshold = 3;
 
@@ -57,6 +76,83 @@ export class LessonsService {
 
   private hashToken(value: string) {
     return createHash("sha256").update(value).digest("hex");
+  }
+
+  private getMediaTokenSecret() {
+    return process.env.MEDIA_TOKEN_SECRET?.trim() || process.env.JWT_SECRET?.trim() || "dev-only-change-me";
+  }
+
+  private base64UrlEncode(value: string) {
+    return Buffer.from(value, "utf8").toString("base64url");
+  }
+
+  private base64UrlDecode(value: string) {
+    return Buffer.from(value, "base64url").toString("utf8");
+  }
+
+  private stableHeaderValue(value?: string | string[]) {
+    return Array.isArray(value) ? value.join(",") : value ?? "";
+  }
+
+  private mediaRequestFingerprint(request?: MediaRequestContext) {
+    const userAgent = this.stableHeaderValue(request?.headers?.["user-agent"]);
+    const language = this.stableHeaderValue(request?.headers?.["accept-language"]);
+    return this.hashToken(`${userAgent}|${language}`);
+  }
+
+  private assertMediaRequestComesFromViewer(request?: MediaRequestContext) {
+    const fetchDest = this.stableHeaderValue(request?.headers?.["sec-fetch-dest"]).toLowerCase();
+    const fetchMode = this.stableHeaderValue(request?.headers?.["sec-fetch-mode"]).toLowerCase();
+    const referrer = (
+      this.stableHeaderValue(request?.headers?.referer) ||
+      this.stableHeaderValue(request?.headers?.referrer)
+    ).toLowerCase();
+    const publicWebUrl = process.env.PUBLIC_WEB_URL?.trim().toLowerCase();
+    const localFrontend =
+      referrer.startsWith("http://localhost:3000/") ||
+      referrer.startsWith("http://127.0.0.1:3000/") ||
+      (publicWebUrl ? referrer.startsWith(`${publicWebUrl.replace(/\/$/, "")}/`) : false);
+
+    const allowedDestinations = new Set(["video", "audio", "image", "empty", "iframe", "object", "embed"]);
+    const looksLikeViewerRequest =
+      (allowedDestinations.has(fetchDest) || !fetchDest) &&
+      fetchDest !== "document" &&
+      fetchMode !== "navigate" &&
+      localFrontend;
+
+    if (!looksLikeViewerRequest) {
+      throw new ForbiddenException("Lesson media must be opened from the protected course viewer");
+    }
+  }
+
+  private signMediaToken(payload: SignedMediaTokenPayload) {
+    const encodedPayload = this.base64UrlEncode(JSON.stringify(payload));
+    const signature = createHmac("sha256", this.getMediaTokenSecret()).update(encodedPayload).digest("base64url");
+    return `${encodedPayload}.${signature}`;
+  }
+
+  private parseMediaToken(rawToken: string) {
+    const [encodedPayload, signature] = rawToken.split(".");
+    if (!encodedPayload || !signature) {
+      throw new ForbiddenException("Lesson media session is invalid or expired");
+    }
+
+    const expectedSignature = createHmac("sha256", this.getMediaTokenSecret()).update(encodedPayload).digest("base64url");
+    const received = Buffer.from(signature);
+    const expected = Buffer.from(expectedSignature);
+    if (received.length !== expected.length || !timingSafeEqual(received, expected)) {
+      throw new ForbiddenException("Lesson media session is invalid or expired");
+    }
+
+    try {
+      return JSON.parse(this.base64UrlDecode(encodedPayload)) as SignedMediaTokenPayload;
+    } catch {
+      throw new ForbiddenException("Lesson media session is invalid or expired");
+    }
+  }
+
+  private buildWatermarkText(user: { fullName?: string | null; email?: string | null }) {
+    return (user.fullName?.trim() || user.email?.trim() || "ATHAR learner").slice(0, 80);
   }
 
   private async resolveAccessibleLesson(lessonId: string, user: JwtPayload) {
@@ -140,63 +236,9 @@ export class LessonsService {
     eventType: ProtectedContentEventType;
     metadata?: Record<string, unknown> | null;
   }) {
-    const admins = await this.prisma.user.findMany({
-      where: {
-        role: UserRole.ADMIN,
-        isActive: true,
-        OR: [
-          { isSuperAdmin: true },
-          { tenantId: input.tenantId }
-        ]
-      },
-      select: {
-        id: true,
-        tenantId: true
-      }
-    });
-
-    const instructor = await this.prisma.course.findUnique({
-      where: { id: input.courseId },
-      select: {
-        instructor: {
-          select: {
-            id: true,
-            tenantId: true
-          }
-        }
-      }
-    });
-
-    const recipients = new Map<string, string | null>();
-    if (instructor?.instructor) {
-      recipients.set(instructor.instructor.id, instructor.instructor.tenantId ?? input.tenantId);
-    }
-    for (const admin of admins) {
-      recipients.set(admin.id, admin.tenantId ?? input.tenantId);
-    }
-
-    await Promise.all(
-      [...recipients.entries()].map(([userId, tenantId]) =>
-        this.notificationsService.create({
-          userId,
-          tenantId,
-          type: NotificationType.CONTENT_SECURITY_ALERT,
-          title: "Protected content activity detected",
-          message: `${input.studentName} (${input.studentEmail}) triggered ${input.eventType.toLowerCase()} in ${input.courseTitle} / ${input.lessonTitle}.`,
-          payload: {
-            courseId: input.courseId,
-            lessonId: input.lessonId,
-            studentId: input.studentId,
-            studentName: input.studentName,
-            studentEmail: input.studentEmail,
-            courseTitle: input.courseTitle,
-            lessonTitle: input.lessonTitle,
-            eventType: input.eventType,
-            metadata: input.metadata ?? {}
-          } as Prisma.InputJsonValue
-        })
-      )
-    );
+    void input;
+    // Protected-content events are still stored quietly for future auditing,
+    // but we intentionally suppress admin/instructor alert spam for normal learners.
   }
 
   async create(user: JwtPayload, dto: CreateLessonDto) {
@@ -347,7 +389,7 @@ export class LessonsService {
     });
   }
 
-  async createMediaSession(user: JwtPayload, lessonId: string, dto?: CreateMediaSessionDto) {
+  async createMediaSession(user: JwtPayload, lessonId: string, dto?: CreateMediaSessionDto, request?: MediaRequestContext) {
     const { lesson, course } = await this.resolveAccessibleLesson(lessonId, user);
 
     if (!lesson.mediaAsset) {
@@ -379,7 +421,14 @@ export class LessonsService {
       );
     }
 
-    const rawToken = randomUUID();
+    const fingerprint = this.mediaRequestFingerprint(request);
+    const rawToken = this.signMediaToken({
+      jti: randomUUID(),
+      userId: user.sub,
+      lessonId: lesson.id,
+      fingerprint,
+      issuedAt: Date.now()
+    });
     const tokenHash = this.hashToken(rawToken);
     const expiresAt = new Date(Date.now() + this.mediaSessionLifetimeMs);
 
@@ -407,7 +456,105 @@ export class LessonsService {
       false
     );
 
-    const baseUrl = this.lessonMediaStorageService.getPublicLessonMediaUrl(lesson.id, lesson.mediaAsset);
+    const isPdf = lesson.mediaContentType === "application/pdf";
+    const baseUrl = isPdf
+      ? this.lessonMediaStorageService.getPublicLessonPdfPagesUrl(lesson.id, lesson.mediaAsset)
+      : this.lessonMediaStorageService.getPublicLessonMediaUrl(lesson.id, lesson.mediaAsset);
+    if (!baseUrl) {
+      throw new NotFoundException("Lesson media not found");
+    }
+
+    const actor = await this.prisma.user.findUnique({
+      where: { id: user.sub },
+      select: {
+        fullName: true,
+        email: true
+      }
+    });
+
+    const viewerUrl = `${baseUrl}?token=${rawToken}&session=${mediaSession.id}&inline=1&filename=${encodeURIComponent(
+      lesson.mediaFileName ?? lesson.title
+    )}`;
+
+    return {
+      sessionId: mediaSession.id,
+      expiresAt: expiresAt.toISOString(),
+      mediaKind: lesson.type,
+      mediaContentType: lesson.mediaContentType || null,
+      mediaFileName: lesson.mediaFileName || null,
+      viewerUrl,
+      watermarkText: this.buildWatermarkText(actor ?? { email: user.email }),
+      policy: {
+        disableDownload: true,
+        disablePictureInPicture: true,
+        blockContextMenu: true,
+        watermark: true,
+        trackVisibility: true
+      }
+    };
+  }
+
+  async renewMediaSession(
+    user: JwtPayload,
+    lessonId: string,
+    sessionId: string,
+    dto?: CreateMediaSessionDto,
+    request?: MediaRequestContext
+  ) {
+    const { lesson } = await this.resolveAccessibleLesson(lessonId, user);
+    if (!lesson.mediaAsset) {
+      throw new NotFoundException("Lesson media not found");
+    }
+
+    const rawToken = dto?.token?.trim();
+    if (!rawToken) {
+      throw new ForbiddenException("Lesson media session is invalid or expired");
+    }
+
+    const tokenPayload = this.parseMediaToken(rawToken);
+    if (
+      tokenPayload.userId !== user.sub ||
+      tokenPayload.lessonId !== lesson.id ||
+      tokenPayload.fingerprint !== this.mediaRequestFingerprint(request)
+    ) {
+      throw new ForbiddenException("Lesson media session is invalid or expired");
+    }
+
+    const tokenHash = this.hashToken(rawToken);
+    const expiresAt = new Date(Date.now() + this.mediaSessionLifetimeMs);
+    const mediaSession = await this.prisma.mediaSession.findFirst({
+      where: {
+        id: sessionId,
+        tokenHash,
+        userId: user.sub,
+        lessonId: lesson.id
+      },
+      include: {
+        user: {
+          select: {
+            fullName: true,
+            email: true
+          }
+        }
+      }
+    });
+
+    if (!mediaSession) {
+      throw new ForbiddenException("Lesson media session is invalid or expired");
+    }
+
+    await this.prisma.mediaSession.update({
+      where: { id: mediaSession.id },
+      data: {
+        expiresAt,
+        lastAccessedAt: new Date()
+      }
+    });
+
+    const isPdf = lesson.mediaContentType === "application/pdf";
+    const baseUrl = isPdf
+      ? this.lessonMediaStorageService.getPublicLessonPdfPagesUrl(lesson.id, lesson.mediaAsset)
+      : this.lessonMediaStorageService.getPublicLessonMediaUrl(lesson.id, lesson.mediaAsset);
     if (!baseUrl) {
       throw new NotFoundException("Lesson media not found");
     }
@@ -423,6 +570,7 @@ export class LessonsService {
       mediaContentType: lesson.mediaContentType || null,
       mediaFileName: lesson.mediaFileName || null,
       viewerUrl,
+      watermarkText: this.buildWatermarkText(mediaSession.user),
       policy: {
         disableDownload: true,
         disablePictureInPicture: true,
@@ -485,7 +633,14 @@ export class LessonsService {
     return event;
   }
 
-  async readProtectedMedia(lessonId: string, rawToken: string, sessionId?: string) {
+  async readProtectedMedia(lessonId: string, rawToken: string, sessionId?: string, request?: MediaRequestContext) {
+    this.assertMediaRequestComesFromViewer(request);
+
+    const tokenPayload = this.parseMediaToken(rawToken);
+    if (tokenPayload.lessonId !== lessonId || tokenPayload.fingerprint !== this.mediaRequestFingerprint(request)) {
+      throw new ForbiddenException("Lesson media session is invalid or expired");
+    }
+
     const tokenHash = this.hashToken(rawToken);
     const mediaSession = await this.prisma.mediaSession.findFirst({
       where: {
@@ -499,7 +654,10 @@ export class LessonsService {
             id: true,
             fullName: true,
             email: true,
-            role: true
+            role: true,
+            tenantId: true,
+            isSuperAdmin: true,
+            adminPermissions: true
           }
         },
         lesson: {
@@ -515,7 +673,8 @@ export class LessonsService {
                   select: {
                     id: true,
                     title: true,
-                    tenantId: true
+                    tenantId: true,
+                    instructorId: true
                   }
                 }
               }
@@ -546,6 +705,37 @@ export class LessonsService {
       throw new ForbiddenException("Lesson media session is invalid or expired");
     }
 
+    if (tokenPayload.userId !== mediaSession.userId) {
+      throw new ForbiddenException("Lesson media session is invalid or expired");
+    }
+
+    const course = mediaSession.lesson.section.course;
+    if (mediaSession.user.role === UserRole.STUDENT) {
+      const enrollment = await this.prisma.enrollment.findFirst({
+        where: {
+          userId: mediaSession.userId,
+          courseId: mediaSession.courseId
+        },
+        select: { id: true }
+      });
+
+      if (!enrollment) {
+        throw new ForbiddenException("You do not have access to this lesson");
+      }
+    } else if (mediaSession.user.role === UserRole.INSTRUCTOR) {
+      if (course.instructorId !== mediaSession.userId || course.tenantId !== mediaSession.user.tenantId) {
+        throw new ForbiddenException("You do not have access to this lesson");
+      }
+    } else if (mediaSession.user.role === UserRole.ADMIN) {
+      const canReviewCourses =
+        mediaSession.user.isSuperAdmin || mediaSession.user.adminPermissions.includes("REVIEW_COURSES");
+      if (!canReviewCourses) {
+        throw new ForbiddenException("You do not have access to this lesson");
+      }
+    } else {
+      throw new ForbiddenException("Unsupported role for protected media");
+    }
+
     if (!mediaSession.lesson.mediaAsset) {
       throw new NotFoundException("Lesson media not found");
     }
@@ -555,12 +745,57 @@ export class LessonsService {
       data: { lastAccessedAt: new Date() }
     });
 
-    const file = await this.lessonMediaStorageService.readLocalMediaRef(mediaSession.lesson.mediaAsset);
+    const file = await this.lessonMediaStorageService.readMediaRef(mediaSession.lesson.mediaAsset);
 
     return {
       ...file,
       fileName: mediaSession.lesson.mediaFileName || file.fileName,
-      contentType: mediaSession.lesson.mediaContentType || file.contentType
+      contentType: mediaSession.lesson.mediaContentType || file.contentType,
+      watermarkText: this.buildWatermarkText(mediaSession.user)
+    };
+  }
+
+  async getProtectedPdfPageMetadata(lessonId: string, rawToken: string, sessionId: string | undefined, request?: MediaRequestContext) {
+    const file = await this.readProtectedMedia(lessonId, rawToken, sessionId, request);
+    if (file.contentType !== "application/pdf") {
+      throw new NotFoundException("Protected PDF not found");
+    }
+
+    const pageCount = await this.pdfPageRendererService.getPageCount(
+      `${lessonId}:${file.fileName}:${file.buffer.length}`,
+      file.buffer
+    );
+
+    return {
+      pageCount,
+      watermarkText: file.watermarkText,
+      contentType: "application/pdf"
+    };
+  }
+
+  async renderProtectedPdfPage(
+    lessonId: string,
+    pageNumber: number,
+    rawToken: string,
+    sessionId: string | undefined,
+    request?: MediaRequestContext
+  ) {
+    const file = await this.readProtectedMedia(lessonId, rawToken, sessionId, request);
+    if (file.contentType !== "application/pdf") {
+      throw new NotFoundException("Protected PDF not found");
+    }
+
+    const image = await this.pdfPageRendererService.renderWatermarkedPage({
+      cacheKey: `${lessonId}:${file.fileName}:${file.buffer.length}`,
+      pdfBuffer: file.buffer,
+      pageNumber,
+      watermarkText: file.watermarkText
+    });
+
+    return {
+      image,
+      fileName: `${file.fileName.replace(/\.pdf$/i, "")}-page-${pageNumber}.png`,
+      contentType: "image/png"
     };
   }
 }

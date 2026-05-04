@@ -91,9 +91,23 @@ export class LessonsAccessController {
   createMediaSession(
     @CurrentUser() user: JwtPayload,
     @Param("id") id: string,
-    @Body() dto: CreateMediaSessionDto
+    @Body() dto: CreateMediaSessionDto,
+    @Req() req: Request
   ) {
-    return this.lessonsService.createMediaSession(user, id, dto);
+    return this.lessonsService.createMediaSession(user, id, dto, req);
+  }
+
+  @Roles("STUDENT", "INSTRUCTOR", "ADMIN")
+  @RequireTenant(false)
+  @Post(":id/media-session/:sessionId/renew")
+  renewMediaSession(
+    @CurrentUser() user: JwtPayload,
+    @Param("id") id: string,
+    @Param("sessionId") sessionId: string,
+    @Body() dto: CreateMediaSessionDto,
+    @Req() req: Request
+  ) {
+    return this.lessonsService.renewMediaSession(user, id, sessionId, dto, req);
   }
 
   @Roles("STUDENT", "INSTRUCTOR", "ADMIN")
@@ -123,7 +137,7 @@ export class LessonsPublicController {
     @Res({ passthrough: true }) res: Response,
     @Req() req: Request
   ) {
-    const file = await this.lessonsService.readProtectedMedia(id, token, sessionId);
+    const file = await this.lessonsService.readProtectedMedia(id, token, sessionId, req);
     const shouldDownload = downloadMode === "1" && inlineMode !== "1";
     const disposition = shouldDownload ? "attachment" : "inline";
     const outputFileName = requestedFileName?.trim() || file.fileName;
@@ -163,5 +177,39 @@ export class LessonsPublicController {
     res.setHeader("Content-Length", String(file.buffer.length));
     res.setHeader("X-Content-Type-Options", "nosniff");
     return new StreamableFile(file.buffer);
+  }
+
+  @Get(":id/pdf-pages")
+  async getPdfPageMetadata(
+    @Param("id") id: string,
+    @Query("token") token: string,
+    @Query("session") sessionId: string | undefined,
+    @Req() req: Request
+  ) {
+    return this.lessonsService.getProtectedPdfPageMetadata(id, token, sessionId, req);
+  }
+
+  @Get(":id/pdf-pages/:pageNumber")
+  async getPdfPage(
+    @Param("id") id: string,
+    @Param("pageNumber") pageNumber: string,
+    @Query("token") token: string,
+    @Query("session") sessionId: string | undefined,
+    @Res({ passthrough: true }) res: Response,
+    @Req() req: Request
+  ) {
+    const parsedPageNumber = Number(pageNumber);
+    if (!Number.isInteger(parsedPageNumber) || parsedPageNumber < 1) {
+      throw new BadRequestException("Invalid PDF page number");
+    }
+
+    const file = await this.lessonsService.renderProtectedPdfPage(id, parsedPageNumber, token, sessionId, req);
+    res.setHeader("Content-Type", file.contentType);
+    res.setHeader("Content-Disposition", `inline; filename="${file.fileName}"`);
+    res.setHeader("Cache-Control", "private, no-store");
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    res.setHeader("Content-Length", String(file.image.length));
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    return new StreamableFile(file.image);
   }
 }

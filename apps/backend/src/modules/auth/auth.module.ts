@@ -9,6 +9,7 @@ import { MailerModule } from "../mailer/mailer.module";
 import { AuthController } from "./controllers/auth.controller";
 import { AuthService } from "./services/auth.service";
 import { JwtStrategy } from "./strategies/jwt.strategy";
+import { RateLimitGuard } from "../../shared/guards/rate-limit.guard";
 
 @Module({
   imports: [
@@ -26,7 +27,7 @@ import { JwtStrategy } from "./strategies/jwt.strategy";
     })
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, RateLimitGuard],
   exports: [AuthService]
 })
 export class AuthModule {}

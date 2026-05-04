@@ -177,6 +177,41 @@ enum BillingPeriod {
   YEARLY
 }
 
+enum SubscriptionPaymentProvider {
+  MANUAL
+  STRIPE
+  PAYPAL
+  PAYMOB
+  PAYTABS
+  OTHER
+}
+
+enum SubscriptionPaymentStatus {
+  PENDING
+  PROCESSING
+  APPROVED
+  REJECTED
+  PAID
+  FAILED
+}
+
+enum PlatformPaymentMethodType {
+  INSTAPAY
+  VODAFONE_CASH
+  ORANGE_CASH
+  ETISALAT_CASH
+  WE_CASH
+  FAWRY
+  BANK
+  CUSTOM
+  PAYMOB
+  PAYTABS
+  STRIPE
+  PAYPAL
+  PAYONEER
+  OTHER
+}
+
 model Tenant {
   id        String   @id @default(uuid())
   name      String
@@ -196,6 +231,7 @@ model Tenant {
   payments Payment[]
   certificates Certificate[]
   subscriptions TenantSubscription[]
+  subscriptionPayments SubscriptionPayment[]
   conversations Conversation[]
 
   @@index([isActive])
@@ -237,6 +273,7 @@ model Plan {
 
   tenants Tenant[]
   subscriptions TenantSubscription[]
+  subscriptionPayments SubscriptionPayment[]
 
   @@index([isActive])
   @@index([isArchived])
@@ -266,6 +303,62 @@ model TenantSubscription {
   @@index([endsAt])
 }
 
+model SubscriptionPayment {
+  id            String                      @id @default(uuid())
+  tenantId      String                      @map("tenant_id")
+  userId        String                      @map("user_id")
+  planId        String                      @map("plan_id")
+  platformPaymentMethodId String?           @map("platform_payment_method_id")
+  billingPeriod BillingPeriod               @map("billing_period")
+  provider      SubscriptionPaymentProvider @default(MANUAL)
+  status        SubscriptionPaymentStatus   @default(PENDING)
+  amount        Float
+  proof         String?
+  providerRef   String?                     @map("provider_ref")
+  adminNote     String?                     @map("admin_note")
+  reviewedAt    DateTime?                   @map("reviewed_at")
+  createdAt     DateTime                    @default(now())
+  updatedAt     DateTime                    @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan   Plan   @relation(fields: [planId], references: [id], onDelete: Restrict)
+  platformPaymentMethod PlatformPaymentMethod? @relation(fields: [platformPaymentMethodId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([planId])
+  @@index([platformPaymentMethodId])
+  @@index([status])
+  @@index([provider])
+  @@index([createdAt])
+}
+
+model PlatformPaymentMethod {
+  id             String                    @id @default(uuid())
+  type           PlatformPaymentMethodType
+  category       PaymentMethodCategory
+  label          String
+  details        String                    @default("")
+  config         Json?
+  isActive       Boolean                   @default(true) @map("is_active")
+  isConfigured   Boolean                   @default(false) @map("is_configured")
+  isDeleted      Boolean                   @default(false) @map("is_deleted")
+  deletedAt      DateTime?                 @map("deleted_at")
+  createdById    String?                   @map("created_by_id")
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+
+  createdBy User? @relation("PlatformPaymentMethodsCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  subscriptionPayments SubscriptionPayment[]
+
+  @@index([category])
+  @@index([isActive])
+  @@index([isConfigured])
+  @@index([isDeleted])
+  @@index([createdById])
+}
+
 model User {
   id        String   @id @default(uuid())
   tenantId  String?  @map("tenant_id")
@@ -291,6 +384,8 @@ model User {
   enrollments      Enrollment[]
   paymentMethods   PaymentMethod[] @relation("InstructorPaymentMethods")
   payments         Payment[]
+  subscriptionPayments SubscriptionPayment[]
+  createdPlatformPaymentMethods PlatformPaymentMethod[] @relation("PlatformPaymentMethodsCreatedBy")
   joinedInstructors StudentInstructor[] @relation("StudentInstructorStudent")
   followedByStudents StudentInstructor[] @relation("StudentInstructorInstructor")
   lessonCompletions LessonCompletion[]

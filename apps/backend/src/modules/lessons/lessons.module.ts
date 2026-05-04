@@ -8,11 +8,12 @@ import {
 } from "./controllers/lessons.controller";
 import { LessonMediaStorageService } from "./services/lesson-media-storage.service";
 import { LessonsService } from "./services/lessons.service";
+import { PdfPageRendererService } from "./services/pdf-page-renderer.service";
 
 @Module({
   imports: [SubscriptionsModule, NotificationsModule],
   controllers: [LessonsController, LessonsAccessController, LessonsPublicController],
-  providers: [LessonsService, LessonMediaStorageService],
+  providers: [LessonsService, LessonMediaStorageService, PdfPageRendererService],
   exports: [LessonsService]
 })
 export class LessonsModule {}
