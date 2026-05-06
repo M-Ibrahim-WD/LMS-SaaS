@@ -7,6 +7,13 @@ import {
 import { ConfigService } from "@nestjs/config";
 import nodemailer, { type Transporter } from "nodemailer";
 
+type MailInput = {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+};
+
 @Injectable()
 export class MailerService implements OnModuleInit {
   private readonly logger = new Logger(MailerService.name);
@@ -17,6 +24,11 @@ export class MailerService implements OnModuleInit {
 
   async onModuleInit() {
     const nodeEnv = this.config.get<string>("app.nodeEnv") ?? "development";
+    if (this.getBrevoApiKey()) {
+      this.logger.log("Brevo API mail delivery is enabled.");
+      return;
+    }
+
     const verifyOnStartup =
       this.config.get<boolean>("app.smtp.verifyOnStartup") ?? nodeEnv === "production";
 
@@ -31,6 +43,10 @@ export class MailerService implements OnModuleInit {
     } catch (error) {
       this.logger.error(this.buildSmtpErrorMessage(error, "startup verification"));
     }
+  }
+
+  private getBrevoApiKey() {
+    return this.config.get<string>("app.brevo.apiKey") ?? "";
   }
 
   private getTransporter() {
@@ -80,6 +96,22 @@ export class MailerService implements OnModuleInit {
     }
 
     return `"${fromName.replace(/"/g, "")}" <${fromEmail}>`;
+  }
+
+  private getSender() {
+    const fromEmail = this.config.get<string>("app.smtp.fromEmail") ?? "";
+    const fromName = this.config.get<string>("app.smtp.fromName") ?? "ATHAR LMS";
+
+    if (!fromEmail) {
+      throw new InternalServerErrorException(
+        "Email sender is not configured. Please set SMTP_FROM_EMAIL."
+      );
+    }
+
+    return {
+      email: fromEmail,
+      name: fromName
+    };
   }
 
   private buildSmtpErrorMessage(error: unknown, action: string) {
@@ -132,6 +164,45 @@ export class MailerService implements OnModuleInit {
     return `SMTP ${action} failed for ${host}:${port} (secure=${String(secure)}). Classification: ${classification}. Details: ${details}`;
   }
 
+  private async sendViaBrevo(input: MailInput) {
+    const apiKey = this.getBrevoApiKey();
+    if (!apiKey) {
+      throw new InternalServerErrorException(
+        "Email delivery is not configured. Please set BREVO_API_KEY."
+      );
+    }
+
+    const sender = this.getSender();
+
+    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "api-key": apiKey,
+        accept: "application/json",
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        sender,
+        to: [{ email: input.to }],
+        subject: input.subject,
+        htmlContent: input.html,
+        textContent: input.text
+      })
+    });
+
+    if (!response.ok) {
+      const responseText = await response.text();
+      this.logger.error(
+        `Brevo email delivery to ${input.to} failed with status ${response.status}. Details: ${responseText}`
+      );
+      throw new InternalServerErrorException(
+        "Email delivery failed. Please try again later."
+      );
+    }
+
+    this.logger.log(`Delivered email "${input.subject}" to ${input.to} via Brevo API.`);
+  }
+
   private async verifyTransport(context: string) {
     const transporter = this.getTransporter();
 
@@ -149,6 +220,11 @@ export class MailerService implements OnModuleInit {
     html: string;
     text: string;
   }) {
+    if (this.getBrevoApiKey()) {
+      await this.sendViaBrevo(input);
+      return;
+    }
+
     const transporter = this.getTransporter();
 
     try {
