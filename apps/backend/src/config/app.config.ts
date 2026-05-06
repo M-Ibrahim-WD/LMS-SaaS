@@ -35,7 +35,12 @@ export const appConfig = registerAs("app", () => ({
     user: process.env.SMTP_USER?.trim() ?? "",
     pass: process.env.SMTP_PASS?.trim() ?? "",
     fromEmail: process.env.SMTP_FROM_EMAIL?.trim() ?? "",
-    fromName: process.env.SMTP_FROM_NAME?.trim() ?? "ATHAR LMS"
+    fromName: process.env.SMTP_FROM_NAME?.trim() ?? "ATHAR LMS",
+    verifyOnStartup:
+      String(process.env.SMTP_VERIFY_ON_STARTUP ?? "").trim().toLowerCase() === "true",
+    connectionTimeoutMs: Number(process.env.SMTP_CONNECTION_TIMEOUT_MS ?? 15000),
+    greetingTimeoutMs: Number(process.env.SMTP_GREETING_TIMEOUT_MS ?? 15000),
+    socketTimeoutMs: Number(process.env.SMTP_SOCKET_TIMEOUT_MS ?? 20000)
   },
   google: {
     clientId: process.env.GOOGLE_CLIENT_ID?.trim() ?? "",
