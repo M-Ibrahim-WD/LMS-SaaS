@@ -20,14 +20,20 @@ This document captures the operating system already present in this repository s
 - Validate before syncing changes.
 - Treat placeholder infrastructure folders as placeholders until real implementations exist.
 
+## Source Of Truth
+- GitHub `main` is the canonical repository state.
+- The desktop clone is a synced working copy, not the authority.
+- If desktop tracked files differ from GitHub, GitHub wins by default unless a task explicitly says otherwise.
+
 ## Default Delivery Flow
-1. Understand the existing behavior before editing.
-2. Make the smallest safe change that solves the task.
-3. Keep new logic close to the feature first.
-4. Reuse shared abstractions only when they are clearly stable.
-5. Validate the affected surfaces.
-6. Update documentation when the architecture or workflow meaningfully changes.
-7. Sync changes only after validation passes.
+1. Sync the desktop clone to GitHub before starting work.
+2. Understand the existing behavior before editing.
+3. Make the smallest safe change that solves the task.
+4. Keep new logic close to the feature first.
+5. Reuse shared abstractions only when they are clearly stable.
+6. Validate the affected surfaces.
+7. Update documentation when the architecture or workflow meaningfully changes.
+8. Push validated changes back through GitHub.
 
 ## Preferred Change Strategy
 
@@ -66,16 +72,21 @@ Reference:
 
 ## Sync And Safety Workflow
 The repo already uses a guarded sync approach:
-- create a backup snapshot
+- refresh from GitHub
+- create a backup snapshot when needed
 - store a short task summary
 - run validation
 - stage changes
 - commit
 - push
+- let deployment platforms update from GitHub
 
 Reference scripts:
 - `backup_and_summary.ps1`
 - `safe_sync_after_task.ps1`
+
+Release reference:
+- `docs/deployment-runbook.md`
 
 ## Documentation Rules
 - Do not let docs overstate shipped infrastructure.
@@ -93,7 +104,7 @@ Reference scripts:
 - No broad rewrites without a clear reason.
 - No framework replacement as a default fix.
 - No pretending future infrastructure is already active.
-- No sync-before-validation workflow for normal tasks.
+- No desktop-first workflow for normal tasks.
 
 ## Team Agreement For Future Tasks
 - Start with repo context, not assumptions.

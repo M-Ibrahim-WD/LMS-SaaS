@@ -41,10 +41,16 @@ A working LMS SaaS product built as a TypeScript monorepo. This repo is no longe
    - `pnpm dev`
 
 ## Auth And Homepage Builder Configuration
-- Public email verification and password reset require valid SMTP settings in `apps/backend/.env`.
+- Public email verification and password reset require valid email delivery settings.
+- Use `BREVO_API_KEY` for Railway-hosted production email delivery. SMTP settings remain available for local development or hosts that allow outbound SMTP.
 - Google sign-in requires `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and a callback URL that points to `/api/auth/google/callback`.
 - The public homepage is driven from the admin homepage builder at `/admin/homepage`.
 - Super admins can always manage the homepage. Delegated admins need the `MANAGE_HOMEPAGE` permission.
+
+## Deployment Workflow
+- GitHub `main` is the source of truth for production work.
+- Sync the desktop clone from GitHub before new implementation batches.
+- Use `docs/deployment-runbook.md` as the release and environment checklist for Railway, Vercel, and Railway Postgres.
 
 ## Validation Commands
 - Frontend type check: `pnpm --filter @lms/frontend lint`

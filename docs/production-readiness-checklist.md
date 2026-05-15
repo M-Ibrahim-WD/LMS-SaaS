@@ -25,7 +25,7 @@
 ### Communication
 - [x] In-app notifications
 - [x] Notification center UI with filtering and mark-as-read actions
-- [ ] Email notifications
+- [x] Transactional auth email delivery
 - [ ] Announcements
 - [ ] Discussions/comments
 - [ ] Messaging flow
@@ -43,8 +43,8 @@
 - [x] JWT auth and RBAC
 - [x] Super-admin protection and delegated admin permissions
 - [x] Forced password change flow for delegated admins
-- [ ] Password reset flow for general users
-- [ ] Email verification
+- [x] Password reset flow for general users
+- [x] Email verification
 - [ ] Refresh token/session rotation
 - [ ] Expanded rate limiting
 - [ ] Upload content security review
@@ -54,10 +54,10 @@
 - [ ] Redis in real feature flows
 - [ ] BullMQ jobs
 - [ ] S3-compatible object storage
-- [ ] Email provider integration
+- [x] Email provider integration
 - [ ] Structured monitoring/logging
 - [ ] CI/CD pipeline
-- [ ] Deployment environments and secrets review
+- [x] Deployment environments and secrets review
 
 ## Data and Reporting
 - [x] Tenant/platform overview metrics
@@ -78,7 +78,7 @@
 - [ ] End-to-end tests
 - [ ] Seed/demo data strategy
 - [ ] API documentation
-- [ ] Release runbook
+- [x] Release runbook
 
 ## UX and Product Quality
 - [x] Shared page-shell and feedback primitives
