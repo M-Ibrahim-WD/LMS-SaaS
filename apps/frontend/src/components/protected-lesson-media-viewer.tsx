@@ -30,6 +30,15 @@ type MediaSessionResponse = {
   };
 };
 
+function looksLikeCloudflareStreamViewerUrl(viewerUrl: string) {
+  try {
+    const parsed = new URL(viewerUrl);
+    return parsed.host === "iframe.videodelivery.net" || parsed.host.endsWith(".cloudflarestream.com");
+  } catch {
+    return false;
+  }
+}
+
 interface ProtectedLessonMediaViewerProps {
   lessonId: string;
   lessonTitle: string;
@@ -564,7 +573,7 @@ export function ProtectedLessonMediaViewer({
     const sourceType = activeSession?.mediaContentType ?? mediaContentType ?? "";
     const viewerUrl = activeSession?.viewerUrl ?? "";
 
-    if (viewerUrl.includes("iframe.videodelivery.net")) {
+    if (looksLikeCloudflareStreamViewerUrl(viewerUrl)) {
       return "stream-video";
     }
 
